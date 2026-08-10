@@ -1,0 +1,141 @@
+.content-perfil-perfil {
+  align-items: center;
+  background: #f7f7f7;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 14px;
+  height: auto;
+  justify-content: center;
+  margin: 18px 18px 1px;
+  max-width: calc(100% - 36px);
+  min-height: 200px;
+  padding: 20px 16px 16px;
+  position: relative;
+  text-align: center;
+  width: 364px;
+}
+
+.content-perfil-perfil__avatar {
+  border-radius: 50%;
+  height: 72px;
+  object-fit: cover;
+  width: 72px;
+}
+
+.content-perfil-perfil__fields {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.content-perfil-perfil__field {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  width: 100%;
+}
+
+.content-perfil-perfil__row {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.content-perfil-perfil__label {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.content-perfil-perfil__value {
+  color: #353535;
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: right;
+  word-break: break-word;
+}
+
+.content-perfil-perfil__value--name {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.content-perfil-perfil::after {
+  align-items: center;
+  background: #00ce29;
+  border-radius: 50%;
+  color: #000;
+  content: attr(data-perfil);
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  height: 24px;
+  justify-content: center;
+  position: absolute;
+  right: calc((100% / 2) - 45px);
+  top: 25px;
+  width: 24px;
+}
+
+.profile-accordion {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.profile-accordion .order-accordion__panel,
+.profile-settings-accordion .order-accordion__panel {
+  background: #f7f7f7;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
+  margin: 0 18px 14px;
+  padding: 12px 14px;
+}
+
+.profile-address {
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+}
+
+.profile-address__label {
+  color: #353535;
+  font-size: 14px;
+}
+
+.profile-address__value {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.profile-address:last-child {
+  border-bottom: none;
+}
+
+.profile-drawer-shell {
+  overflow: hidden;
+}
+
+.profile-settings-panel {
+  margin-top: 8px;
+}

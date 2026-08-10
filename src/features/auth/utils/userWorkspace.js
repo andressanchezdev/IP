@@ -1,5 +1,5 @@
-import { loadPersistedState, savePersistedState } from '../../../utils/storage'
-import { defaultProfileSettings } from '../../landing/data/mockProfile'
+import { loadPersistedState, savePersistedState } from '@/shared/lib/storage'
+import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 
 const WORKSPACE_TTL = 365 * 24 * 60 * 60 * 1000
 
@@ -10,6 +10,7 @@ export function createEmptyWorkspace(profileSettings) {
     pendingOrders: [],
     historyOrders: [],
     cart: [],
+    cartUpdatedAt: null,
   }
 }
 
@@ -32,13 +33,9 @@ export function saveUserWorkspace(userId, workspace) {
 function migrateLegacyOrders(userId) {
   const legacyPending = loadPersistedState('pendingOrders', [])
   const legacyHistory = loadPersistedState('historyOrders', [])
-
   const hasLegacy = legacyPending.length > 0 || legacyHistory.length > 0
-  if (!hasLegacy && userId !== defaultProfileSettings.personal.userId) {
-    return null
-  }
 
-  if (userId !== defaultProfileSettings.personal.userId && !hasLegacy) {
+  if (!hasLegacy) {
     return null
   }
 
@@ -52,14 +49,19 @@ function migrateLegacyOrders(userId) {
     profileSettings: loadPersistedState('profileSettings', defaultProfileSettings),
     pendingOrders: legacyPending.map(assignUserId),
     historyOrders: legacyHistory.map(assignUserId),
-    cart: loadPersistedState('cart', []),
+    cart: [],
+    cartUpdatedAt: new Date().toISOString(),
   }
 }
 
 export function getOrCreateUserWorkspace(userId, profileSettings) {
   const stored = loadUserWorkspace(userId)
   if (stored) {
-    return stored
+    return {
+      ...createEmptyWorkspace(profileSettings),
+      ...stored,
+      userId,
+    }
   }
 
   const migrated = migrateLegacyOrders(userId)
@@ -78,5 +80,14 @@ export function persistUserWorkspace(userId, workspace) {
     return
   }
 
-  saveUserWorkspace(userId, workspace)
+  const current = loadUserWorkspace(userId) || createEmptyWorkspace({
+    personal: { userId },
+  })
+
+  saveUserWorkspace(userId, {
+    ...current,
+    ...workspace,
+    userId,
+  })
 }
+

@@ -1,0 +1,21 @@
+.catalog-scroll-sentinel {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 48px;
+  padding: 16px 0 28px;
+  width: 100%;
+}
+
+.catalog-scroll-sentinel__label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.catalog-scroll-sentinel__done {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin: 16px 0 8px;
+  text-align: center;
+}

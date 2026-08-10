@@ -1,25 +1,16 @@
-import { loadPersistedState, savePersistedState } from '../../../utils/storage'
-import { defaultProfileSettings } from '../../landing/data/mockProfile'
+import { loadPersistedState, savePersistedState } from '@/shared/lib/storage'
+import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 
 const AUTH_SESSION_TTL = 30 * 24 * 60 * 60 * 1000
 const AUTH_SESSION_SHORT_TTL = 8 * 60 * 60 * 1000
 const REGISTERED_USERS_TTL = 365 * 24 * 60 * 60 * 1000
 
-const DEFAULT_USER = {
-  username: defaultProfileSettings.access.email,
-  password: defaultProfileSettings.access.password,
-  profile: defaultProfileSettings,
-}
-
 function normalizeUsername(value) {
-  return value.trim().toLowerCase()
+  return String(value ?? '').trim().toLowerCase()
 }
 
 function createNextUserId(users) {
-  const ids = [
-    defaultProfileSettings.personal.userId,
-    ...users.map((entry) => entry.profile?.personal?.userId),
-  ]
+  const ids = users.map((entry) => entry.profile?.personal?.userId)
   const highestId = ids.reduce((highest, id) => {
     const numericId = Number(String(id ?? '').replace(/\D/g, ''))
     return Number.isFinite(numericId) ? Math.max(highest, numericId) : highest
@@ -31,8 +22,12 @@ function createNextUserId(users) {
 export function loadAuthSession() {
   const session = loadPersistedState('authSession', null)
 
-  if (!session?.username) {
+  if (!session?.username && !session?.email) {
     return null
+  }
+
+  if (!session.username && session.email) {
+    session.username = session.email
   }
 
   if (session.userId) {
@@ -69,19 +64,9 @@ export function saveRegisteredUsers(users) {
 
 export function findUserCredentials(username) {
   const normalized = normalizeUsername(username)
-  const registered = loadRegisteredUsers().find(
+  return loadRegisteredUsers().find(
     (entry) => normalizeUsername(entry.username) === normalized,
-  )
-
-  if (registered) {
-    return registered
-  }
-
-  if (normalizeUsername(DEFAULT_USER.username) === normalized) {
-    return DEFAULT_USER
-  }
-
-  return null
+  ) ?? null
 }
 
 export function registerUser(userData) {
@@ -127,3 +112,5 @@ export function registerUser(userData) {
   saveRegisteredUsers([...users, entry])
   return { success: true, user: entry }
 }
+
+export { defaultProfileSettings }
