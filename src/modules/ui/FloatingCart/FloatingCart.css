@@ -1,0 +1,54 @@
+/* Solo existe en móvil: en escritorio el carrito sigue viviendo en el header. */
+.floating-cart {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .floating-cart {
+    align-items: center;
+    background: var(--color-bg-page);
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    box-shadow: var(--shadow-card-hover);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    height: clamp(44px, 12vw, 52px);
+    justify-content: center;
+    position: fixed;
+    right: 21px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    width: clamp(44px, 12vw, 52px);
+    z-index: 16;
+    
+  }
+
+  .floating-cart:active {
+    transform: scale(0.94);
+  }
+
+  .floating-cart__icon {
+    height: clamp(20px, 5.5vw, 24px);
+    width: clamp(20px, 5.5vw, 24px);
+    transform: translateX(-2.5px);
+  }
+
+  .floating-cart__badge {
+    align-items: center;
+    background: #e53935;
+    border-radius: 999px;
+    box-shadow: 0 0 0 2px var(--color-bg-page);
+    color: #ffffff;
+    display: inline-flex;
+    font-size: clamp(9px, 2.5vw, 11px);
+    font-weight: 700;
+    height: clamp(16px, 4.5vw, 20px);
+    justify-content: center;
+    min-width: clamp(16px, 4.5vw, 20px);
+    padding: 0 clamp(3px, 1vw, 5px);
+    position: absolute;
+    right: -2px;
+    top: -2px;
+  }
+}

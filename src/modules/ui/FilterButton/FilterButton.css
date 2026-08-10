@@ -1,0 +1,44 @@
+.filter-button {
+  align-items: center;
+  border-radius: var(--radius-badge);
+  border: none;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  padding: 8px 14px;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-button__icon {
+  height: 16px;
+  width: 16px;
+}
+
+.filter-button--active {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.filter-button--filter {
+  background: var(--color-filter);
+}
+
+.filter-button--new {
+  background: var(--color-new);
+}
+
+.filter-button--promo {
+  background: var(--color-promo);
+}
+
+.filter-button:active {
+  transform: translateY(0);
+}
+
+.filter-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}

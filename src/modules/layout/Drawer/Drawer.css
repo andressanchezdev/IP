@@ -1,0 +1,108 @@
+.drawer {
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  border-left: 1px solid var(--color-border);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  max-width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  right: 0;
+  top: 0;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  width: 410px;
+  z-index: 30;
+}
+
+.drawer__actions {
+  flex-shrink: 0;
+}
+
+.drawer__close,
+.drawer__menu,
+.drawer__settings,
+.drawer__clear-filters {
+  align-items: center;
+  background: #f4f4f4;
+  border-radius: 999px;
+  border: none;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  width: 34px;
+}
+
+.drawer__header {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 14px 14px 12px;
+}
+
+.drawer__header-spacer {
+  flex-shrink: 0;
+  height: 34px;
+  width: 34px;
+}
+
+.drawer__menu-action {
+  background: var(--color-bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.drawer__menu-action--danger {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  border-color: #f5c6cb;
+  color: #7a1f1f;
+}
+
+.drawer__menu-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.drawer__settings-icon {
+  display: block;
+  height: 18px;
+  width: 18px;
+}
+
+.drawer__clear-filters-icon {
+  display: block;
+  height: 18px;
+  width: 18px;
+}
+
+.drawer__title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.drawer--open {
+  transform: translateX(0);
+}
+
+.drawer-backdrop {
+  background: rgba(0, 0, 0, 0.2);
+  inset: 0;
+  position: fixed;
+  z-index: 20;
+}

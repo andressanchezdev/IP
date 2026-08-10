@@ -1,0 +1,126 @@
+/* Estilos nuevos del flujo Finalizar (no altera clases existentes). */
+
+.checkout-finalize {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkout-finalize__box {
+  background: var(--color-bg-surface);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.checkout-finalize__box-title {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checkout-finalize__row {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.checkout-finalize__row--highlight strong {
+  font-size: 15px;
+}
+
+.checkout-finalize__delivery-note {
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 4px;
+  padding-top: 8px;
+}
+
+.checkout-finalize__field-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.checkout-finalize__edit {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 4px;
+}
+
+.checkout-finalize__edit:hover {
+  background: #f0f0f0;
+  color: var(--color-text-primary);
+}
+
+.checkout-finalize__edit img {
+  display: block;
+}
+
+.checkout-finalize__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkout-finalize__option {
+  align-items: flex-start;
+  background: #f7f7f7;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.checkout-finalize__option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.checkout-finalize__option small {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.checkout-finalize__option input {
+  accent-color: #ffc46f;
+  margin-top: 2px;
+}
+
+.checkout-finalize__map-slot {
+  align-items: center;
+  background: linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 120px;
+}
+
+.checkout-finalize__payment-panel {
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
