@@ -1,12 +1,68 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { PRODUCTS_PAGE_SIZE, searchInventoryProducts } from '@/features/catalog/api/generalApi'
+import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
 import { matchesOrderIdSearch } from '@/features/orders/utils/orderSearch'
+import { getApiAuthToken } from '@/shared/api'
+import { getBrandLogoUrl } from '@/shared/lib/brandLogos'
 import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 
-export const SEARCH_DEBOUNCE_MS = 350
+const SEARCH_DEBOUNCE_MS = 350
+/** Cap filtered landing results to avoid scroll/request storms after applying filters. */
+const FILTER_RESULT_LIMIT = PRODUCTS_PAGE_SIZE
+
+function normalizeProduct(product) {
+  return {
+    ...product,
+    brandLogo: product.brandLogo || product.brandLogoUrl || getBrandLogoUrl(product.brand),
+    imageUrl: product.imageUrl || '',
+  }
+}
+
+/**
+ * Filtros locales sobre resultados (catálogo o GET search).
+ * Campos UI ← JSON API: brand←marca, category←categoria, model←modelo.
+ */
+function applyCatalogFilters(list, {
+  filters,
+  filterNuevos,
+  filterPromociones,
+  withStock,
+}) {
+  return list.filter((product) => {
+    const matchesBrand = filters.brands.length === 0 || filters.brands.includes(product.brand)
+    const matchesCategory =
+      filters.categories.length === 0 || filters.categories.includes(product.category)
+    const matchesModel = filters.models.length === 0 || filters.models.includes(product.model)
+
+    const matchesQuickOptions =
+      (!filterNuevos && !filterPromociones) ||
+      (filterNuevos && product.stock >= 5) ||
+      (filterPromociones && product.price <= 17500)
+
+    const matchesWithStock = !withStock || product.stock > 0
+
+    return (
+      matchesBrand &&
+      matchesCategory &&
+      matchesModel &&
+      matchesQuickOptions &&
+      matchesWithStock
+    )
+  })
+}
+
+function isAbortError(error) {
+  return (
+    error?.name === 'AbortError'
+    || error?.code === 20
+    || /aborted|abort/i.test(String(error?.message || ''))
+  )
+}
 
 export function useStorePageFilters({
   activeView,
   products,
+  searchProducts,
   pendingOrders,
   historyOrders,
   cartItems,
@@ -18,15 +74,24 @@ export function useStorePageFilters({
   historyPaymentFilter,
   drawerOpen,
   drawerType,
+  setSearchProducts,
+  beginCatalogSearch,
+  endCatalogSearch,
 }) {
-  // Espera a que el usuario deje de escribir antes de filtrar (evita trabajo/peticiones por tecla).
   const debouncedSearchValue = useDebouncedValue(searchValue, SEARCH_DEBOUNCE_MS)
   const isStoreView = activeView === 'tienda'
+
+  // Product search GET only runs after Enter (committed query).
+  // Source of truth for results: context `searchProducts` (no local duplicate).
+  const [committedProductSearch, setCommittedProductSearch] = useState('')
+  const [productSearchNonce, setProductSearchNonce] = useState(0)
+
   const headerSearch = {
-    tienda: { placeholder: 'Buscar productos', ariaLabel: 'Buscar productos' },
+    tienda: { placeholder: 'Buscar productos ', ariaLabel: 'Buscar productos' },
     espera: { placeholder: 'Buscar ', ariaLabel: 'Buscar pedido por número' },
     historial: { placeholder: 'Buscar', ariaLabel: 'Buscar pedido por número' },
-  }[activeView] ?? { placeholder: 'Buscar productos', ariaLabel: 'Buscar productos' }
+  }[activeView] ?? { placeholder: 'Buscar productos (Enter)', ariaLabel: 'Buscar productos' }
+
   const hasActiveFilters = Boolean(
     filters.brands.length ||
       filters.categories.length ||
@@ -37,39 +102,119 @@ export function useStorePageFilters({
   )
   const hasSearchValue = Boolean(searchValue.trim())
   const filterDrawerOpen = drawerOpen && drawerType === 'filter'
+  const hasCommittedProductSearch = Boolean(committedProductSearch)
+
+  const submitProductSearch = useCallback(() => {
+    if (!isStoreView) {
+      return
+    }
+    const next = String(searchValue || '').trim()
+    setCommittedProductSearch(next)
+    setProductSearchNonce((current) => current + 1)
+  }, [isStoreView, searchValue])
+
+  const clearCommittedProductSearch = useCallback(() => {
+    setCommittedProductSearch('')
+    setProductSearchNonce(0)
+    setSearchProducts?.(null)
+    endCatalogSearch?.()
+  }, [endCatalogSearch, setSearchProducts])
+
+  useEffect(() => {
+    if (!isStoreView) {
+      clearCommittedProductSearch()
+    }
+  }, [isStoreView, clearCommittedProductSearch])
+
+  useEffect(() => {
+    if (!isStoreView) {
+      return undefined
+    }
+
+    if (!committedProductSearch) {
+      endCatalogSearch?.()
+      setSearchProducts?.(null)
+      return undefined
+    }
+
+    const token = getApiAuthToken()
+    if (!token) {
+      beginCatalogSearch?.()
+      setSearchProducts?.([])
+      return () => {
+        endCatalogSearch?.()
+      }
+    }
+
+    const controller = new AbortController()
+    let cancelled = false
+    const search = committedProductSearch
+
+    beginCatalogSearch?.()
+
+    searchInventoryProducts({
+      token,
+      search,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (cancelled) return
+        const mapped = mapApiProducts(result.productos).map(normalizeProduct)
+        setSearchProducts?.(mapped)
+      })
+      .catch((error) => {
+        if (cancelled || isAbortError(error) || controller.signal.aborted) {
+          return
+        }
+        console.error(
+          `[search] Falló GET /api/v1/inventory/products/search?search=${encodeURIComponent(search)}`,
+          error?.status || '',
+          error,
+        )
+        setSearchProducts?.([])
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [
+    isStoreView,
+    committedProductSearch,
+    productSearchNonce,
+    setSearchProducts,
+    beginCatalogSearch,
+    endCatalogSearch,
+  ])
 
   const filteredProducts = useMemo(() => {
-    const query = debouncedSearchValue.trim().toLowerCase()
-    return products.filter((product) => {
-      const matchesSearch =
-        !query ||
-        [product.description, product.model, product.brand, product.reference, product.category, product.searching]
-          .join(' ')
-          .toLowerCase()
-          .includes(query)
+    const source = (hasCommittedProductSearch && isStoreView)
+      ? (searchProducts ?? [])
+      : products
 
-      const matchesBrand = filters.brands.length === 0 || filters.brands.includes(product.brand)
-      const matchesCategory =
-        filters.categories.length === 0 || filters.categories.includes(product.category)
-      const matchesModel = filters.models.length === 0 || filters.models.includes(product.model)
+    if (filterDrawerOpen) {
+      return source
+    }
 
-      const matchesQuickOptions =
-        (!filterNuevos && !filterPromociones) ||
-        (filterNuevos && product.stock >= 5) ||
-        (filterPromociones && product.price <= 17500)
-
-      const matchesWithStock = !withStock || product.stock > 0
-
-      return (
-        matchesSearch &&
-        matchesBrand &&
-        matchesCategory &&
-        matchesModel &&
-        matchesQuickOptions &&
-        matchesWithStock
-      )
+    const filtered = applyCatalogFilters(source, {
+      filters,
+      filterNuevos,
+      filterPromociones,
+      withStock,
     })
-  }, [products, filters, debouncedSearchValue, filterNuevos, filterPromociones, withStock])
+
+    return filtered.slice(0, FILTER_RESULT_LIMIT)
+  }, [
+    hasCommittedProductSearch,
+    isStoreView,
+    searchProducts,
+    products,
+    filterDrawerOpen,
+    filters,
+    filterNuevos,
+    filterPromociones,
+    withStock,
+  ])
 
   const filteredPendingOrders = useMemo(() => {
     if (activeView !== 'espera') {
@@ -111,5 +256,7 @@ export function useStorePageFilters({
     filteredHistoryOrders,
     paymentMethods,
     cartProductIds,
+    submitProductSearch,
+    clearCommittedProductSearch,
   }
 }

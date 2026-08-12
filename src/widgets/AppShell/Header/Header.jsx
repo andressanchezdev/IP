@@ -10,6 +10,7 @@ import './Header.css'
 export function Header({
   searchValue,
   onSearchChange,
+  onSearchSubmit,
   searchPlaceholder = 'Buscar',
   searchAriaLabel = 'Buscar',
   onClearSearch,
@@ -79,6 +80,7 @@ export function Header({
             <SearchBar
               value={searchValue}
               onChange={onSearchChange}
+              onSubmit={onSearchSubmit}
               placeholder={searchPlaceholder}
               ariaLabel={searchAriaLabel}
               onClear={onClearSearch}

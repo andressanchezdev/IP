@@ -216,14 +216,14 @@
 }
 
 .auth-form__secondary:hover {
-  background: #f5f5f5;
+  background: var(--color-gris-claro);
 }
 
 .auth-form__submit {
   background: #ffc46f;
   border-radius: 10px;
   border: none;
-  color: #1a1a1a;
+  color: var(--color-gris-oscuro);
   cursor: pointer;
   font-size: 14px;
   font-weight: 700;
@@ -273,7 +273,7 @@
 }
 
 .auth-modal__brand {
-  background-color: #f0f0f0;
+  background-color: var(--color-gris-claro);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;

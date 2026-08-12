@@ -35,7 +35,7 @@
 }
 
 .search-bar__clear:not(:disabled):hover {
-  background: #f0f0f0;
+  background: var(--color-gris-claro);
   color: var(--color-text-primary);
 }
 

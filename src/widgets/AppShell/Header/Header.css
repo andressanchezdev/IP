@@ -280,7 +280,7 @@
   .header__filters--open {
     display: flex;
     justify-content: stretch;
-    background-color: #F7F7F7;
+    background-color: var(--color-gris-claro);
     transform: translateX(-3px);
   }
 

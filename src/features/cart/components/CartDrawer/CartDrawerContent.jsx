@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import searchIcon from '@/assets/icons/search.svg'
-import { useAuth, useCart, useCatalog } from '@/app/providers'
+import { useCart, useCatalog } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
@@ -103,18 +103,15 @@ function CartCard({ item, catalogStock = 0, onQuantityChange, onRemove }) {
 }
 
 export function CartDrawerContent() {
-  const { isAuthenticated } = useAuth()
   const {
     cartItems,
     removeFromCart,
     setCartItemQuantity,
     initiateCheckout,
-    refreshCartFromApi,
   } = useCart()
   const { products } = useCatalog()
   const { showToast } = useToast()
   const [cartSearchValue, setCartSearchValue] = useState('')
-  const [isRefreshingCart, setIsRefreshingCart] = useState(false)
 
   const catalogStockById = useMemo(() => {
     const map = new Map()
@@ -123,27 +120,6 @@ export function CartDrawerContent() {
     })
     return map
   }, [products])
-
-  useEffect(() => {
-    if (!isAuthenticated || !refreshCartFromApi) {
-      return undefined
-    }
-
-    let cancelled = false
-    setIsRefreshingCart(true)
-
-    Promise.resolve(refreshCartFromApi())
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) {
-          setIsRefreshingCart(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [isAuthenticated, refreshCartFromApi])
 
   const totalCart = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -181,7 +157,7 @@ export function CartDrawerContent() {
       <div className="content-main-aux-carrito">
         {cartItems.length === 0 ? (
           <p className="content-main-carrito__empty">
-            {isRefreshingCart ? 'Cargando carrito…' : 'El carrito está vacío.'}
+            El carrito está vacío.
           </p>
         ) : (
           <>

@@ -7,7 +7,7 @@
 
 .accordion__icon {
   align-items: center;
-  background: #f0f0f0;
+  background: var(--color-gris-claro);
   border-radius: 6px;
   display: inline-flex;
   flex-shrink: 0;
@@ -36,11 +36,11 @@
   align-items: center;
   background: transparent;
   border: none;
-  color: var(--color-text-primary);
+  color: var(--drawer-color, var(--color-text-primary));
   cursor: pointer;
   display: flex;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--drawer-fs, 13px);
+  font-weight: var(--drawer-fw, 600);
   gap: 8px;
   justify-content: space-between;
   padding: 10px 12px;

@@ -31,6 +31,7 @@ export function StorePage() {
   const { pendingOrders, historyOrders, openOrderDrawer } = useOrders()
   const {
     products,
+    searchProducts,
     filters,
     clearFilters,
     filterNuevos,
@@ -41,6 +42,9 @@ export function StorePage() {
     setWithStock,
     searchValue,
     setSearchValue,
+    setSearchProducts,
+    beginCatalogSearch,
+    endCatalogSearch,
   } = useCatalog()
   const {
     activeView,
@@ -64,9 +68,12 @@ export function StorePage() {
     filteredHistoryOrders,
     paymentMethods,
     cartProductIds,
+    submitProductSearch,
+    clearCommittedProductSearch,
   } = useStorePageFilters({
     activeView,
     products,
+    searchProducts,
     pendingOrders,
     historyOrders,
     cartItems,
@@ -78,6 +85,9 @@ export function StorePage() {
     historyPaymentFilter,
     drawerOpen,
     drawerType,
+    setSearchProducts,
+    beginCatalogSearch,
+    endCatalogSearch,
   })
 
   useEffect(() => {
@@ -106,8 +116,9 @@ export function StorePage() {
 
   useEffect(() => {
     setSearchValue('')
+    clearCommittedProductSearch()
     setHistoryPaymentFilter('')
-  }, [activeView, setSearchValue])
+  }, [activeView, setSearchValue, clearCommittedProductSearch])
 
   const handleOpenOrder = useCallback((orderId) => {
     openOrderDrawer(orderId)
@@ -143,12 +154,21 @@ export function StorePage() {
     })
   }, [setFilterPromociones])
 
+  const handleSearchSubmit = useCallback(() => {
+    if (!isStoreView) {
+      return
+    }
+    submitProductSearch()
+  }, [isStoreView, submitProductSearch])
+
   const handleClearSearch = () => {
     if (!isStoreView) {
       setSearchValue('')
       return
     }
 
+    setSearchValue('')
+    clearCommittedProductSearch()
     clearFilters()
     if (hasActiveFilters) {
       showToast('Filtros limpiados', 'success')
@@ -252,6 +272,7 @@ export function StorePage() {
         <Header
           searchValue={searchValue}
           onSearchChange={setSearchValue}
+          onSearchSubmit={handleSearchSubmit}
           searchPlaceholder={headerSearch.placeholder}
           searchAriaLabel={headerSearch.ariaLabel}
           onClearSearch={handleClearSearch}

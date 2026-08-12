@@ -36,7 +36,7 @@
 
 .carrito-card__image-slot {
   align-self: center;
-  background: linear-gradient(135deg, #f7f7f7 0%, #efefef 100%);
+  background: var(--color-gris-claro);
   border-radius: 8px;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -62,7 +62,7 @@
 
 .carrito-card__category,
 .carrito-card__description {
-  color: #1a1a1a;
+  color: var(--color-gris-oscuro);
   font-size: 13px;
   font-weight: 700;
   margin: 0;
@@ -77,7 +77,7 @@
 }
 
 .carrito-card__title-sep {
-  color: #1a1a1a;
+  color: var(--color-gris-oscuro);
   flex: 0 0 auto;
   font-size: 13px;
   font-weight: 700;
@@ -222,7 +222,7 @@
 }
 
 .carrito-search__clear:not(:disabled):hover {
-  background: #f0f0f0;
+  background: var(--color-gris-claro);
   color: var(--color-text-primary);
 }
 
@@ -258,10 +258,10 @@
 }
 
 .checkout-panel__back-btn {
-  background: #ffffff;
+  background: var(--color-gris-oscuro);
   border-radius: 10px;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  border: none;
+  color: #ffffff;
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
@@ -276,7 +276,7 @@
 }
 
 .checkout-panel__step {
-  background: #f0f0f0;
+  background: var(--color-gris-claro);
   border-radius: 8px;
   color: var(--color-text-secondary);
   flex: 1;
@@ -288,7 +288,7 @@
 
 .checkout-panel__step--active {
   background: #ffc46f;
-  color: #1a1a1a;
+  color: var(--color-gris-oscuro);
 }
 
 .checkout-panel__step--done {
@@ -313,7 +313,7 @@
 }
 
 .content-main-carrito {
-  color: #353535;
+  color: var(--color-gris-oscuro);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -349,13 +349,14 @@
 }
 
 .content-main-data-carrito__checkout {
-  background: linear-gradient(135deg, #111 0%, #333 100%);
+  background: var(--color-gris-oscuro);
   border-radius: 10px;
   border: none;
-  color: white;
+  color: #ffffff;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-family);
+  font-size: var(--drawer-fs, 13px);
+  font-weight: var(--drawer-fw, 600);
   padding: 10px 16px;
   white-space: nowrap;
 }

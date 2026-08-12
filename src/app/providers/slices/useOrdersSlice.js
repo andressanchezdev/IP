@@ -1,0 +1,133 @@
+import { useCallback, useMemo, useState } from 'react'
+import { enrichOrder } from '@/features/orders/utils/enrichOrder'
+
+export function useOrdersSlice({
+  initialPendingOrders,
+  initialHistoryOrders,
+  setDrawerOpen,
+  setDrawerType,
+  setActiveView,
+}) {
+  const [pendingOrders, setPendingOrders] = useState(() => initialPendingOrders)
+  const [historyOrders, setHistoryOrders] = useState(() => initialHistoryOrders)
+  const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const [orderSubView, setOrderSubView] = useState(null)
+
+  const resetOrderDrawer = useCallback(() => {
+    setSelectedOrderId(null)
+    setOrderSubView(null)
+  }, [])
+
+  const openOrderDrawer = useCallback((orderId) => {
+    setSelectedOrderId(orderId)
+    setDrawerType('order')
+    setDrawerOpen(true)
+  }, [setDrawerOpen, setDrawerType])
+
+  const selectedOrder = useMemo(() => {
+    if (!selectedOrderId) {
+      return null
+    }
+
+    const order = pendingOrders.find((entry) => entry.id === selectedOrderId)
+      ?? historyOrders.find((entry) => entry.id === selectedOrderId)
+
+    return enrichOrder(order)
+  }, [selectedOrderId, pendingOrders, historyOrders])
+
+  const formalizeOrderPayment = useCallback((orderId, { type, ...details }) => {
+    const methodLabels = {
+      efectivo: 'Efectivo',
+      transferencia: 'Transferencia',
+      credito: 'Crédito',
+    }
+
+    const order = pendingOrders.find((entry) => entry.id === orderId)
+    if (!order) {
+      return { success: false, reason: 'not-found' }
+    }
+
+    const payment = order.payment ?? {}
+    const paymentAmount = Number(type === 'efectivo' ? details.amountReceived : details.amount)
+    const paidAmount = Number(payment.paidAmount ?? 0)
+    const total = Number(order.total ?? payment.amount ?? 0)
+    const remainingAmount = Math.max(0, total - paidAmount)
+
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return { success: false, reason: 'invalid-amount' }
+    }
+
+    if (paymentAmount > remainingAmount) {
+      return { success: false, reason: 'exceeds-balance', remainingAmount }
+    }
+
+    const now = new Date().toISOString()
+    const nextPaidAmount = paidAmount + paymentAmount
+    const isFullyPaid = nextPaidAmount >= total
+    const payments = [
+      ...(payment.payments ?? []),
+      { amount: paymentAmount, type, details, createdAt: now },
+    ]
+    const updatedOrder = {
+      ...order,
+      paymentMethod: methodLabels[type] ?? order.paymentMethod,
+      processStatus: isFullyPaid ? 'completado' : (order.processStatus ?? 'en proceso...'),
+      payment: {
+        ...payment,
+        type,
+        method: methodLabels[type] ?? payment.method,
+        paidAmount: nextPaidAmount,
+        payments,
+        paymentsMade: payments.length,
+        details,
+        lastPaymentAt: now,
+      },
+    }
+
+    if (isFullyPaid) {
+      setPendingOrders((currentOrders) => currentOrders.filter((entry) => entry.id !== orderId))
+      setHistoryOrders((currentOrders) => [
+        updatedOrder,
+        ...currentOrders.filter((entry) => entry.id !== orderId),
+      ])
+      setDrawerOpen(false)
+      setActiveView('historial')
+      resetOrderDrawer()
+    } else {
+      setPendingOrders((currentOrders) =>
+        currentOrders.map((entry) => (entry.id === orderId ? updatedOrder : entry)),
+      )
+      setOrderSubView(null)
+    }
+
+    return { success: true, isFullyPaid }
+  }, [pendingOrders, resetOrderDrawer, setActiveView, setDrawerOpen])
+
+  const value = useMemo(() => ({
+    pendingOrders,
+    historyOrders,
+    selectedOrderId,
+    selectedOrder,
+    orderSubView,
+    setOrderSubView,
+    openOrderDrawer,
+    formalizeOrderPayment,
+  }), [
+    pendingOrders,
+    historyOrders,
+    selectedOrderId,
+    selectedOrder,
+    orderSubView,
+    openOrderDrawer,
+    formalizeOrderPayment,
+  ])
+
+  return {
+    pendingOrders,
+    setPendingOrders,
+    historyOrders,
+    setHistoryOrders,
+    resetOrderDrawer,
+    value,
+  }
+}

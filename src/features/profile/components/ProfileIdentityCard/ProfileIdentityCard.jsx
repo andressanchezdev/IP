@@ -16,22 +16,15 @@ export function ProfileIdentityCard({ personal, avatar }) {
     ...defaultProfileSettings.personal,
     ...(personal || {}),
   }
-  const statusInitial = String(data.role || '').trim().charAt(0).toUpperCase()
   const identityId = data.userId || data.documentId
+  const backgroundImage = `url(${avatar || profileAvatar})`
 
   return (
     <div
       className="content-perfil-perfil"
-      data-perfil={statusInitial || undefined}
       aria-label="Datos del cliente"
+      style={{ backgroundImage }}
     >
-      <img
-        src={avatar || profileAvatar}
-        alt=""
-        className="content-perfil-perfil__avatar"
-        aria-hidden="true"
-      />
-
       <div className="content-perfil-perfil__fields">
         <div className="content-perfil-perfil__field" data-field="identidad">
           <div className="content-perfil-perfil__row">

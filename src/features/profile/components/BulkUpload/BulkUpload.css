@@ -1,0 +1,407 @@
+.bulk-upload {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 8px 18px 0;
+  width: 100%;
+}
+
+.bulk-upload__hint {
+  color: var(--color-gris);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.bulk-upload__hint strong {
+  color: var(--color-gris);
+  font-weight: 600;
+}
+
+.bulk-upload__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bulk-upload__btn {
+  background: var(--color-gris-oscuro);
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 14px;
+  text-align: center;
+  transition: opacity 0.15s ease;
+}
+
+.bulk-upload__btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.bulk-upload__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bulk-upload__btn--loading {
+  opacity: 0.85;
+}
+
+.bulk-upload__btn--progress {
+  background: var(--color-gris-claro);
+  color: var(--color-gris-oscuro);
+  overflow: hidden;
+  position: relative;
+}
+
+.bulk-upload__btn-progress-fill {
+  background: var(--color-gris-oscuro);
+  inset: 0 auto 0 0;
+  position: absolute;
+  transition: width 0.25s ease;
+}
+
+.bulk-upload__btn--progress .bulk-upload__btn-content {
+  color: #ffffff;
+  mix-blend-mode: difference;
+  position: relative;
+}
+
+.bulk-upload__btn-content {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.bulk-upload__download-icon {
+  display: block;
+  filter: brightness(0) invert(1);
+  flex-shrink: 0;
+  height: 16px;
+  width: 16px;
+}
+
+.bulk-upload__spinner {
+  animation: bulk-upload-spin 0.8s linear infinite;
+  border: 2px solid var(--color-gris-casi-invisible);
+  border-radius: 50%;
+  border-top-color: var(--color-gris-oscuro);
+  display: inline-block;
+  flex-shrink: 0;
+  height: 14px;
+  width: 14px;
+}
+
+.bulk-upload__spinner--light {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+}
+
+@keyframes bulk-upload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bulk-upload__process-loading {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.bulk-upload__process-loading .bulk-upload__sheet-status {
+  margin: 0;
+}
+
+.bulk-upload__process-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.bulk-upload__process-item {
+  align-items: center;
+  border-bottom: 1px solid var(--color-gris-casi-invisible);
+  display: flex;
+  gap: 8px;
+  padding: 7px 12px;
+}
+
+.bulk-upload__process-item:last-child {
+  border-bottom: none;
+}
+
+.bulk-upload__ok {
+  color: #2e7d32;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.bulk-upload__process-code {
+  color: var(--color-gris);
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bulk-upload__process-message {
+  color: var(--color-gris);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.bulk-upload__comparison {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bulk-upload__comparison-list {
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.bulk-upload__comparison-item {
+  align-items: center;
+  border-bottom: 1px solid var(--color-gris-casi-invisible);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 7px 12px;
+}
+
+.bulk-upload__comparison-item:last-child {
+  border-bottom: none;
+}
+
+.bulk-upload__comparison-code {
+  color: var(--color-gris-oscuro);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-upload__comparison-qty {
+  color: var(--color-gris);
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.bulk-upload__status {
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.bulk-upload__status--ok {
+  background: var(--color-gris-claro);
+  color: var(--color-gris-oscuro);
+}
+
+.bulk-upload__status--short {
+  background: #fff8e1;
+  color: #8a6d1a;
+}
+
+.bulk-upload__status--out {
+  background: var(--color-agotado-bg);
+  color: var(--color-agotado-text);
+}
+
+.bulk-upload__comparison-summary {
+  border-top: 1px solid var(--color-gris-casi-invisible);
+  color: var(--color-gris);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.bulk-upload__comparison-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.bulk-upload__decision {
+  color: var(--color-gris-oscuro);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+  padding: 0 12px 12px;
+}
+
+.bulk-upload__omissions {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  color: var(--color-gris-oscuro);
+  padding: 12px 14px;
+}
+
+.bulk-upload__omissions-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.bulk-upload__omissions-list {
+  margin: 0;
+  max-height: 140px;
+  overflow: auto;
+  padding-left: 18px;
+}
+
+.bulk-upload__omissions-list li {
+  color: var(--color-gris);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.bulk-upload__omissions-list li:last-child {
+  margin-bottom: 0;
+}
+
+.bulk-upload__file-input {
+  display: none;
+}
+
+.bulk-upload__table-wrap {
+  background: transparent;
+  border: none;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+}
+
+.bulk-upload__table-wrap--fill {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bulk-upload__table-wrap--fill .bulk-upload__excel-window {
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bulk-upload__table-wrap--fill .bulk-upload__excel-body {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+}
+
+.bulk-upload__table-wrap--fill .bulk-upload__process-list {
+  flex: 1;
+}
+
+.bulk-upload__excel-window {
+  background: #ffffff;
+  border: 1px solid var(--color-gris-casi-invisible);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.bulk-upload__excel-titlebar {
+  background: var(--color-gris-oscuro);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+.bulk-upload__excel-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-upload__excel-toolbar {
+  background: var(--color-gris-claro);
+  border-bottom: 1px solid var(--color-gris-casi-invisible);
+  color: var(--color-gris-oscuro);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+.bulk-upload__excel-body {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.bulk-upload__sheet-status {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin: 12px;
+}
+
+.bulk-upload__sheet {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+}
+
+.bulk-upload__sheet-row {
+  display: grid;
+  grid-template-columns: repeat(var(--excel-cols, 2), minmax(100px, 1fr));
+  width: 100%;
+}
+
+.bulk-upload__sheet-row--head .bulk-upload__sheet-cell {
+  background: var(--color-gris-claro);
+  color: var(--color-gris-oscuro);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.bulk-upload__sheet-cell {
+  border-bottom: 1px solid var(--color-gris-casi-invisible);
+  border-right: 1px solid var(--color-gris-casi-invisible);
+  color: var(--color-gris-oscuro);
+  font-size: 13px;
+  line-height: 1.3;
+  overflow: hidden;
+  padding: 7px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-upload__sheet-row:last-child .bulk-upload__sheet-cell {
+  border-bottom: none;
+}

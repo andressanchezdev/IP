@@ -1,5 +1,5 @@
 export { ProductCard } from './components/ProductCard/ProductCard'
 export { FilterDrawerContent } from './components/FilterDrawer/FilterDrawerContent'
-export { getGeneral, getInventoryProducts, PRODUCTS_PAGE_SIZE } from './api/generalApi'
+export { getGeneral, searchInventoryProducts, PRODUCTS_PAGE_SIZE } from './api/generalApi'
 export { useStockWebSocket } from './ws/useStockWebSocket'
 export { applyStockFromWsMessage } from './ws/stockHandlers'

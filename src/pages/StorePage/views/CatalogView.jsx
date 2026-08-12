@@ -11,12 +11,22 @@ function getLandingScrollRoot(node) {
 }
 
 export function CatalogView({ products, cartProductIds, onOrder }) {
-  const { hasMoreProducts, isLoadingProducts, loadMoreProducts } = useCatalog()
+  const {
+    hasMoreProducts,
+    isLoadingProducts,
+    loadMoreProducts,
+    isCatalogSearchActive,
+    isCatalogFilterActive,
+  } = useCatalog()
   const sentinelRef = useRef(null)
   const requestLockRef = useRef(false)
 
+  // Search or applied filters: no scroll pagination (avoids request storms on short lists).
+  const canPaginateOnScroll =
+    hasMoreProducts && !isCatalogSearchActive && !isCatalogFilterActive
+
   useEffect(() => {
-    if (!hasMoreProducts) {
+    if (!canPaginateOnScroll) {
       return undefined
     }
 
@@ -48,9 +58,9 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasMoreProducts, isLoadingProducts, loadMoreProducts, products.length])
+  }, [canPaginateOnScroll, isLoadingProducts, loadMoreProducts, products.length])
 
-  if (products.length === 0 && isLoadingProducts) {
+  if (products.length === 0 && isLoadingProducts && !isCatalogSearchActive) {
     return (
       <section className="landing__panel">
         <div className="landing__empty-state">Cargando productos…</div>
@@ -79,7 +89,16 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
         ))}
       </div>
 
-      {hasMoreProducts ? (
+      {isCatalogSearchActive ? (
+        <p className="catalog-scroll-sentinel__done">
+          {products.length} resultado{products.length === 1 ? '' : 's'} de búsqueda
+        </p>
+      ) : isCatalogFilterActive ? (
+        <p className="catalog-scroll-sentinel__done">
+          Mostrando {products.length} producto{products.length === 1 ? '' : 's'} filtrado
+          {products.length === 1 ? '' : 's'}
+        </p>
+      ) : canPaginateOnScroll ? (
         <div className="catalog-scroll-sentinel" ref={sentinelRef} aria-hidden="true">
           {isLoadingProducts ? (
             <span className="catalog-scroll-sentinel__label">Cargando más productos…</span>

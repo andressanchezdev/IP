@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
 import { useCatalog } from '@/app/providers'
-import './FilterDrawer.css'
+import { uniqueSorted } from '@/shared/lib/uniqueSorted'
+import {
+  DrawerFooterBar,
+  DrawerPanel,
+  DrawerSectionList,
+  DrawerShell,
+} from '@/shared/ui/DrawerShell/DrawerShell'
 
 function MultiFilterField({ label, options, selected, emptyLabel, onAdd, onRemove }) {
   const availableOptions = options.filter((option) => !selected.includes(option))
@@ -47,125 +53,133 @@ function MultiFilterField({ label, options, selected, emptyLabel, onAdd, onRemov
   )
 }
 
+/**
+ * Opciones de filtro desde el JSON de productos.
+ * Edita solo el draft; el filtro combinado se aplica con "Aplicar filtro".
+ */
 export function FilterDrawerContent() {
   const {
     products,
-    filters,
-    setFilters,
-    filterNuevos,
-    setFilterNuevos,
-    filterPromociones,
-    setFilterPromociones,
-    withStock,
-    setWithStock,
+    searchProducts,
+    draftFilters,
+    setDraftFilters,
+    draftFilterNuevos,
+    setDraftFilterNuevos,
+    draftFilterPromociones,
+    setDraftFilterPromociones,
+    draftWithStock,
+    setDraftWithStock,
+    applyCatalogFiltersAndClose,
   } = useCatalog()
 
+  const sourceProducts = searchProducts != null ? searchProducts : products
+
   const filterBrands = useMemo(
-    () => [...new Set(products.map((product) => product.brand))],
-    [products],
+    () => uniqueSorted(sourceProducts.map((product) => product.brand)),
+    [sourceProducts],
   )
   const filterCategories = useMemo(
-    () => [...new Set(products.map((product) => product.category))],
-    [products],
+    () => uniqueSorted(sourceProducts.map((product) => product.category)),
+    [sourceProducts],
   )
   const filterModels = useMemo(
-    () => [...new Set(products.map((product) => product.model))],
-    [products],
+    () => uniqueSorted(sourceProducts.map((product) => product.model)),
+    [sourceProducts],
   )
 
   const activeFilterCount =
-    filters.brands.length +
-    filters.categories.length +
-    filters.models.length +
-    (filterNuevos ? 1 : 0) +
-    (filterPromociones ? 1 : 0) +
-    (withStock ? 1 : 0)
+    draftFilters.brands.length +
+    draftFilters.categories.length +
+    draftFilters.models.length +
+    (draftFilterNuevos ? 1 : 0) +
+    (draftFilterPromociones ? 1 : 0) +
+    (draftWithStock ? 1 : 0)
 
   const addFilterValue = (key, value) => {
-    setFilters((current) => {
-      if (current[key].includes(value)) {
+    setDraftFilters((current) => {
+      const list = current[key] || []
+      if (list.includes(value)) {
         return current
       }
-      return { ...current, [key]: [...current[key], value] }
+      return { ...current, [key]: [...list, value] }
     })
   }
 
   const removeFilterValue = (key, value) => {
-    setFilters((current) => ({
+    setDraftFilters((current) => ({
       ...current,
-      [key]: current[key].filter((entry) => entry !== value),
+      [key]: (current[key] || []).filter((entry) => entry !== value),
     }))
   }
 
   return (
-    <div className="content-main-carrito">
-      <div className="content-main-aux-carrito">
-        <div className="filter-drawer-panel">
-          <MultiFilterField
-            label="Marca"
-            emptyLabel="Seleccionar marca"
-            options={filterBrands}
-            selected={filters.brands}
-            onAdd={(value) => addFilterValue('brands', value)}
-            onRemove={(value) => removeFilterValue('brands', value)}
-          />
+    <DrawerShell
+      footer={(
+        <DrawerFooterBar
+          label="Filtros activos"
+          value={activeFilterCount}
+          actionLabel="Aplicar filtro"
+          onAction={applyCatalogFiltersAndClose}
+        />
+      )}
+    >
+      <DrawerPanel>
+        <MultiFilterField
+          label="Marca"
+          emptyLabel="Seleccionar marca"
+          options={filterBrands}
+          selected={draftFilters.brands}
+          onAdd={(value) => addFilterValue('brands', value)}
+          onRemove={(value) => removeFilterValue('brands', value)}
+        />
 
-          <MultiFilterField
-            label="Categoría"
-            emptyLabel="Seleccionar categoría"
-            options={filterCategories}
-            selected={filters.categories}
-            onAdd={(value) => addFilterValue('categories', value)}
-            onRemove={(value) => removeFilterValue('categories', value)}
-          />
+        <MultiFilterField
+          label="Categoría"
+          emptyLabel="Seleccionar categoría"
+          options={filterCategories}
+          selected={draftFilters.categories}
+          onAdd={(value) => addFilterValue('categories', value)}
+          onRemove={(value) => removeFilterValue('categories', value)}
+        />
 
-          <MultiFilterField
-            label="Modelo"
-            emptyLabel="Seleccionar modelo"
-            options={filterModels}
-            selected={filters.models}
-            onAdd={(value) => addFilterValue('models', value)}
-            onRemove={(value) => removeFilterValue('models', value)}
-          />
-        </div>
+        <MultiFilterField
+          label="Modelo"
+          emptyLabel="Seleccionar modelo"
+          options={filterModels}
+          selected={draftFilters.models}
+          onAdd={(value) => addFilterValue('models', value)}
+          onRemove={(value) => removeFilterValue('models', value)}
+        />
+      </DrawerPanel>
 
-        <div className="filter-drawer-panel filter-drawer-panel--quick">
-          <span className="filter-drawer-quick-title">Opciones rápidas</span>
-          <div className="filter-drawer-quick-list">
-            <label className="filter-drawer-check">
-              <input
-                type="checkbox"
-                checked={filterPromociones}
-                onChange={(event) => setFilterPromociones(event.target.checked)}
-              />
-              <span>Promociones</span>
-            </label>
-            <label className="filter-drawer-check">
-              <input
-                type="checkbox"
-                checked={filterNuevos}
-                onChange={(event) => setFilterNuevos(event.target.checked)}
-              />
-              <span>Nuevos</span>
-            </label>
-            <label className="filter-drawer-check">
-              <input
-                type="checkbox"
-                checked={withStock}
-                onChange={(event) => setWithStock(event.target.checked)}
-              />
-              <span>Con cantidad</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="content-main-data-carrito">
-        <div className="content-main-data-carrito__total">
-          <span>Filtros activos</span>
-          <strong>{activeFilterCount}</strong>
-        </div>
-      </div>
-    </div>
+      <DrawerPanel title="Opciones rápidas" variant="quick">
+        <DrawerSectionList>
+          <label className="filter-drawer-check">
+            <span>Promociones</span>
+            <input
+              type="checkbox"
+              checked={draftFilterPromociones}
+              onChange={(event) => setDraftFilterPromociones(event.target.checked)}
+            />
+          </label>
+          <label className="filter-drawer-check">
+            <span>Nuevos</span>
+            <input
+              type="checkbox"
+              checked={draftFilterNuevos}
+              onChange={(event) => setDraftFilterNuevos(event.target.checked)}
+            />
+          </label>
+          <label className="filter-drawer-check">
+            <span>Con cantidad</span>
+            <input
+              type="checkbox"
+              checked={draftWithStock}
+              onChange={(event) => setDraftWithStock(event.target.checked)}
+            />
+          </label>
+        </DrawerSectionList>
+      </DrawerPanel>
+    </DrawerShell>
   )
 }

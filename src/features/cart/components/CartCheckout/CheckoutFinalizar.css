@@ -63,7 +63,7 @@
 }
 
 .checkout-finalize__edit:hover {
-  background: #f0f0f0;
+  background: var(--color-gris-claro);
   color: var(--color-text-primary);
 }
 
@@ -79,7 +79,7 @@
 
 .checkout-finalize__option {
   align-items: flex-start;
-  background: #f7f7f7;
+  background: var(--color-gris-claro);
   border-radius: 10px;
   cursor: pointer;
   display: flex;
@@ -106,7 +106,7 @@
 
 .checkout-finalize__map-slot {
   align-items: center;
-  background: linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%);
+  background: linear-gradient(135deg, var(--color-gris-claro) 0%, var(--color-gris-casi-invisible) 100%);
   border: 1px dashed var(--color-border);
   border-radius: 10px;
   color: var(--color-text-secondary);

@@ -85,7 +85,7 @@
 }
 
 .landing__table th {
-  background: #f8f8f8;
+  background: var(--color-gris-claro);
 }
 
 .landing__table th,

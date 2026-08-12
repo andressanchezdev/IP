@@ -12,6 +12,20 @@ import { OrderPaymentsDrawerContent } from '@/features/orders/components/OrderPa
 import { FilterDrawerContent } from '@/features/catalog/components/FilterDrawer/FilterDrawerContent'
 import { ProfileDrawerContent } from '@/features/profile/components/ProfileDrawer/ProfileDrawerContent'
 import { ProfileSettingsDrawerContent } from '@/features/profile/components/ProfileSettings/ProfileSettingsDrawerContent'
+import {
+  BulkUploadFileContent,
+} from '@/features/profile/components/BulkUpload/BulkUploadViews'
+import {
+  ProfileCatalogPickerContent,
+  ProfileDownloadMethodContent,
+} from '@/features/profile/components/ProfilePriceList/ProfilePriceListViews'
+
+const PRICE_LIST_TITLES = {
+  download: 'Método de descarga',
+  brand: 'Marca a escoger',
+  category: 'Categoría a escoger',
+  model: 'Modelo a escoger',
+}
 
 export function AppDrawer() {
   const { clearFilters } = useCatalog()
@@ -29,7 +43,7 @@ export function AppDrawer() {
   } = useUi()
   const { showToast } = useToast()
   const [cartMenuOpen, setCartMenuOpen] = useState(false)
-  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
+  const [profileSubView, setProfileSubView] = useState(null)
   const [orderOpenSections, setOrderOpenSections] = useState([])
   const [orderPackagingProductsOpen, setOrderPackagingProductsOpen] = useState(false)
 
@@ -59,7 +73,7 @@ export function AppDrawer() {
 
   useEffect(() => {
     if (!drawerOpen || drawerType !== 'profile') {
-      setProfileSettingsOpen(false)
+      setProfileSubView(null)
     }
   }, [drawerOpen, drawerType])
 
@@ -72,8 +86,12 @@ export function AppDrawer() {
       setCartCheckoutStep(0)
       return
     }
-    if (drawerType === 'profile' && profileSettingsOpen) {
-      setProfileSettingsOpen(false)
+    if (drawerType === 'profile' && profileSubView === 'bulk-upload') {
+      setProfileSubView(null)
+      return
+    }
+    if (drawerType === 'profile' && profileSubView) {
+      setProfileSubView(null)
       return
     }
     if (drawerType === 'order' && !orderSubView && orderOpenSections.length > 0) {
@@ -102,10 +120,62 @@ export function AppDrawer() {
       return <FilterDrawerContent />
     }
     if (drawerType === 'profile') {
-      if (profileSettingsOpen) {
+      if (profileSubView === 'settings') {
         return <ProfileSettingsDrawerContent />
       }
-      return <ProfileDrawerContent />
+      if (profileSubView === 'bulk-upload') {
+        return <BulkUploadFileContent onCancelOrder={() => setProfileSubView(null)} />
+      }
+      if (profileSubView === 'price-download') {
+        return (
+          <ProfileDownloadMethodContent
+            onSelect={() => setProfileSubView(null)}
+          />
+        )
+      }
+      if (profileSubView === 'price-brand') {
+        return (
+          <ProfileCatalogPickerContent
+            field="brand"
+            title="Marca"
+            onSelect={() => setProfileSubView(null)}
+          />
+        )
+      }
+      if (profileSubView === 'price-category') {
+        return (
+          <ProfileCatalogPickerContent
+            field="category"
+            title="Categoría"
+            onSelect={() => setProfileSubView(null)}
+          />
+        )
+      }
+      if (profileSubView === 'price-model') {
+        return (
+          <ProfileCatalogPickerContent
+            field="model"
+            title="Modelo"
+            onSelect={() => setProfileSubView(null)}
+          />
+        )
+      }
+      return (
+        <ProfileDrawerContent
+          onOpenBulkUpload={() => setProfileSubView('bulk-upload')}
+          onOpenPriceListView={(actionId) => {
+            const next = {
+              download: 'price-download',
+              brand: 'price-brand',
+              category: 'price-category',
+              model: 'price-model',
+            }[actionId]
+            if (next) {
+              setProfileSubView(next)
+            }
+          }}
+        />
+      )
     }
     if (drawerType === 'order') {
       if (orderSubView === 'payments') {
@@ -143,7 +213,13 @@ export function AppDrawer() {
       return undefined
     }
     if (drawerType === 'profile') {
-      return profileSettingsOpen ? 'Configuración' : undefined
+      if (profileSubView === 'settings') return 'Configuración'
+      if (profileSubView === 'bulk-upload') return 'Subir nuevo archivo'
+      if (profileSubView === 'price-download') return PRICE_LIST_TITLES.download
+      if (profileSubView === 'price-brand') return PRICE_LIST_TITLES.brand
+      if (profileSubView === 'price-category') return PRICE_LIST_TITLES.category
+      if (profileSubView === 'price-model') return PRICE_LIST_TITLES.model
+      return undefined
     }
     if (drawerType === 'order') {
       if (orderSubView === 'payments') {
@@ -161,8 +237,8 @@ export function AppDrawer() {
     if (drawerType === 'cart' && cartCheckoutStep > 0) {
       return 'Volver al carrito'
     }
-    if (drawerType === 'profile' && profileSettingsOpen) {
-      return 'Volver al perfil'
+    if (drawerType === 'profile' && profileSubView) {
+      return 'Volver'
     }
     if (drawerType === 'order' && orderSubView) {
       return 'Volver al pedido'
@@ -186,13 +262,13 @@ export function AppDrawer() {
       )
     }
 
-    if (drawerType === 'profile' && !profileSettingsOpen) {
+    if (drawerType === 'profile' && !profileSubView) {
       return (
         <div className="drawer__actions">
           <button
             type="button"
             className="drawer__settings"
-            onClick={() => setProfileSettingsOpen(true)}
+            onClick={() => setProfileSubView('settings')}
             aria-label="Configuración del perfil"
           >
             <img src={settingsIcon} alt="" className="drawer__settings-icon" aria-hidden="true" />
@@ -209,6 +285,7 @@ export function AppDrawer() {
             className="drawer__clear-filters"
             onClick={() => {
               clearFilters()
+              closeDrawer()
               showToast('Filtros limpiados', 'success')
             }}
             aria-label="Limpiar filtros"

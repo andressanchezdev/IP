@@ -1,0 +1,49 @@
+.profile-price-list__actions {
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.profile-price-list__actions .content-list-data__row--action {
+  align-items: center;
+  background: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  font: inherit;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.profile-price-list__actions .content-list-data__row--action .content-list-data__label,
+.profile-price-list__actions .content-list-data__row--action .content-list-data__value {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.profile-price-list__actions .content-list-data__row--action .content-list-data__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-price-list__actions .content-list-data__row--action:hover {
+  opacity: 0.75;
+}
+
+.profile-price-list__search {
+  margin-bottom: 4px;
+}
+
+.profile-price-list__empty {
+  margin: 0;
+  padding: 10px 4px;
+}

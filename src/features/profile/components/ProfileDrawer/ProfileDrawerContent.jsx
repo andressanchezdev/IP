@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { useProfile } from '@/app/providers'
 import { formatPrice } from '@/shared/lib/formatPrice'
-import { DrawerAccordionSection } from '@/shared/ui/Drawer/DrawerAccordionSection'
 import { ProfileIdentityCard } from '@/features/profile/components/ProfileIdentityCard/ProfileIdentityCard'
-import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
+import {
+  DrawerCheckRow,
+  DrawerPanel,
+  DrawerSectionBody,
+  DrawerSectionList,
+  DrawerShell,
+} from '@/shared/ui/DrawerShell/DrawerShell'
 import './ProfileDrawer.css'
+import '@/features/profile/components/ProfilePriceList/ProfilePriceList.css'
 
 const PROFILE_SECTIONS = [
   { id: 'price-list', label: 'Listado de precios' },
@@ -14,6 +20,14 @@ const PROFILE_SECTIONS = [
   { id: 'purchases', label: 'Compras' },
   { id: 'balance', label: 'Saldo a favor' },
   { id: 'addresses', label: 'Direcciones de entrega' },
+  { id: 'bulk-upload', label: 'Subida masiva' },
+]
+
+const PRICE_LIST_ACTIONS = [
+  { id: 'download', label: 'Método de descarga' },
+  { id: 'brand', label: 'Marca a escoger' },
+  { id: 'category', label: 'Categoría a escoger' },
+  { id: 'model', label: 'Modelo a escoger' },
 ]
 
 function ProfilePanelRow({ label, value, highlight = false }) {
@@ -27,31 +41,39 @@ function ProfilePanelRow({ label, value, highlight = false }) {
   )
 }
 
-export function ProfileDrawerContent() {
+export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) {
   const { profile, profileSettings } = useProfile()
-  const [openSections, setOpenSections] = useState([])
+  const [openSectionId, setOpenSectionId] = useState(null)
 
   const toggleSection = (sectionId) => {
-    setOpenSections((current) =>
-      current.includes(sectionId)
-        ? current.filter((id) => id !== sectionId)
-        : [...current, sectionId],
-    )
+    if (sectionId === 'bulk-upload') {
+      onOpenBulkUpload?.()
+      return
+    }
+
+    setOpenSectionId((current) => (current === sectionId ? null : sectionId))
   }
 
   const renderSectionContent = (sectionId) => {
     switch (sectionId) {
       case 'price-list':
-        if (!profile.priceList?.length) {
-          return <ProfilePanelRow label="Listas" value="Sin datos" />
-        }
-        return profile.priceList.map((entry) => (
-          <ProfilePanelRow
-            key={entry.label}
-            label={entry.label}
-            value={`${entry.items} productos`}
-          />
-        ))
+        return (
+          <div className="profile-price-list__actions">
+            {PRICE_LIST_ACTIONS.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                className="content-list-data__row content-list-data__row--action"
+                onClick={() => onOpenPriceListView?.(action.id)}
+              >
+                <span className="content-list-data__label">{action.label}</span>
+                <span className="content-list-data__value content-list-data__value--highlight" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            ))}
+          </div>
+        )
       case 'debts':
         return <ProfilePanelRow label="Total adeudado" value={formatPrice(profile.adeudos)} highlight />
       case 'credit':
@@ -78,25 +100,40 @@ export function ProfileDrawerContent() {
   }
 
   return (
-    <div className="order-drawer-shell profile-drawer-shell">
-      <ProfileIdentityCard
-        personal={profileSettings.personal}
-        avatar={profile.avatar}
-      />
+    <DrawerShell>
+      <DrawerPanel>
+        <ProfileIdentityCard
+          personal={profileSettings.personal}
+          avatar={profile.avatar}
+        />
+      </DrawerPanel>
 
-      <div className="order-accordion content-list-data profile-accordion">
-        {PROFILE_SECTIONS.map((section) => (
-          <DrawerAccordionSection
-            key={section.id}
-            id={section.id}
-            title={section.label}
-            isOpen={openSections.includes(section.id)}
-            onToggle={toggleSection}
-          >
-            {renderSectionContent(section.id)}
-          </DrawerAccordionSection>
-        ))}
-      </div>
-    </div>
+      <DrawerPanel title="Información de cuenta" variant="quick">
+        <DrawerSectionList>
+          {PROFILE_SECTIONS.map((section) => {
+            const isOpen = openSectionId === section.id
+            return (
+              <div key={section.id} className="profile-drawer-section">
+                <DrawerCheckRow
+                  active={isOpen}
+                  onClick={() => toggleSection(section.id)}
+                >
+                  <span>{section.label}</span>
+                  <span
+                    className={`filter-drawer-check__caret${isOpen && section.id !== 'bulk-upload' ? ' filter-drawer-check__caret--open' : ''}`}
+                    aria-hidden="true"
+                  />
+                </DrawerCheckRow>
+                {isOpen && section.id !== 'bulk-upload' ? (
+                  <DrawerSectionBody>
+                    {renderSectionContent(section.id)}
+                  </DrawerSectionBody>
+                ) : null}
+              </div>
+            )
+          })}
+        </DrawerSectionList>
+      </DrawerPanel>
+    </DrawerShell>
   )
 }

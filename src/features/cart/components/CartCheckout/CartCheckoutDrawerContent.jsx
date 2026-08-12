@@ -12,18 +12,6 @@ const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
 const MAP_ADDRESS_PLACEHOLDER = 'Ubicación seleccionada en mapa — Bogotá, Colombia'
 
-function buildClientDefaults(profileSettings) {
-  const { personal, company } = profileSettings
-  return {
-    fullName: personal.fullName ?? '',
-    documentId: personal.documentId ?? '',
-    phone: personal.mobile || personal.phone || '',
-    email: personal.email ?? '',
-    address: personal.address || company.address || '',
-    notes: '',
-  }
-}
-
 function SummaryRow({ label, value, highlight = false }) {
   return (
     <div className={`checkout-finalize__row ${highlight ? 'checkout-finalize__row--highlight' : ''}`}>
@@ -34,11 +22,10 @@ function SummaryRow({ label, value, highlight = false }) {
 }
 
 export function CartCheckoutDrawerContent() {
-  const { cartItems, createOrderFromCheckout } = useCart()
-  const { profileSettings, profile } = useProfile()
+  const { cartItems } = useCart()
+  const { profile } = useProfile()
   const { showToast } = useToast()
 
-  const [deliverySource, setDeliverySource] = useState(null)
   const [selectedAddressId, setSelectedAddressId] = useState('')
   const [newAddress, setNewAddress] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
@@ -73,16 +60,6 @@ export function CartCheckoutDrawerContent() {
   const hasDelivery = Boolean(deliveryAddress.trim())
   const showDeliverySection = !hasDelivery || editingDelivery
   const showPaymentSection = !paymentConfirmed || editingPayment
-  const canCreateOrder = hasDelivery && paymentConfirmed && cartItems.length > 0
-
-  const clientData = useMemo(() => {
-    const defaults = buildClientDefaults(profileSettings)
-    return {
-      ...defaults,
-      address: deliveryAddress || defaults.address,
-      notes: deliverySource === 'map' ? 'Entrega según ubicación en mapa' : defaults.notes,
-    }
-  }, [profileSettings, deliveryAddress, deliverySource])
 
   const confirmRegisteredAddress = () => {
     const selected = registeredAddresses.find((entry) => entry.id === selectedAddressId)
@@ -90,7 +67,6 @@ export function CartCheckoutDrawerContent() {
       showToast('Seleccione una dirección registrada', 'error')
       return
     }
-    setDeliverySource('registered')
     setDeliveryAddress(selected.address)
     setEditingDelivery(false)
     showToast('Dirección de entrega establecida', 'success')
@@ -104,14 +80,12 @@ export function CartCheckoutDrawerContent() {
     if (registeredAddresses.length >= MAX_ADDRESSES) {
       showToast('Máximo 3 direcciones por usuario', 'error')
     }
-    setDeliverySource('new')
     setDeliveryAddress(newAddress.trim())
     setEditingDelivery(false)
     showToast('Nueva dirección establecida', 'success')
   }
 
   const confirmMapAddress = () => {
-    setDeliverySource('map')
     setDeliveryAddress(MAP_ADDRESS_PLACEHOLDER)
     setEditingDelivery(false)
     showToast('Ubicación de mapa establecida', 'success')
@@ -166,25 +140,6 @@ export function CartCheckoutDrawerContent() {
     setPaymentPanel(null)
     setEditingPayment(false)
     showToast('Crédito seleccionado', 'success')
-  }
-
-  const handlePlaceOrder = () => {
-    if (!canCreateOrder) {
-      showToast('Complete entrega y método de pago', 'error')
-      return
-    }
-
-    createOrderFromCheckout({
-      clientData,
-      paymentType: paymentMethod === 'contraentrega' ? 'efectivo' : paymentMethod,
-      paymentDetails: {
-        ...paymentDetails,
-        deliverySource,
-        deliveryAddress,
-        checkoutFlow: 'finalizar',
-      },
-    })
-    showToast('Pedido realizado correctamente', 'success')
   }
 
   return (
@@ -401,21 +356,6 @@ export function CartCheckoutDrawerContent() {
             </div>
           </Accordion>
         )}
-      </div>
-
-      <div className="content-main-data-carrito">
-        <div className="content-main-data-carrito__total">
-          <span>Total a pagar</span>
-          <strong>{formatPrice(totalToPay)}</strong>
-        </div>
-        <button
-          type="button"
-          className="content-main-data-carrito__checkout"
-          onClick={handlePlaceOrder}
-          disabled={!canCreateOrder}
-        >
-          Crear pedido
-        </button>
       </div>
     </div>
   )

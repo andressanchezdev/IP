@@ -73,4 +73,60 @@ export async function getGeneral({
   }
 }
 
-export const getInventoryProducts = getGeneral
+/**
+ * GET /api/v1/inventory/products/search?search=<texto barra>
+ * Ejemplo: /api/v1/inventory/products/search?search=aceite
+ * Bearer token requerido.
+ */
+export async function searchInventoryProducts({
+  token,
+  search,
+  signal,
+} = {}) {
+  const searchText = String(search ?? '').trim()
+  if (!searchText) {
+    return {
+      productos: [],
+      meta: {},
+      raw: null,
+      search: '',
+    }
+  }
+
+  const qs = buildQuery({
+    search: searchText,
+  })
+  const path = `/api/v1/inventory/products/search${qs}`
+
+  try {
+    const payload = await apiRequest(path, {
+      method: 'GET',
+      token,
+      signal,
+    })
+
+    const productos = extractProducts(payload)
+    const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+
+    return {
+      productos,
+      meta,
+      raw: payload,
+      search: searchText,
+      path,
+    }
+  } catch (error) {
+    // Sin coincidencias: algunos backends responden 404 → lista vacía.
+    if (error?.name === 'ApiError' && error.status === 404) {
+      return {
+        productos: [],
+        meta: {},
+        raw: error.payload ?? null,
+        search: searchText,
+        path,
+        emptyBy404: true,
+      }
+    }
+    throw error
+  }
+}

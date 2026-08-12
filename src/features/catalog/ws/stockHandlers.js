@@ -1,7 +1,6 @@
 import {
   isOrderFlowWsTipo,
   isSpanishCartActionTipo,
-  isStockWsTipo,
   WS_MESSAGE_TYPES,
 } from '@/shared/ws/config'
 import { applyProductStockFromListado } from './applyProductStock'
@@ -89,11 +88,13 @@ export function applyStockFromWsMessage(message, {
     }
   }
 
+  if (import.meta.env.DEV) {
+    console.info('[ws] tipo parseado pero no aplicado a stock', tipo, message)
+  }
+
   return {
     tipo,
     action: 'ignorado',
     idBodega: message?.idBodega ?? null,
   }
 }
-
-export { isStockWsTipo, applyProductStockFromListado }

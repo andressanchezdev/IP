@@ -9,8 +9,17 @@ export function SearchBar({
   onClear,
   canClear,
   onFocus,
+  onSubmit,
 }) {
   const isClearEnabled = canClear ?? Boolean(value?.trim())
+
+  const handleKeyDown = (event) => {
+    if (event.key !== 'Enter') {
+      return
+    }
+    event.preventDefault()
+    onSubmit?.(value)
+  }
 
   return (
     <div className="search-bar">
@@ -21,8 +30,10 @@ export function SearchBar({
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         onFocus={(event) => onFocus?.(event)}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        enterKeyHint="search"
       />
       {onClear && (
         <button

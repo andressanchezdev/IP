@@ -7,11 +7,16 @@ import {
 } from '@/features/profile/data/profileDefaults'
 import { ProfileIdentityCard } from '@/features/profile/components/ProfileIdentityCard/ProfileIdentityCard'
 import { confirmAction } from '@/shared/lib/confirmAction'
-import { DrawerAccordionSection } from '@/shared/ui/Drawer/DrawerAccordionSection'
+import {
+  DrawerCheckRow,
+  DrawerPanel,
+  DrawerSectionBody,
+  DrawerSectionList,
+  DrawerShell,
+} from '@/shared/ui/DrawerShell/DrawerShell'
 import eyeIcon from '@/assets/icons/eye.svg'
 import eyeOffIcon from '@/assets/icons/eye-off.svg'
 import deleteAccountIcon from '@/assets/icons/delete-account.svg'
-import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
 import '@/features/profile/components/ProfileDrawer/ProfileDrawer.css'
 import './ProfileSettings.css'
 
@@ -31,7 +36,7 @@ function SettingsField({ id, label, type = 'text', value, onChange, disabled = f
   const inputType = isPassword && showPassword ? 'text' : type
 
   return (
-    <label className="profile-settings-field" htmlFor={id}>
+    <label className="filter-drawer-field" htmlFor={id}>
       <span>
         {label}
         {disabled && <span className="profile-settings-field__lock"> · No editable</span>}
@@ -80,7 +85,7 @@ export function ProfileSettingsDrawerContent() {
   } = useProfile()
   const { closeDrawer } = useUi()
   const { showToast } = useToast()
-  const [openSections, setOpenSections] = useState([])
+  const [openSectionId, setOpenSectionId] = useState(null)
   const [personalDraft, setPersonalDraft] = useState(() => ({
     ...defaultProfileSettings.personal,
     ...profileSettings.personal,
@@ -104,11 +109,7 @@ export function ProfileSettingsDrawerContent() {
   }, [profileSettings.access])
 
   const toggleSection = (sectionId) => {
-    setOpenSections((current) =>
-      current.includes(sectionId)
-        ? current.filter((id) => id !== sectionId)
-        : [...current, sectionId],
-    )
+    setOpenSectionId((current) => (current === sectionId ? null : sectionId))
   }
 
   const handleSavePersonal = async () => {
@@ -297,7 +298,7 @@ export function ProfileSettingsDrawerContent() {
               onChange={(value) => setPersonalDraft((current) => ({ ...current, warehouseId: value }))}
               disabled
             />
-            <button type="button" className="profile-settings-save" onClick={handleSavePersonal}>
+            <button type="button" className="content-main-data-carrito__checkout profile-settings-inline-action" onClick={handleSavePersonal}>
               Guardar datos
             </button>
           </div>
@@ -340,14 +341,14 @@ export function ProfileSettingsDrawerContent() {
               onChange={(value) => setCompanyDraft((current) => ({ ...current, address: value }))}
               disabled
             />
-            <button type="button" className="profile-settings-save" onClick={handleSaveCompany}>
+            <button type="button" className="content-main-data-carrito__checkout profile-settings-inline-action" onClick={handleSaveCompany}>
               Guardar datos
             </button>
           </div>
         )
       case 'notifications':
         return (
-          <label className="profile-settings-switch">
+          <label className="filter-drawer-check">
             <span>Activar notificaciones</span>
             <input
               type="checkbox"
@@ -360,7 +361,6 @@ export function ProfileSettingsDrawerContent() {
                 )
               }}
             />
-            <span className="profile-settings-switch__track" aria-hidden="true" />
           </label>
         )
       case 'cache':
@@ -386,33 +386,33 @@ export function ProfileSettingsDrawerContent() {
               value={accessDraft.password}
               onChange={(value) => setAccessDraft((current) => ({ ...current, password: value }))}
             />
-            <button type="button" className="profile-settings-save" onClick={handleSaveAccess}>
+            <button type="button" className="content-main-data-carrito__checkout profile-settings-inline-action" onClick={handleSaveAccess}>
               Guardar acceso
             </button>
           </div>
         )
       case 'terms':
         return (
-          <>
+          <DrawerSectionList>
             <a
               href={PROFILE_LEGAL_LINKS.terms}
               target="_blank"
               rel="noopener noreferrer"
-              className="profile-settings-link"
+              className="filter-drawer-check profile-settings-link-row"
             >
+              <span>Ver términos y condiciones</span>
               <img src={eyeIcon} alt="" className="profile-settings-link__icon" aria-hidden="true" />
-              Ver términos y condiciones
             </a>
             <a
               href={PROFILE_LEGAL_LINKS.privacy}
               target="_blank"
               rel="noopener noreferrer"
-              className="profile-settings-link"
+              className="filter-drawer-check profile-settings-link-row"
             >
+              <span>Ver políticas de privacidad</span>
               <img src={eyeIcon} alt="" className="profile-settings-link__icon" aria-hidden="true" />
-              Ver políticas de privacidad
             </a>
-          </>
+          </DrawerSectionList>
         )
       case 'delete':
         return (
@@ -427,25 +427,40 @@ export function ProfileSettingsDrawerContent() {
   }
 
   return (
-    <div className="order-drawer-shell profile-settings-shell">
-      <ProfileIdentityCard
-        personal={profileSettings.personal}
-        avatar={profile.avatar}
-      />
+    <DrawerShell>
+      <DrawerPanel>
+        <ProfileIdentityCard
+          personal={profileSettings.personal}
+          avatar={profile.avatar}
+        />
+      </DrawerPanel>
 
-      <div className="order-accordion content-list-data profile-settings-accordion">
-        {SETTINGS_SECTIONS.map((section) => (
-          <DrawerAccordionSection
-            key={section.id}
-            id={section.id}
-            title={section.label}
-            isOpen={openSections.includes(section.id)}
-            onToggle={toggleSection}
-          >
-            {renderSectionContent(section.id)}
-          </DrawerAccordionSection>
-        ))}
-      </div>
-    </div>
+      <DrawerPanel title="Ajustes" variant="quick">
+        <DrawerSectionList>
+          {SETTINGS_SECTIONS.map((section) => {
+            const isOpen = openSectionId === section.id
+            return (
+              <div key={section.id} className="profile-drawer-section">
+                <DrawerCheckRow
+                  active={isOpen}
+                  onClick={() => toggleSection(section.id)}
+                >
+                  <span>{section.label}</span>
+                  <span
+                    className={`filter-drawer-check__caret${isOpen ? ' filter-drawer-check__caret--open' : ''}`}
+                    aria-hidden="true"
+                  />
+                </DrawerCheckRow>
+                {isOpen ? (
+                  <DrawerSectionBody>
+                    {renderSectionContent(section.id)}
+                  </DrawerSectionBody>
+                ) : null}
+              </div>
+            )
+          })}
+        </DrawerSectionList>
+      </DrawerPanel>
+    </DrawerShell>
   )
 }

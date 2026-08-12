@@ -2,6 +2,8 @@ import { useCart, useUi } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { downloadOrderPdf } from '@/shared/lib/downloadOrderPdf'
+import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
+import deleteAccountIcon from '@/assets/icons/delete-account.svg'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 
 export function CartMenuDrawerContent() {
@@ -24,6 +26,12 @@ export function CartMenuDrawerContent() {
             }}
             disabled={cartItems.length === 0}
           >
+            <img
+              src={cloudDownloadIcon}
+              alt=""
+              className="drawer__menu-action-icon"
+              aria-hidden="true"
+            />
             Descargar PDF
           </button>
           <button
@@ -40,6 +48,12 @@ export function CartMenuDrawerContent() {
             }}
             disabled={cartItems.length === 0}
           >
+            <img
+              src={deleteAccountIcon}
+              alt=""
+              className="drawer__menu-action-icon"
+              aria-hidden="true"
+            />
             Limpiar carrito
           </button>
         </div>
