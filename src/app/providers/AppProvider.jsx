@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { clearExpiredStorage } from '@/shared/lib/storage'
 import { persistUserWorkspace } from '@/features/auth/utils/userWorkspace'
 import { toAuthUserSummary } from '@/features/auth/utils/mapLoginUserToProfile'
+import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import {
   AuthContext,
   CartContext,
@@ -10,6 +11,8 @@ import {
   ProfileContext,
   UiContext,
 } from './storeContexts'
+import { APP_EVENTS, createAppEvents } from './appEvents'
+import { loadInitialUserData } from './helpers'
 import { useAuthSlice } from './slices/useAuthSlice'
 import { useUiSlice } from './slices/useUiSlice'
 import { useOrdersSlice } from './slices/useOrdersSlice'
@@ -18,132 +21,139 @@ import { useCartSlice } from './slices/useCartSlice'
 import { useCatalogSlice } from './slices/useCatalogSlice'
 
 export function AppProvider({ children }) {
-  const crossRef = useRef({})
+  const [events] = useState(() => createAppEvents())
+  const [initialUserData] = useState(() => loadInitialUserData(null))
   const productsRef = useRef([])
   const cartHydratingRef = useRef(false)
-  const syncFilterDraftRef = useRef(() => {})
-  const resetOrderDrawerRef = useRef(() => {})
-  const setCartCheckoutStepRef = useRef(() => {})
-  const releaseHandlersRef = useRef({
-    onReleaseCache: () => {},
-    onDeleteAccount: () => {},
-  })
 
-  const syncFilterDraftFromApplied = useCallback((...args) => {
-    syncFilterDraftRef.current(...args)
-  }, [])
-  const resetOrderDrawer = useCallback((...args) => {
-    resetOrderDrawerRef.current(...args)
-  }, [])
-  const setCartCheckoutStep = useCallback((...args) => {
-    setCartCheckoutStepRef.current(...args)
-  }, [])
-  const onReleaseCache = useCallback(() => {
-    releaseHandlersRef.current.onReleaseCache()
-  }, [])
-  const onDeleteAccount = useCallback(() => {
-    releaseHandlersRef.current.onDeleteAccount()
-  }, [])
-
-  const auth = useAuthSlice({ crossRef, cartHydratingRef })
-  const { initialUserData } = auth
+  const auth = useAuthSlice({ events, cartHydratingRef })
 
   const ui = useUiSlice({
-    syncFilterDraftFromApplied,
-    resetOrderDrawer,
-    setCartCheckoutStep,
+    events,
     authUsername: auth.authSession?.username,
-    setPendingEsperaView: auth.setPendingEsperaView,
-    setAuthModalOpen: auth.setAuthModalOpen,
-    setAuthModalMode: auth.setAuthModalMode,
   })
 
   const orders = useOrdersSlice({
+    events,
     initialPendingOrders: initialUserData.pendingOrders,
     initialHistoryOrders: initialUserData.historyOrders,
-    setDrawerOpen: ui.setDrawerOpen,
-    setDrawerType: ui.setDrawerType,
-    setActiveView: ui.setActiveView,
   })
-  resetOrderDrawerRef.current = orders.resetOrderDrawer
 
   const profile = useProfileSlice({
-    currentUserId: auth.currentUserId,
+    events,
     initialProfileSettings: initialUserData.profileSettings,
-    onReleaseCache,
-    onDeleteAccount,
   })
 
   const cart = useCartSlice({
+    events,
     tokenAccess: auth.authSession?.tokenAccess,
     productsRef,
     authUsername: auth.authSession?.username,
-    openAuthForCart: auth.openAuthForCart,
-    setPendingCheckout: auth.setPendingCheckout,
-    setActiveView: ui.setActiveView,
-    setDrawerOpen: ui.setDrawerOpen,
-    setDrawerType: ui.setDrawerType,
-    resetOrderDrawer: orders.resetOrderDrawer,
-    setPendingOrders: orders.setPendingOrders,
     currentUserId: auth.currentUserId,
     initialCartItems: initialUserData.cartItems,
     cartHydratingRef,
   })
-  setCartCheckoutStepRef.current = cart.setCartCheckoutStep
 
   const catalog = useCatalogSlice({
+    events,
     tokenAccess: auth.authSession?.tokenAccess,
     userId: auth.authSession?.userId,
     applyCartFromApi: cart.applyCartFromApi,
     warehouseIdRef: profile.warehouseIdRef,
-    setDrawerOpen: ui.setDrawerOpen,
-    setCartCheckoutStep: cart.setCartCheckoutStep,
-    resetOrderDrawer: orders.resetOrderDrawer,
     cartHydratingRef,
   })
   productsRef.current = catalog.products
-  syncFilterDraftRef.current = catalog.syncFilterDraftFromApplied
 
-  releaseHandlersRef.current.onReleaseCache = () => {
-    catalog.resetCatalogForCacheClear()
-    cart.setCartItems([])
-    orders.setPendingOrders([])
-    orders.setHistoryOrders([])
+  // Único punto de acoplamiento entre dominios: cada slice emite eventos y
+  // aquí se decide cómo reaccionan los demás.
+  const wiringRef = useRef({})
+  wiringRef.current = {
+    [APP_EVENTS.AUTH_RESTORED]: ({ session }) => {
+      const data = loadInitialUserData(session)
+      profile.setProfileSettings(data.profileSettings)
+      orders.setPendingOrders(data.pendingOrders)
+      orders.setHistoryOrders(data.historyOrders)
+    },
+    [APP_EVENTS.AUTH_LOGIN]: ({ profile: nextProfile, workspace }) => {
+      profile.setProfileSettings(nextProfile)
+      orders.setPendingOrders(workspace.pendingOrders ?? [])
+      orders.setHistoryOrders(workspace.historyOrders ?? [])
+      // Cart se hidrata solo desde GET /api/v1/inventory/carts.
+      cart.setCartItems([])
+      catalog.resetCatalogProducts()
+    },
+    [APP_EVENTS.AUTH_LOGGED_OUT]: () => {
+      profile.setProfileSettings(defaultProfileSettings)
+      orders.setPendingOrders([])
+      orders.setHistoryOrders([])
+      orders.resetOrderDrawer()
+      cart.setCartItems([])
+      catalog.resetCatalogForCacheClear()
+      ui.setActiveView('tienda')
+      ui.setDrawerOpen(false)
+    },
+    [APP_EVENTS.POST_LOGIN_NAV]: ({ target }) => {
+      if (target === 'checkout') {
+        cart.setCartCheckoutStep(1)
+        ui.setDrawerType('cart')
+        ui.setDrawerOpen(true)
+      } else if (target === 'espera') {
+        ui.setActiveView('espera')
+      }
+    },
+    [APP_EVENTS.ORDER_CREATED]: ({ order }) => {
+      orders.setPendingOrders((current) => [order, ...current])
+      orders.resetOrderDrawer()
+      ui.setActiveView('espera')
+      ui.setDrawerOpen(false)
+    },
+    [APP_EVENTS.ORDER_COMPLETED]: () => {
+      ui.setDrawerOpen(false)
+      ui.setActiveView('historial')
+    },
+    [APP_EVENTS.ORDER_OPENED]: () => {
+      ui.setDrawerType('order')
+      ui.setDrawerOpen(true)
+    },
+    [APP_EVENTS.FILTERS_APPLIED]: () => {
+      ui.closeDrawer()
+    },
+    [APP_EVENTS.DRAWER_OPENED]: ({ type }) => {
+      if (type !== 'order') {
+        orders.resetOrderDrawer()
+      }
+      if (type === 'filter') {
+        catalog.syncFilterDraftFromApplied()
+      }
+    },
+    [APP_EVENTS.DRAWER_CLOSED]: () => {
+      cart.setCartCheckoutStep(0)
+      orders.resetOrderDrawer()
+    },
+    [APP_EVENTS.CACHE_RELEASED]: () => {
+      catalog.resetCatalogForCacheClear()
+      cart.setCartItems([])
+      orders.setPendingOrders([])
+      orders.setHistoryOrders([])
+    },
+    [APP_EVENTS.ACCOUNT_DELETED]: () => {
+      auth.setAuthSession(null)
+      catalog.resetCatalogForCacheClear()
+      cart.setCartItems([])
+      orders.setPendingOrders([])
+      orders.setHistoryOrders([])
+      orders.resetOrderDrawer()
+      ui.setDrawerOpen(false)
+    },
   }
 
-  releaseHandlersRef.current.onDeleteAccount = () => {
-    auth.setAuthSession(null)
-    catalog.resetCatalogForCacheClear()
-    cart.setCartItems([])
-    orders.setPendingOrders([])
-    orders.setHistoryOrders([])
-    ui.setDrawerOpen(false)
-    orders.resetOrderDrawer()
-  }
+  useEffect(() => {
+    const unsubscribes = Object.values(APP_EVENTS).map((event) => (
+      events.on(event, (payload) => wiringRef.current[event]?.(payload))
+    ))
 
-  crossRef.current = {
-    profileSettings: profile.profileSettings,
-    pendingOrders: orders.pendingOrders,
-    historyOrders: orders.historyOrders,
-    setProfileSettings: profile.setProfileSettings,
-    setPendingOrders: orders.setPendingOrders,
-    setHistoryOrders: orders.setHistoryOrders,
-    setCartItems: cart.setCartItems,
-    setProducts: catalog.setProducts,
-    setLastProductId: catalog.setLastProductId,
-    setHasMoreProducts: catalog.setHasMoreProducts,
-    setFilters: catalog.setFilters,
-    setFilterNuevos: catalog.setFilterNuevos,
-    setFilterPromociones: catalog.setFilterPromociones,
-    setWithStock: catalog.setWithStock,
-    setSearchValue: catalog.setSearchValue,
-    setSearchProducts: catalog.setSearchProducts,
-    setCartCheckoutStep: cart.setCartCheckoutStep,
-    setDrawerType: ui.setDrawerType,
-    setDrawerOpen: ui.setDrawerOpen,
-    setActiveView: ui.setActiveView,
-    resetOrderDrawer: orders.resetOrderDrawer,
-  }
+    return () => unsubscribes.forEach((off) => off())
+  }, [events])
 
   useEffect(() => {
     if (!auth.currentUserId) {
@@ -191,12 +201,9 @@ export function AppProvider({ children }) {
     displayName: authUser?.fullName || auth.authSession?.displayName || '',
     tokenAccess: auth.authSession?.tokenAccess || null,
     authModalOpen: auth.authModalOpen,
-    authModalMode: auth.authModalMode,
     openAuthModal: auth.openAuthModal,
     closeAuthModal: auth.closeAuthModal,
-    switchAuthModalMode: auth.switchAuthModalMode,
     login: auth.login,
-    register: auth.register,
     logout: auth.logout,
     pendingCheckout: auth.pendingCheckout,
     pendingEsperaView: auth.pendingEsperaView,
@@ -207,30 +214,21 @@ export function AppProvider({ children }) {
     auth.authSession?.displayName,
     auth.authSession?.tokenAccess,
     auth.authModalOpen,
-    auth.authModalMode,
     auth.openAuthModal,
     auth.closeAuthModal,
-    auth.switchAuthModalMode,
     auth.login,
-    auth.register,
     auth.logout,
     auth.pendingCheckout,
     auth.pendingEsperaView,
   ])
 
-  const cartValue = cart.value
-  const ordersValue = orders.value
-  const catalogValue = catalog.value
-  const profileValue = profile.value
-  const uiValue = ui.value
-
   return (
     <AuthContext.Provider value={authValue}>
-      <CartContext.Provider value={cartValue}>
-        <OrdersContext.Provider value={ordersValue}>
-          <CatalogContext.Provider value={catalogValue}>
-            <ProfileContext.Provider value={profileValue}>
-              <UiContext.Provider value={uiValue}>
+      <CartContext.Provider value={cart.value}>
+        <OrdersContext.Provider value={orders.value}>
+          <CatalogContext.Provider value={catalog.value}>
+            <ProfileContext.Provider value={profile.value}>
+              <UiContext.Provider value={ui.value}>
                 {children}
               </UiContext.Provider>
             </ProfileContext.Provider>

@@ -1,22 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ORDER_STEPS } from '@/features/orders/constants/orderSteps'
-import { enrichOrder } from '@/features/orders/utils/enrichOrder'
-import { PAYMENT_METHOD_LABELS } from '@/features/orders/constants/paymentConfig'
-import { deleteCartItem, getCart, postCartItem } from '@/features/cart/api/cartApi'
+import { buildCheckoutOrder } from '@/features/orders/utils/buildCheckoutOrder'
+import { getCart } from '@/features/cart/api/cartApi'
+import { persistCartItemSafe, removeCartItemSafe } from '@/features/cart/api/cartApiSafe'
 import { mapApiCartItems } from '@/features/catalog/mappers/mapCartItems'
+import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
 
 export function useCartSlice({
+  events,
   tokenAccess,
   productsRef,
   authUsername,
-  openAuthForCart,
-  setPendingCheckout,
-  setActiveView,
-  setDrawerOpen,
-  setDrawerType: _setDrawerType,
-  resetOrderDrawer,
-  setPendingOrders,
   currentUserId,
   initialCartItems,
   cartHydratingRef: cartHydratingRefProp,
@@ -64,66 +58,19 @@ export function useCartSlice({
     }
   }, [applyCartFromApi, tokenAccess])
 
-  /**
-   * Carrito solo por API: GET / POST / DELETE.
-   * No modifica stock de productos; eso lo hace el WS por su cuenta.
-   */
-  const persistCartItemToApi = useCallback(async ({
-    productId,
-    cantidad,
-    precioUnitario,
-  }) => {
-    const token = tokenAccess
-    if (!token) {
-      return { success: false, error: 'Sesión requerida', needsAuth: true }
-    }
+  const persistCartItemToApi = useCallback(
+    (payload) => persistCartItemSafe({ token: tokenAccess, ...payload }),
+    [tokenAccess],
+  )
 
-    try {
-      const result = await postCartItem({
-        token,
-        idProducto: productId,
-        cantidad,
-        precioUnitario,
-      })
-      return { success: true, ...result }
-    } catch (error) {
-      console.error('[cart] No se pudo guardar POST /api/v1/inventory/carts', error)
-      return {
-        success: false,
-        error: error?.message || 'No se pudo guardar el carrito',
-      }
-    }
-  }, [tokenAccess])
-
-  const removeCartItemFromApi = useCallback(async (idCarrito) => {
-    const token = tokenAccess
-    if (!token) {
-      return { success: false, error: 'Sesión requerida', needsAuth: true }
-    }
-
-    if (idCarrito == null || idCarrito === '') {
-      return { success: false, error: 'id_carrito no disponible' }
-    }
-
-    try {
-      const result = await deleteCartItem({
-        token,
-        idCarrito,
-      })
-      return { success: true, ...result }
-    } catch (error) {
-      console.error('[cart] No se pudo eliminar DELETE /api/v1/inventory/carts', error)
-      return {
-        success: false,
-        error: error?.message || 'No se pudo eliminar del carrito',
-      }
-    }
-  }, [tokenAccess])
+  const removeCartItemFromApi = useCallback(
+    (idCarrito) => removeCartItemSafe({ token: tokenAccess, idCarrito }),
+    [tokenAccess],
+  )
 
   const addToCart = useCallback(async (productId, quantity = 1) => {
     if (!tokenAccess) {
-      setPendingCheckout(true)
-      openAuthForCart()
+      events.emit(APP_EVENTS.AUTH_REQUIRED, { pending: 'checkout' })
       return { success: false, needsAuth: true, error: 'Inicia sesión para agregar al carrito' }
     }
 
@@ -153,7 +100,7 @@ export function useCartSlice({
 
     await refreshCartFromApi()
     return { success: true, quantity: nextQty, previousQty }
-  }, [tokenAccess, openAuthForCart, persistCartItemToApi, productsRef, refreshCartFromApi, setPendingCheckout])
+  }, [tokenAccess, events, persistCartItemToApi, productsRef, refreshCartFromApi])
 
   const removeFromCart = useCallback(async (productId) => {
     if (!tokenAccess) {
@@ -233,75 +180,19 @@ export function useCartSlice({
       return
     }
 
-    const now = new Date()
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    const total = Number(paymentDetails?.amount) || subtotal + Math.round(subtotal * 0.19)
-    const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-    const orderId = `PED-${Date.now()}`
-    const methodLabel = PAYMENT_METHOD_LABELS[paymentType] ?? 'Efectivo'
-
-    const order = enrichOrder({
-      id: orderId,
+    const order = buildCheckoutOrder({
+      cartItems,
       userId: currentUserId,
-      invoiceNumber: `FAC-${Date.now()}`,
-      createdAt: now.toISOString(),
-      dateLimit: new Date(Date.now() + 86400000).toISOString(),
-      orderType: 'general',
-      processStatus: 'en proceso...',
-      items: cartItems,
-      client: clientData,
-      paymentMethod: methodLabel,
-      total,
-      status: ORDER_STEPS[0],
-      steps: ORDER_STEPS,
-      payment: {
-        method: methodLabel,
-        type: paymentType,
-        deadline: new Date(Date.now() + 7 * 86400000).toISOString(),
-        amount: total,
-        paidAmount: 0,
-        payments: [],
-        paymentsMade: 0,
-        paymentsTotal: 3,
-        checkoutDetails: paymentDetails,
-        details: paymentDetails,
-        lastPaymentAt: null,
-      },
-      packaging: {
-        packedQuantity: 0,
-        totalQuantity,
-        boxes: Math.max(1, Math.ceil(totalQuantity / 20)),
-        bags: Math.max(1, Math.ceil(totalQuantity / 10)),
-      },
-      delivery: {
-        date: new Date(Date.now() + 3 * 86400000).toISOString(),
-        address: clientData.address,
-        notes: clientData.notes || 'Entregar en horario de oficina',
-        deliveredBy: 'Transportes Premium',
-        receivedBy: clientData.fullName,
-      },
-      salesPoints: [
-        { id: '001', name: 'tienda1online' },
-        { id: '002', name: 'tienda2online' },
-      ],
-      selectedSalesPointId: '001',
+      clientData,
+      paymentType,
+      paymentDetails,
     })
 
-    setPendingOrders((currentOrders) => [order, ...currentOrders])
     commitCart([])
     setCartCheckoutStep(0)
-    setActiveView('espera')
-    setDrawerOpen(false)
-    resetOrderDrawer()
-  }, [
-    cartItems,
-    commitCart,
-    currentUserId,
-    resetOrderDrawer,
-    setActiveView,
-    setDrawerOpen,
-    setPendingOrders,
-  ])
+    // Orders y UI reaccionan al evento (card en espera + cierre del drawer).
+    events.emit(APP_EVENTS.ORDER_CREATED, { order })
+  }, [cartItems, commitCart, currentUserId, events])
 
   const initiateCheckout = useCallback(() => {
     if (cartItems.length === 0) {
@@ -309,14 +200,13 @@ export function useCartSlice({
     }
 
     if (!authUsername) {
-      setPendingCheckout(true)
-      openAuthForCart()
+      events.emit(APP_EVENTS.AUTH_REQUIRED, { pending: 'checkout' })
       return { success: false, needsAuth: true }
     }
 
     setCartCheckoutStep(1)
     return { success: true }
-  }, [cartItems, authUsername, openAuthForCart, setPendingCheckout])
+  }, [cartItems, authUsername, events])
 
   const value = useMemo(() => ({
     cartItems,

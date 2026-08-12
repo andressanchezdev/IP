@@ -2,11 +2,11 @@ import { useAuth, useCart, useCatalog, useOrders, useUi } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { AuthModal } from '@/features/auth'
 import { FloatingCart } from '@/features/cart/components/FloatingCart/FloatingCart'
-import { confirmAction } from '@/shared/lib/confirmAction'
 import { AppDrawer } from '@/widgets/AppDrawer/AppDrawer'
 import { Header } from '@/widgets/AppShell/Header/Header'
 import { Sidebar } from '@/widgets/AppShell/Sidebar/Sidebar'
-import { useCallback, useEffect, useState, startTransition } from 'react'
+import { useEffect, useState } from 'react'
+import { useStorePageActions } from './hooks/useStorePageActions'
 import { useStorePageFilters } from './hooks/useStorePageFilters'
 import { CatalogView } from './views/CatalogView'
 import { HistoryView } from './views/HistoryView'
@@ -17,12 +17,9 @@ export function StorePage() {
   const {
     isAuthenticated,
     authModalOpen,
-    authModalMode,
     openAuthModal,
     closeAuthModal,
-    switchAuthModalMode,
     login,
-    register,
     logout,
     pendingCheckout,
     pendingEsperaView,
@@ -90,6 +87,40 @@ export function StorePage() {
     endCatalogSearch,
   })
 
+  const {
+    handleOpenOrder,
+    handleOrderProduct,
+    handleNavigate,
+    handleToggleNuevos,
+    handleTogglePromociones,
+    handleSearchSubmit,
+    handleClearSearch,
+    handleProfileClick,
+    handleLogin,
+    handleLogout,
+  } = useStorePageActions({
+    products,
+    addToCart,
+    showToast,
+    navigateToView,
+    setFilterNuevos,
+    setFilterPromociones,
+    isStoreView,
+    submitProductSearch,
+    clearCommittedProductSearch,
+    setSearchValue,
+    clearFilters,
+    hasActiveFilters,
+    isAuthenticated,
+    openAuthModal,
+    openDrawer,
+    openOrderDrawer,
+    login,
+    logout,
+    pendingCheckout,
+    pendingEsperaView,
+  })
+
   useEffect(() => {
     if (!isStoreView) {
       setFilterNuevos(false)
@@ -119,110 +150,6 @@ export function StorePage() {
     clearCommittedProductSearch()
     setHistoryPaymentFilter('')
   }, [activeView, setSearchValue, clearCommittedProductSearch])
-
-  const handleOpenOrder = useCallback((orderId) => {
-    openOrderDrawer(orderId)
-  }, [openOrderDrawer])
-
-  const handleOrderProduct = useCallback(async (productId, quantity) => {
-    const product = products.find((item) => item.id === productId)
-    const result = await addToCart(productId, quantity)
-
-    if (!result?.success) {
-      showToast(result?.error || 'No se pudo agregar al carrito', 'error')
-      return
-    }
-
-    showToast(`${product?.description ?? 'Producto'} agregado al carrito`, 'success')
-  }, [addToCart, products, showToast])
-
-  const handleNavigate = useCallback((view) => {
-    startTransition(() => {
-      navigateToView(view)
-    })
-  }, [navigateToView])
-
-  const handleToggleNuevos = useCallback(() => {
-    startTransition(() => {
-      setFilterNuevos((current) => !current)
-    })
-  }, [setFilterNuevos])
-
-  const handleTogglePromociones = useCallback(() => {
-    startTransition(() => {
-      setFilterPromociones((current) => !current)
-    })
-  }, [setFilterPromociones])
-
-  const handleSearchSubmit = useCallback(() => {
-    if (!isStoreView) {
-      return
-    }
-    submitProductSearch()
-  }, [isStoreView, submitProductSearch])
-
-  const handleClearSearch = () => {
-    if (!isStoreView) {
-      setSearchValue('')
-      return
-    }
-
-    setSearchValue('')
-    clearCommittedProductSearch()
-    clearFilters()
-    if (hasActiveFilters) {
-      showToast('Filtros limpiados', 'success')
-    }
-  }
-
-  const handleProfileClick = () => {
-    if (!isAuthenticated) {
-      openAuthModal('login')
-      return
-    }
-    openDrawer('profile')
-  }
-
-  const handleLogin = async (credentials) => {
-    const result = await login(credentials)
-    if (!result.success) {
-      showToast(result.error, 'error')
-      return
-    }
-    showToast(
-      pendingCheckout
-        ? 'Sesión iniciada. Continúe con el pago.'
-        : pendingEsperaView
-          ? 'Sesión iniciada. Mostrando sus pedidos en espera.'
-          : 'Sesión iniciada correctamente',
-      'success',
-    )
-  }
-
-  const handleRegister = (formData) => {
-    const result = register(formData)
-    if (!result.success) {
-      showToast(result.error, 'error')
-      return
-    }
-    showToast('Cuenta creada e iniciada correctamente', 'success')
-  }
-
-  const handleLogout = async () => {
-    const confirmed = await confirmAction({
-      title: '¿Cerrar sesión?',
-      text: 'Se cerrará tu sesión actual en Importadora Premium.',
-      confirmText: 'Cerrar sesión',
-      icon: 'question',
-    })
-
-    if (!confirmed) {
-      return
-    }
-
-    logout()
-    showToast('Sesión cerrada correctamente', 'success')
-  }
 
   const renderContent = () => {
     if (activeView === 'espera') {
@@ -264,7 +191,7 @@ export function StorePage() {
         isAuthenticated={isAuthenticated}
         onNavigate={handleNavigate}
         onProfileClick={handleProfileClick}
-        onLogin={() => openAuthModal('login')}
+        onLogin={() => openAuthModal()}
         onLogout={handleLogout}
       />
 
@@ -317,11 +244,8 @@ export function StorePage() {
 
       <AuthModal
         isOpen={authModalOpen}
-        mode={authModalMode}
         onClose={closeAuthModal}
-        onSwitchMode={() => switchAuthModalMode(authModalMode === 'login' ? 'register' : 'login')}
         onLogin={handleLogin}
-        onRegister={handleRegister}
       />
     </div>
   )

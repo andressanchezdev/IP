@@ -9,18 +9,26 @@ import {
   DrawerSectionList,
   DrawerShell,
 } from '@/shared/ui/DrawerShell/DrawerShell'
+import listIcon from '@/assets/icons/list.svg'
+import receiptIcon from '@/assets/icons/receipt.svg'
+import creditCardIcon from '@/assets/icons/credit-card.svg'
+import percentIcon from '@/assets/icons/percent.svg'
+import shoppingBagIcon from '@/assets/icons/shopping-bag.svg'
+import walletIcon from '@/assets/icons/wallet.svg'
+import mapPinIcon from '@/assets/icons/map-pin.svg'
+import cloudUploadIcon from '@/assets/icons/cloud-upload.svg'
 import './ProfileDrawer.css'
 import '@/features/profile/components/ProfilePriceList/ProfilePriceList.css'
 
 const PROFILE_SECTIONS = [
-  { id: 'price-list', label: 'Listado de precios' },
-  { id: 'debts', label: 'Adeudos' },
-  { id: 'credit', label: 'Crédito' },
-  { id: 'discounts', label: 'Descuentos' },
-  { id: 'purchases', label: 'Compras' },
-  { id: 'balance', label: 'Saldo a favor' },
-  { id: 'addresses', label: 'Direcciones de entrega' },
-  { id: 'bulk-upload', label: 'Subida masiva' },
+  { id: 'price-list', label: 'Listado de precios', icon: listIcon },
+  { id: 'debts', label: 'Adeudos', icon: receiptIcon },
+  { id: 'credit', label: 'Crédito', icon: creditCardIcon },
+  { id: 'discounts', label: 'Descuentos', icon: percentIcon },
+  { id: 'purchases', label: 'Compras', icon: shoppingBagIcon },
+  { id: 'balance', label: 'Saldo a favor', icon: walletIcon },
+  { id: 'addresses', label: 'Direcciones de entrega', icon: mapPinIcon },
+  { id: 'bulk-upload', label: 'Subida masiva', icon: cloudUploadIcon },
 ]
 
 const PRICE_LIST_ACTIONS = [
@@ -108,7 +116,7 @@ export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) 
         />
       </DrawerPanel>
 
-      <DrawerPanel title="Información de cuenta" variant="quick">
+      <DrawerPanel title="Información de Usuario" variant="quick">
         <DrawerSectionList>
           {PROFILE_SECTIONS.map((section) => {
             const isOpen = openSectionId === section.id
@@ -118,7 +126,15 @@ export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) 
                   active={isOpen}
                   onClick={() => toggleSection(section.id)}
                 >
-                  <span>{section.label}</span>
+                  <span className="profile-drawer-section__label">
+                    <img
+                      src={section.icon}
+                      alt=""
+                      className="profile-drawer-section__icon"
+                      aria-hidden="true"
+                    />
+                    {section.label}
+                  </span>
                   <span
                     className={`filter-drawer-check__caret${isOpen && section.id !== 'bulk-upload' ? ' filter-drawer-check__caret--open' : ''}`}
                     aria-hidden="true"

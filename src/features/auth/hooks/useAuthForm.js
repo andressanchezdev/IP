@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { validateField, validateLogin, validateRegister } from '@/features/auth/utils/authValidation'
+import { validateField, validateLogin } from '@/features/auth/utils/authValidation'
 
 const LOGIN_INITIAL = {
   email: '',
@@ -7,51 +7,18 @@ const LOGIN_INITIAL = {
   rememberMe: false,
 }
 
-const REGISTER_INITIAL = {
-  accountType: 'natural',
-  fullName: '',
-  documentId: '',
-  phone: '',
-  email: '',
-  companyName: '',
-  nit: '',
-  password: '',
-  confirmPassword: '',
-}
-
-export function useAuthForm(mode = 'login') {
-  const [loginForm, setLoginForm] = useState(LOGIN_INITIAL)
-  const [registerForm, setRegisterForm] = useState(REGISTER_INITIAL)
+export function useAuthForm() {
+  const [form, setForm] = useState(LOGIN_INITIAL)
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
-
-  const form = mode === 'login' ? loginForm : registerForm
 
   const setField = useCallback((field, value) => {
     setTouched((current) => ({ ...current, [field]: true }))
 
-    if (mode === 'login') {
-      setLoginForm((current) => {
-        const nextForm = { ...current, [field]: value }
-        setErrors((prev) => {
-          const message = validateField(field, nextForm, 'login')
-          const nextErrors = { ...prev }
-          if (message) {
-            nextErrors[field] = message
-          } else {
-            delete nextErrors[field]
-          }
-          return nextErrors
-        })
-        return nextForm
-      })
-      return
-    }
-
-    setRegisterForm((current) => {
+    setForm((current) => {
       const nextForm = { ...current, [field]: value }
       setErrors((prev) => {
-        const message = validateField(field, nextForm, 'register')
+        const message = validateField(field, nextForm)
         const nextErrors = { ...prev }
         if (message) {
           nextErrors[field] = message
@@ -62,27 +29,21 @@ export function useAuthForm(mode = 'login') {
       })
       return nextForm
     })
-  }, [mode])
+  }, [])
 
   const validateAll = useCallback(() => {
-    const result = mode === 'login'
-      ? validateLogin(loginForm)
-      : validateRegister(registerForm)
+    const result = validateLogin(form)
 
     setErrors(result.errors)
     setTouched(
-      Object.keys(mode === 'login' ? loginForm : registerForm).reduce(
-        (acc, key) => ({ ...acc, [key]: true }),
-        {},
-      ),
+      Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
     )
 
     return result.isValid
-  }, [mode, loginForm, registerForm])
+  }, [form])
 
   const reset = useCallback(() => {
-    setLoginForm(LOGIN_INITIAL)
-    setRegisterForm(REGISTER_INITIAL)
+    setForm(LOGIN_INITIAL)
     setErrors({})
     setTouched({})
   }, [])

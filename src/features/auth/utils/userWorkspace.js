@@ -22,12 +22,28 @@ export function loadUserWorkspace(userId) {
   return loadPersistedState(`userWorkspace:${userId}`, null)
 }
 
+/** Nunca persistir contraseñas en storage local. */
+function stripSensitiveData(workspace) {
+  const profileSettings = workspace?.profileSettings
+  if (!profileSettings?.access?.password) {
+    return workspace
+  }
+
+  return {
+    ...workspace,
+    profileSettings: {
+      ...profileSettings,
+      access: { ...profileSettings.access, password: '' },
+    },
+  }
+}
+
 export function saveUserWorkspace(userId, workspace) {
   if (!userId) {
     return
   }
 
-  savePersistedState(`userWorkspace:${userId}`, workspace, WORKSPACE_TTL)
+  savePersistedState(`userWorkspace:${userId}`, stripSensitiveData(workspace), WORKSPACE_TTL)
 }
 
 function migrateLegacyOrders(userId) {

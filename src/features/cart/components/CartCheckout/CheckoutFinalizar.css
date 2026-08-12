@@ -148,3 +148,26 @@
   gap: 10px;
   padding-top: 10px;
 }
+
+.checkout-finalize__confirm {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.checkout-finalize__confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* En móvil, mobile.css reduce .content-main-data-carrito__checkout;
+   Confirmar debe conservar las mismas medidas que en web. */
+@media (max-width: 768px) {
+  .content-main-data-carrito__checkout.checkout-finalize__confirm {
+    flex: none;
+    font-size: var(--drawer-fs, 13px);
+    min-height: 40px;
+    min-width: 0;
+    padding: 10px 16px;
+    width: 100%;
+  }
+}

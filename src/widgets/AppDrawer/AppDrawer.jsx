@@ -10,22 +10,8 @@ import { CartMenuDrawerContent } from '@/features/cart/components/CartMenu/CartM
 import { OrderDrawerContent } from '@/features/orders/components/OrderDrawer/OrderDrawerContent'
 import { OrderPaymentsDrawerContent } from '@/features/orders/components/OrderPayments/OrderPaymentsDrawerContent'
 import { FilterDrawerContent } from '@/features/catalog/components/FilterDrawer/FilterDrawerContent'
-import { ProfileDrawerContent } from '@/features/profile/components/ProfileDrawer/ProfileDrawerContent'
-import { ProfileSettingsDrawerContent } from '@/features/profile/components/ProfileSettings/ProfileSettingsDrawerContent'
-import {
-  BulkUploadFileContent,
-} from '@/features/profile/components/BulkUpload/BulkUploadViews'
-import {
-  ProfileCatalogPickerContent,
-  ProfileDownloadMethodContent,
-} from '@/features/profile/components/ProfilePriceList/ProfilePriceListViews'
-
-const PRICE_LIST_TITLES = {
-  download: 'Método de descarga',
-  brand: 'Marca a escoger',
-  category: 'Categoría a escoger',
-  model: 'Modelo a escoger',
-}
+import { ProfileDrawerSubViews } from './ProfileDrawerSubViews'
+import { getCloseAriaLabel, getDrawerTitle } from './appDrawerMeta'
 
 export function AppDrawer() {
   const { clearFilters } = useCatalog()
@@ -86,10 +72,6 @@ export function AppDrawer() {
       setCartCheckoutStep(0)
       return
     }
-    if (drawerType === 'profile' && profileSubView === 'bulk-upload') {
-      setProfileSubView(null)
-      return
-    }
     if (drawerType === 'profile' && profileSubView) {
       setProfileSubView(null)
       return
@@ -120,68 +102,11 @@ export function AppDrawer() {
       return <FilterDrawerContent />
     }
     if (drawerType === 'profile') {
-      if (profileSubView === 'settings') {
-        return <ProfileSettingsDrawerContent />
-      }
-      if (profileSubView === 'bulk-upload') {
-        return (
-          <BulkUploadFileContent
-            onCancelOrder={() => setProfileSubView(null)}
-            onOrderSent={() => {
-              setProfileSubView(null)
-              closeDrawer()
-            }}
-          />
-        )
-      }
-      if (profileSubView === 'price-download') {
-        return (
-          <ProfileDownloadMethodContent
-            onSelect={() => setProfileSubView(null)}
-          />
-        )
-      }
-      if (profileSubView === 'price-brand') {
-        return (
-          <ProfileCatalogPickerContent
-            field="brand"
-            title="Marca"
-            onSelect={() => setProfileSubView(null)}
-          />
-        )
-      }
-      if (profileSubView === 'price-category') {
-        return (
-          <ProfileCatalogPickerContent
-            field="category"
-            title="Categoría"
-            onSelect={() => setProfileSubView(null)}
-          />
-        )
-      }
-      if (profileSubView === 'price-model') {
-        return (
-          <ProfileCatalogPickerContent
-            field="model"
-            title="Modelo"
-            onSelect={() => setProfileSubView(null)}
-          />
-        )
-      }
       return (
-        <ProfileDrawerContent
-          onOpenBulkUpload={() => setProfileSubView('bulk-upload')}
-          onOpenPriceListView={(actionId) => {
-            const next = {
-              download: 'price-download',
-              brand: 'price-brand',
-              category: 'price-category',
-              model: 'price-model',
-            }[actionId]
-            if (next) {
-              setProfileSubView(next)
-            }
-          }}
+        <ProfileDrawerSubViews
+          profileSubView={profileSubView}
+          setProfileSubView={setProfileSubView}
+          closeDrawer={closeDrawer}
         />
       )
     }
@@ -210,49 +135,16 @@ export function AppDrawer() {
     return null
   }
 
-  const drawerTitle = (() => {
-    if (drawerType === 'cart') {
-      if (cartMenuOpen) {
-        return 'Opciones'
-      }
-      if (cartCheckoutStep > 0) {
-        return 'Finalizar'
-      }
-      return undefined
-    }
-    if (drawerType === 'profile') {
-      if (profileSubView === 'settings') return 'Configuración'
-      if (profileSubView === 'bulk-upload') return 'Subir nuevo archivo'
-      if (profileSubView === 'price-download') return PRICE_LIST_TITLES.download
-      if (profileSubView === 'price-brand') return PRICE_LIST_TITLES.brand
-      if (profileSubView === 'price-category') return PRICE_LIST_TITLES.category
-      if (profileSubView === 'price-model') return PRICE_LIST_TITLES.model
-      return undefined
-    }
-    if (drawerType === 'order') {
-      if (orderSubView === 'payments') {
-        return 'Pagos'
-      }
-      return selectedOrder?.id
-    }
-    return undefined
-  })()
-
-  const closeAriaLabel = (() => {
-    if (drawerType === 'cart' && cartMenuOpen) {
-      return 'Volver al carrito'
-    }
-    if (drawerType === 'cart' && cartCheckoutStep > 0) {
-      return 'Volver al carrito'
-    }
-    if (drawerType === 'profile' && profileSubView) {
-      return 'Volver'
-    }
-    if (drawerType === 'order' && orderSubView) {
-      return 'Volver al pedido'
-    }
-    return 'Cerrar panel'
-  })()
+  const metaState = {
+    drawerType,
+    cartMenuOpen,
+    cartCheckoutStep,
+    profileSubView,
+    orderSubView,
+    selectedOrder,
+  }
+  const drawerTitle = getDrawerTitle(metaState)
+  const closeAriaLabel = getCloseAriaLabel(metaState)
 
   const headerActions = (() => {
     if (drawerType === 'cart' && !cartMenuOpen && cartCheckoutStep === 0) {

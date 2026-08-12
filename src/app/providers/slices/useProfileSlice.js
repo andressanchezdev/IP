@@ -6,21 +6,23 @@ import {
 } from '@/features/profile/data/profileDefaults'
 import { clearApiAuthToken } from '@/shared/api'
 import { clearAuthSession } from '@/features/auth/utils/authStorage'
-import { PROFILE_SETTINGS_TTL } from '../helpers'
+import { APP_EVENTS } from '../appEvents'
+import { PROFILE_SETTINGS_TTL, sanitizeProfileSettings } from '../helpers'
 
 export function useProfileSlice({
-  // Reserved for composer/workspace wiring; profile state is keyed externally by auth.
-  currentUserId: _currentUserId,
+  events,
   initialProfileSettings,
-  onReleaseCache,
-  onDeleteAccount,
 }) {
   const [profileSettings, setProfileSettings] = useState(() => initialProfileSettings)
   const warehouseIdRef = useRef(null)
   warehouseIdRef.current = profileSettings?.personal?.warehouseId ?? null
 
   useEffect(() => {
-    savePersistedState('profileSettings', profileSettings, PROFILE_SETTINGS_TTL)
+    savePersistedState(
+      'profileSettings',
+      sanitizeProfileSettings(profileSettings),
+      PROFILE_SETTINGS_TTL,
+    )
   }, [profileSettings])
 
   const profile = useMemo(() => ({
@@ -52,8 +54,8 @@ export function useProfileSlice({
 
   const releaseAppCache = useCallback(() => {
     clearAppCache()
-    onReleaseCache?.()
-  }, [onReleaseCache])
+    events.emit(APP_EVENTS.CACHE_RELEASED)
+  }, [events])
 
   const deleteAccount = useCallback(() => {
     clearAppCache()
@@ -61,8 +63,8 @@ export function useProfileSlice({
     clearAuthSession()
     savePersistedState('profileSettings', defaultProfileSettings, PROFILE_SETTINGS_TTL)
     setProfileSettings(defaultProfileSettings)
-    onDeleteAccount?.()
-  }, [onDeleteAccount])
+    events.emit(APP_EVENTS.ACCOUNT_DELETED)
+  }, [events])
 
   const value = useMemo(() => ({
     profile,

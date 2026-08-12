@@ -1,49 +1,32 @@
 import { useCallback, useMemo, useState } from 'react'
+import { APP_EVENTS } from '../appEvents'
 
-export function useUiSlice({
-  syncFilterDraftFromApplied,
-  resetOrderDrawer,
-  setCartCheckoutStep,
-  authUsername,
-  setPendingEsperaView,
-  setAuthModalOpen,
-  setAuthModalMode,
-}) {
+export function useUiSlice({ events, authUsername }) {
   const [activeView, setActiveView] = useState('tienda')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerType, setDrawerType] = useState('cart')
 
   const openDrawer = useCallback((type = 'cart') => {
-    if (type !== 'order') {
-      resetOrderDrawer()
-    }
-
-    // Filtrar draft is only applied via "Aplicar filtro", never on drawer switch.
-    if (type === 'filter') {
-      syncFilterDraftFromApplied()
-    }
-
+    // Los demás dominios reaccionan (reset de order drawer, sync de filtros).
+    events.emit(APP_EVENTS.DRAWER_OPENED, { type })
     setDrawerType(type)
     setDrawerOpen(true)
-  }, [resetOrderDrawer, syncFilterDraftFromApplied])
+  }, [events])
 
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false)
-    setCartCheckoutStep(0)
-    resetOrderDrawer()
-  }, [resetOrderDrawer, setCartCheckoutStep])
+    events.emit(APP_EVENTS.DRAWER_CLOSED)
+  }, [events])
 
   const navigateToView = useCallback((view) => {
     if (view === 'espera' && !authUsername) {
-      setPendingEsperaView(true)
-      setAuthModalOpen(true)
-      setAuthModalMode('login')
+      events.emit(APP_EVENTS.AUTH_REQUIRED, { pending: 'espera' })
       return false
     }
 
     setActiveView(view)
     return true
-  }, [authUsername, setAuthModalMode, setAuthModalOpen, setPendingEsperaView])
+  }, [authUsername, events])
 
   const value = useMemo(() => ({
     activeView,
@@ -59,6 +42,7 @@ export function useUiSlice({
     setActiveView,
     setDrawerOpen,
     setDrawerType,
+    closeDrawer,
     value,
   }
 }

@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { flushPersistedState, savePersistedState } from '@/shared/lib/storage'
-import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import {
   clearAuthSession,
   loadAuthSession,
-  registerUser,
   saveAuthSession,
 } from '@/features/auth/utils/authStorage'
 import {
@@ -17,18 +15,34 @@ import {
   toAuthUserSummary,
 } from '@/features/auth/utils/mapLoginUserToProfile'
 import { clearApiAuthToken, setApiAuthToken } from '@/shared/api'
-import { loadInitialUserData, PROFILE_SETTINGS_TTL } from '../helpers'
+import { APP_EVENTS } from '../appEvents'
+import { PROFILE_SETTINGS_TTL, sanitizeProfileSettings } from '../helpers'
 
-export function useAuthSlice({ crossRef, cartHydratingRef }) {
-  const [authSession, setAuthSession] = useState(() => loadAuthSession())
-  const [initialUserData] = useState(() => loadInitialUserData(authSession))
+export function useAuthSlice({ events, cartHydratingRef }) {
+  const [authSession, setAuthSession] = useState(null)
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authModalMode, setAuthModalMode] = useState('login')
   const [pendingCheckout, setPendingCheckout] = useState(false)
   const [pendingEsperaView, setPendingEsperaView] = useState(false)
 
   const isAuthenticated = Boolean(authSession?.username)
   const currentUserId = authSession?.userId ?? null
+
+  // Rehidratación al cargar/refrescar: la sesión cifrada se lee de forma async.
+  useEffect(() => {
+    let cancelled = false
+
+    loadAuthSession().then((session) => {
+      if (cancelled || !session) {
+        return
+      }
+      setAuthSession(session)
+      events.emit(APP_EVENTS.AUTH_RESTORED, { session })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [events])
 
   useEffect(() => {
     if (authSession?.tokenAccess) {
@@ -38,65 +52,28 @@ export function useAuthSlice({ crossRef, cartHydratingRef }) {
     }
   }, [authSession?.tokenAccess])
 
-  const openAuthModal = useCallback((mode = 'login') => {
-    setAuthModalMode(mode)
+  // Otros dominios solicitan login sin acoplarse a este slice.
+  useEffect(() => events.on(APP_EVENTS.AUTH_REQUIRED, ({ pending } = {}) => {
+    if (pending === 'checkout') {
+      setPendingCheckout(true)
+    }
+    if (pending === 'espera') {
+      setPendingEsperaView(true)
+    }
+    setAuthModalOpen(true)
+  }), [events])
+
+  const openAuthModal = useCallback(() => {
     setAuthModalOpen(true)
   }, [])
 
   const closeAuthModal = useCallback(() => {
     setAuthModalOpen(false)
-    setAuthModalMode('login')
     setPendingCheckout(false)
     setPendingEsperaView(false)
   }, [])
 
-  const switchAuthModalMode = useCallback((mode) => {
-    setAuthModalMode(mode)
-  }, [])
-
-  const openAuthForCart = useCallback(() => {
-    setAuthModalOpen(true)
-    setAuthModalMode('login')
-  }, [])
-
-  const applyUserWorkspace = useCallback((credentials) => {
-    const {
-      setProfileSettings,
-      setPendingOrders,
-      setHistoryOrders,
-      setCartItems,
-    } = crossRef.current
-
-    const userId = credentials.profile.personal.userId
-    const workspace = getOrCreateUserWorkspace(userId, credentials.profile)
-
-    setProfileSettings(workspace.profileSettings ?? credentials.profile)
-    setPendingOrders(workspace.pendingOrders ?? [])
-    setHistoryOrders(workspace.historyOrders ?? [])
-    setCartItems([])
-
-    return {
-      username: credentials.username,
-      userId,
-      loggedInAt: new Date().toISOString(),
-    }
-  }, [crossRef])
-
   const login = useCallback(async ({ email, password, rememberMe, username }) => {
-    const {
-      setProfileSettings,
-      setPendingOrders,
-      setHistoryOrders,
-      setCartItems,
-      setProducts,
-      setLastProductId,
-      setHasMoreProducts,
-      setCartCheckoutStep,
-      setDrawerType,
-      setDrawerOpen,
-      setActiveView,
-    } = crossRef.current
-
     const loginEmail = String(email ?? username ?? '').trim()
 
     try {
@@ -117,26 +94,27 @@ export function useAuthSlice({ crossRef, cartHydratingRef }) {
         apiProfile,
         workspace.profileSettings,
       )
-      const authUser = toAuthUserSummary(nextProfile)
 
       if (cartHydratingRef) {
         cartHydratingRef.current = true
       }
-      // Datos personales siempre desde la respuesta de login (user.usuario).
-      setProfileSettings(nextProfile)
-      savePersistedState('profileSettings', nextProfile, PROFILE_SETTINGS_TTL)
+
+      savePersistedState(
+        'profileSettings',
+        sanitizeProfileSettings(nextProfile),
+        PROFILE_SETTINGS_TTL,
+      )
       persistUserWorkspace(userId, {
         profileSettings: nextProfile,
         pendingOrders: workspace.pendingOrders ?? [],
         historyOrders: workspace.historyOrders ?? [],
       })
-      setPendingOrders(workspace.pendingOrders ?? [])
-      setHistoryOrders(workspace.historyOrders ?? [])
-      setProducts([])
-      setLastProductId(null)
-      setHasMoreProducts(false)
-      // Cart se hidrata solo desde GET /api/v1/inventory/carts (no localStorage).
-      setCartItems([])
+
+      events.emit(APP_EVENTS.AUTH_LOGIN, {
+        userId,
+        profile: nextProfile,
+        workspace,
+      })
 
       const session = {
         username: client.email || loginEmail,
@@ -148,24 +126,21 @@ export function useAuthSlice({ crossRef, cartHydratingRef }) {
         documentId: client.documentId,
         mobile: client.mobile,
         role: client.role,
-        user: authUser,
+        user: toAuthUserSummary(nextProfile),
         profile: nextProfile,
         loggedInAt: new Date().toISOString(),
       }
 
       setAuthSession(session)
-      saveAuthSession(session, rememberMe)
+      await saveAuthSession(session, rememberMe)
       setAuthModalOpen(false)
-      setAuthModalMode('login')
 
       if (pendingCheckout) {
         setPendingCheckout(false)
-        setCartCheckoutStep(1)
-        setDrawerType('cart')
-        setDrawerOpen(true)
+        events.emit(APP_EVENTS.POST_LOGIN_NAV, { target: 'checkout' })
       } else if (pendingEsperaView) {
         setPendingEsperaView(false)
-        setActiveView('espera')
+        events.emit(APP_EVENTS.POST_LOGIN_NAV, { target: 'espera' })
       }
 
       return { success: true }
@@ -174,122 +149,33 @@ export function useAuthSlice({ crossRef, cartHydratingRef }) {
       if (cartHydratingRef) {
         cartHydratingRef.current = false
       }
-      crossRef.current.setHasMoreProducts?.(false)
       return {
         success: false,
         error: error?.message || 'No se pudo iniciar sesión',
       }
     }
-  }, [cartHydratingRef, crossRef, pendingCheckout, pendingEsperaView])
-
-  const register = useCallback((formData) => {
-    const {
-      setCartCheckoutStep,
-      setDrawerType,
-      setDrawerOpen,
-      setActiveView,
-    } = crossRef.current
-
-    const result = registerUser(formData)
-
-    if (!result.success) {
-      return result
-    }
-
-    const session = applyUserWorkspace(result.user)
-
-    setAuthSession(session)
-    saveAuthSession(session, true)
-    setAuthModalOpen(false)
-    setAuthModalMode('login')
-
-    if (pendingCheckout) {
-      setPendingCheckout(false)
-      setCartCheckoutStep(1)
-      setDrawerType('cart')
-      setDrawerOpen(true)
-    } else if (pendingEsperaView) {
-      setPendingEsperaView(false)
-      setActiveView('espera')
-    }
-
-    return { success: true }
-  }, [applyUserWorkspace, crossRef, pendingCheckout, pendingEsperaView])
+  }, [cartHydratingRef, events, pendingCheckout, pendingEsperaView])
 
   const logout = useCallback(() => {
-    const {
-      profileSettings,
-      pendingOrders,
-      historyOrders,
-      setProfileSettings,
-      setPendingOrders,
-      setHistoryOrders,
-      setCartItems,
-      setProducts,
-      setLastProductId,
-      setHasMoreProducts,
-      setFilters,
-      setFilterNuevos,
-      setFilterPromociones,
-      setWithStock,
-      setSearchValue,
-      setSearchProducts,
-      setActiveView,
-      setDrawerOpen,
-      resetOrderDrawer,
-    } = crossRef.current
-
-    if (currentUserId) {
-      persistUserWorkspace(currentUserId, {
-        profileSettings,
-        pendingOrders,
-        historyOrders,
-      })
-      flushPersistedState()
-    }
-
+    // El workspace se persiste de forma continua; solo hace falta el flush.
+    flushPersistedState()
     clearApiAuthToken()
     clearAuthSession()
     setAuthSession(null)
-    setProfileSettings(defaultProfileSettings)
-    setPendingOrders([])
-    setHistoryOrders([])
-    setCartItems([])
-    setProducts([])
-    setLastProductId(null)
-    setHasMoreProducts(false)
-    setFilters({ brands: [], categories: [], models: [] })
-    setFilterNuevos(false)
-    setFilterPromociones(false)
-    setWithStock(false)
-    setSearchValue('')
-    setSearchProducts(null)
-    setActiveView('tienda')
-    setDrawerOpen(false)
-    resetOrderDrawer()
-  }, [crossRef, currentUserId])
+    events.emit(APP_EVENTS.AUTH_LOGGED_OUT)
+  }, [events])
 
   return {
     authSession,
     setAuthSession,
-    initialUserData,
     isAuthenticated,
     currentUserId,
     authModalOpen,
-    setAuthModalOpen,
-    authModalMode,
-    setAuthModalMode,
     openAuthModal,
     closeAuthModal,
-    switchAuthModalMode,
-    openAuthForCart,
     login,
-    register,
     logout,
-    applyUserWorkspace,
     pendingCheckout,
-    setPendingCheckout,
     pendingEsperaView,
-    setPendingEsperaView,
   }
 }

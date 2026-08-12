@@ -1,12 +1,12 @@
-import { apiRequest, getApiAuthToken } from '@/shared/api'
-import { postCartItem } from '@/features/cart/api/cartApi'
+import { apiRequest } from '@/shared/api'
+import { toMoneyNumber, wait } from './bulkShared'
+
+export { CART_POST_CONCURRENCY, postBulkOrderToCart } from './bulkCartPost'
 
 /** Lotes de consulta a inventory/products para no saturar la API. */
 export const STOCK_BATCH_SIZE = 20
 /** Ventana de ritmo: 20 peticiones repartidas en 15s (~750ms entre cada una). */
 export const STOCK_BATCH_WINDOW_MS = 15_000
-/** Concurrencia de POST /inventory/carts para acelerar el envío masivo. */
-export const CART_POST_CONCURRENCY = 5
 
 export const STOCK_STATUS = {
   OK: 'Ok',
@@ -20,21 +20,6 @@ function extractProducts(payload) {
   if (Array.isArray(data?.productos)) return data.productos
   if (Array.isArray(data?.products)) return data.products
   return []
-}
-
-function toMoneyNumber(value) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return 0
-  }
-  return numeric
-}
-
-function wait(ms) {
-  if (ms <= 0) return Promise.resolve()
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
 }
 
 async function fetchStockForCode(codigo) {
@@ -176,117 +161,4 @@ export function selectRowsExcludedFromCart(results = [], { onlyOk = false } = {}
     return rows.filter((row) => row.estado !== STOCK_STATUS.OK)
   }
   return rows.filter((row) => row.estado === STOCK_STATUS.OUT)
-}
-
-async function runWithConcurrency(items, concurrency, worker) {
-  const list = Array.isArray(items) ? items : []
-  const limit = Math.max(1, Number(concurrency) || 1)
-  const results = new Array(list.length)
-  let nextIndex = 0
-
-  async function runWorker() {
-    while (nextIndex < list.length) {
-      const current = nextIndex
-      nextIndex += 1
-      results[current] = await worker(list[current], current)
-    }
-  }
-
-  const workers = Array.from(
-    { length: Math.min(limit, list.length || 1) },
-    () => runWorker(),
-  )
-  await Promise.all(workers)
-  return results
-}
-
-/**
- * POST /api/v1/inventory/carts con Bearer token.
- * Body por producto: { id_producto, cantidad, precio_unitario }
- * Un POST distinto por cada fila seleccionada (id distinto por código Excel).
- */
-export async function postBulkOrderToCart(
-  rows = [],
-  {
-    token,
-    getExistingQty,
-    onProgress,
-    concurrency = CART_POST_CONCURRENCY,
-  } = {},
-) {
-  const authToken = token || getApiAuthToken()
-  if (!authToken) {
-    throw new Error('Sesión requerida para enviar al carrito')
-  }
-
-  const list = Array.isArray(rows) ? rows : []
-  const posted = []
-  const failed = []
-  const plannedQtyById = new Map()
-  let done = 0
-
-  onProgress?.(0, list.length)
-
-  // Precalcula cantidades por id para evitar colisiones si hubiera ids repetidos.
-  list.forEach((row) => {
-    const productId = row?.id != null ? String(row.id) : ''
-    const stock = Math.max(0, Number(row?.stock) || 0)
-    const requested = Math.max(0, Number(row?.cantidad) || 0)
-    const orderQty = Math.min(requested, stock)
-    if (!productId || orderQty <= 0) return
-
-    const base = plannedQtyById.has(productId)
-      ? plannedQtyById.get(productId)
-      : Number(getExistingQty?.(productId) || 0)
-    plannedQtyById.set(productId, base + orderQty)
-  })
-
-  await runWithConcurrency(list, concurrency, async (row) => {
-    const productId = row?.id != null ? String(row.id) : ''
-    const stock = Math.max(0, Number(row?.stock) || 0)
-    const requested = Math.max(0, Number(row?.cantidad) || 0)
-    const orderQty = Math.min(requested, stock)
-    const requestBody = {
-      id_producto: Number(productId),
-      cantidad: plannedQtyById.get(productId) ?? orderQty,
-      precio_unitario: toMoneyNumber(row?.precio),
-    }
-
-    if (!productId || !Number.isFinite(requestBody.id_producto) || orderQty <= 0) {
-      failed.push({
-        codigo: row?.codigo,
-        reason: !productId ? 'Código sin producto en inventario' : 'Sin stock disponible',
-        request: requestBody,
-      })
-      done += 1
-      onProgress?.(done, list.length)
-      return
-    }
-
-    try {
-      await postCartItem({
-        token: authToken,
-        idProducto: requestBody.id_producto,
-        cantidad: requestBody.cantidad,
-        precioUnitario: requestBody.precio_unitario,
-      })
-      posted.push({
-        codigo: row.codigo,
-        cantidad: orderQty,
-        id: productId,
-        request: requestBody,
-      })
-    } catch (error) {
-      failed.push({
-        codigo: row?.codigo,
-        reason: error?.message || 'Error al agregar al carrito',
-        request: requestBody,
-      })
-    }
-
-    done += 1
-    onProgress?.(done, list.length)
-  })
-
-  return { posted, failed }
 }

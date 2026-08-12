@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { enrichOrder } from '@/features/orders/utils/enrichOrder'
+import { APP_EVENTS } from '../appEvents'
 
 export function useOrdersSlice({
+  events,
   initialPendingOrders,
   initialHistoryOrders,
-  setDrawerOpen,
-  setDrawerType,
-  setActiveView,
 }) {
   const [pendingOrders, setPendingOrders] = useState(() => initialPendingOrders)
   const [historyOrders, setHistoryOrders] = useState(() => initialHistoryOrders)
@@ -20,9 +19,8 @@ export function useOrdersSlice({
 
   const openOrderDrawer = useCallback((orderId) => {
     setSelectedOrderId(orderId)
-    setDrawerType('order')
-    setDrawerOpen(true)
-  }, [setDrawerOpen, setDrawerType])
+    events.emit(APP_EVENTS.ORDER_OPENED)
+  }, [events])
 
   const selectedOrder = useMemo(() => {
     if (!selectedOrderId) {
@@ -90,9 +88,8 @@ export function useOrdersSlice({
         updatedOrder,
         ...currentOrders.filter((entry) => entry.id !== orderId),
       ])
-      setDrawerOpen(false)
-      setActiveView('historial')
       resetOrderDrawer()
+      events.emit(APP_EVENTS.ORDER_COMPLETED)
     } else {
       setPendingOrders((currentOrders) =>
         currentOrders.map((entry) => (entry.id === orderId ? updatedOrder : entry)),
@@ -101,7 +98,7 @@ export function useOrdersSlice({
     }
 
     return { success: true, isFullyPaid }
-  }, [pendingOrders, resetOrderDrawer, setActiveView, setDrawerOpen])
+  }, [events, pendingOrders, resetOrderDrawer])
 
   const value = useMemo(() => ({
     pendingOrders,

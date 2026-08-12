@@ -7,22 +7,15 @@ import editIcon from '@/assets/icons/edit.svg'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
 import './CheckoutFinalizar.css'
-import { CheckoutDeliveryMap } from './CheckoutDeliveryMap'
+import { SummaryRow } from './SummaryRow'
+import { CheckoutDeliverySection } from './CheckoutDeliverySection'
+import { CheckoutPaymentSection } from './CheckoutPaymentSection'
 
 const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
 
-function SummaryRow({ label, value, highlight = false }) {
-  return (
-    <div className={`checkout-finalize__row ${highlight ? 'checkout-finalize__row--highlight' : ''}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  )
-}
-
 export function CartCheckoutDrawerContent() {
-  const { cartItems } = useCart()
+  const { cartItems, createOrderFromCheckout } = useCart()
   const { profile } = useProfile()
   const { showToast } = useToast()
 
@@ -61,6 +54,7 @@ export function CartCheckoutDrawerContent() {
   const hasDelivery = Boolean(deliveryAddress.trim())
   const showDeliverySection = !hasDelivery || editingDelivery
   const showPaymentSection = !paymentConfirmed || editingPayment
+  const canConfirmOrder = hasDelivery && paymentConfirmed
 
   const confirmRegisteredAddress = () => {
     const selected = registeredAddresses.find((entry) => entry.id === selectedAddressId)
@@ -147,6 +141,23 @@ export function CartCheckoutDrawerContent() {
     showToast('Crédito seleccionado', 'success')
   }
 
+  const handleConfirmOrder = () => {
+    if (!canConfirmOrder) {
+      return
+    }
+
+    createOrderFromCheckout({
+      clientData: {
+        fullName: profile?.fullName || '',
+        address: deliveryAddress,
+        notes: '',
+      },
+      paymentType: paymentMethod,
+      paymentDetails,
+    })
+    showToast('Pedido creado. Puede seguirlo en la vista de espera.', 'success')
+  }
+
   return (
     <div className="content-main-carrito">
       <div className="content-main-aux-carrito order-payments-panel checkout-panel checkout-finalize">
@@ -196,173 +207,45 @@ export function CartCheckoutDrawerContent() {
         </Accordion>
 
         {showDeliverySection && (
-          <Accordion title="Entrega" defaultOpen>
-            <div className="checkout-finalize__box">
-              <Accordion title="1. Direcciones registradas" defaultOpen>
-                <div className="checkout-finalize__options">
-                  {registeredAddresses.map((entry) => (
-                    <label key={entry.id} className="checkout-finalize__option">
-                      <input
-                        type="radio"
-                        name="registered-address"
-                        checked={selectedAddressId === entry.id}
-                        onChange={() => setSelectedAddressId(entry.id)}
-                      />
-                      <span>
-                        <strong>{entry.label}</strong>
-                        <small>{entry.address}</small>
-                      </span>
-                    </label>
-                  ))}
-                  <button
-                    type="button"
-                    className="content-main-data-carrito__checkout"
-                    onClick={confirmRegisteredAddress}
-                    disabled={registeredAddresses.length === 0}
-                  >
-                    Establecer dirección
-                  </button>
-                </div>
-              </Accordion>
-
-              <Accordion title="2. Agregar una nueva dirección de entrega">
-                <label className="order-payments-panel__field">
-                  <span>Nueva dirección</span>
-                  <input
-                    type="text"
-                    value={newAddress}
-                    onChange={(event) => setNewAddress(event.target.value)}
-                    placeholder="Calle, número, ciudad"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="content-main-data-carrito__checkout"
-                  onClick={confirmNewAddress}
-                >
-                  Establecer dirección
-                </button>
-              </Accordion>
-
-              <Accordion title="3. Elegir dirección de entrega en el mapa">
-                <p className="order-payments-panel__intro">
-                  Seleccione la ubicación de entrega en el mapa. Se usará la posición confirmada para el despacho.
-                </p>
-                <CheckoutDeliveryMap onLocationChange={setMapLocation} />
-                {mapLocation?.address ? (
-                  <p className="order-payments-panel__quota">Seleccionada: {mapLocation.address}</p>
-                ) : null}
-                <button
-                  type="button"
-                  className="content-main-data-carrito__checkout"
-                  onClick={confirmMapAddress}
-                  disabled={!mapLocation?.address}
-                >
-                  Confirmar ubicación
-                </button>
-              </Accordion>
-            </div>
-          </Accordion>
+          <CheckoutDeliverySection
+            registeredAddresses={registeredAddresses}
+            selectedAddressId={selectedAddressId}
+            onSelectAddress={setSelectedAddressId}
+            newAddress={newAddress}
+            onNewAddressChange={setNewAddress}
+            mapLocation={mapLocation}
+            onMapLocationChange={setMapLocation}
+            onConfirmRegistered={confirmRegisteredAddress}
+            onConfirmNew={confirmNewAddress}
+            onConfirmMap={confirmMapAddress}
+          />
         )}
 
         {showPaymentSection && (
-          <Accordion title="Método de pago" defaultOpen>
-            <div className="checkout-finalize__box">
-              <div className="order-payment__types order-payments-panel__types">
-                {[
-                  { id: 'transferencia', label: 'Transferencia' },
-                  { id: 'contraentrega', label: 'Contra entrega' },
-                  { id: 'credito', label: 'Crédito' },
-                ].map(({ id, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`order-payment__type order-payment__type--selectable ${paymentPanel === id || paymentMethod === id ? 'order-payment__type--active' : ''}`}
-                    onClick={() => setPaymentPanel(id)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {paymentPanel === 'transferencia' && (
-                <div className="checkout-finalize__payment-panel">
-                  <SummaryRow label="Cuenta ahorros" value="01400000369" />
-                  <SummaryRow label="Valor total a transferir" value={formatPrice(totalToPay)} highlight />
-                  <SummaryRow label="Entidad bancaria" value="Bancolombia" />
-                  <label className="order-payments-panel__field">
-                    <span>Comprobante de transferencia</span>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0]
-                        setTransferProofName(file ? file.name : '')
-                      }}
-                    />
-                    {transferProofName && (
-                      <span className="order-payments-panel__quota">Archivo: {transferProofName}</span>
-                    )}
-                  </label>
-                  <button
-                    type="button"
-                    className="content-main-data-carrito__checkout"
-                    onClick={handleConfirmTransfer}
-                    disabled={!transferProofName}
-                  >
-                    Seleccionar
-                  </button>
-                </div>
-              )}
-
-              {paymentPanel === 'contraentrega' && (
-                <div className="checkout-finalize__payment-panel">
-                  <SummaryRow label="Valor del pedido" value={formatPrice(totalToPay)} highlight />
-                  <span className="checkout-finalize__box-title">Método de pago en entrega</span>
-                  <label className="filter-drawer-check">
-                    <input
-                      type="checkbox"
-                      checked={contraentregaMethod === 'transferencia'}
-                      onChange={() => setContraentregaMethod('transferencia')}
-                    />
-                    <span>Transferencia</span>
-                  </label>
-                  <label className="filter-drawer-check">
-                    <input
-                      type="checkbox"
-                      checked={contraentregaMethod === 'efectivo'}
-                      onChange={() => setContraentregaMethod('efectivo')}
-                    />
-                    <span>Efectivo</span>
-                  </label>
-                  <button
-                    type="button"
-                    className="content-main-data-carrito__checkout"
-                    onClick={handleConfirmContraentrega}
-                    disabled={!contraentregaMethod}
-                  >
-                    Seleccionar
-                  </button>
-                </div>
-              )}
-
-              {paymentPanel === 'credito' && (
-                <div className="checkout-finalize__payment-panel">
-                  <SummaryRow label="Total del pedido" value={formatPrice(totalToPay)} highlight />
-                  <SummaryRow label="Crédito disponible" value={formatPrice(CREDIT_AVAILABLE)} />
-                  <SummaryRow label="Límite de pago" value="2 meses desde la creación" />
-                  <button
-                    type="button"
-                    className="content-main-data-carrito__checkout"
-                    onClick={handleConfirmCredit}
-                  >
-                    Seleccionar
-                  </button>
-                </div>
-              )}
-            </div>
-          </Accordion>
+          <CheckoutPaymentSection
+            totalToPay={totalToPay}
+            creditAvailable={CREDIT_AVAILABLE}
+            paymentPanel={paymentPanel}
+            onSelectPanel={setPaymentPanel}
+            paymentMethod={paymentMethod}
+            transferProofName={transferProofName}
+            onTransferProofChange={setTransferProofName}
+            contraentregaMethod={contraentregaMethod}
+            onContraentregaMethodChange={setContraentregaMethod}
+            onConfirmTransfer={handleConfirmTransfer}
+            onConfirmContraentrega={handleConfirmContraentrega}
+            onConfirmCredit={handleConfirmCredit}
+          />
         )}
+
+        <button
+          type="button"
+          className="content-main-data-carrito__checkout checkout-finalize__confirm"
+          onClick={handleConfirmOrder}
+          disabled={!canConfirmOrder}
+        >
+          Confirmar
+        </button>
       </div>
     </div>
   )

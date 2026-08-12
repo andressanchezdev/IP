@@ -1,6 +1,5 @@
 import { loadPersistedState } from '@/shared/lib/storage'
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
-import { findUserCredentials } from '@/features/auth/utils/authStorage'
 import { getOrCreateUserWorkspace } from '@/features/auth/utils/userWorkspace'
 import { mergeApiProfileWithWorkspace } from '@/features/auth/utils/mapLoginUserToProfile'
 import { getBrandLogoUrl } from '@/shared/lib/brandLogos'
@@ -23,6 +22,18 @@ export function normalizeProduct(product) {
   }
 }
 
+/** Nunca persistir contraseñas en storage local. */
+export function sanitizeProfileSettings(profileSettings) {
+  if (!profileSettings?.access) {
+    return profileSettings
+  }
+
+  return {
+    ...profileSettings,
+    access: { ...profileSettings.access, password: '' },
+  }
+}
+
 export function loadInitialUserData(session) {
   if (!session?.userId) {
     return {
@@ -34,15 +45,13 @@ export function loadInitialUserData(session) {
     }
   }
 
-  // Prioridad: snapshot del login en sesión → workspace → registro local.
-  const sessionProfile = session.profile
-  const credentials = findUserCredentials(session.username)
-  const seedProfile = sessionProfile ?? credentials?.profile ?? defaultProfileSettings
+  // Prioridad: snapshot del login en sesión → workspace local.
+  const seedProfile = session.profile ?? defaultProfileSettings
   const workspace = getOrCreateUserWorkspace(session.userId, seedProfile)
   const workspaceProfile = workspace.profileSettings ?? seedProfile
 
-  const profileSettings = sessionProfile
-    ? mergeApiProfileWithWorkspace(sessionProfile, workspaceProfile)
+  const profileSettings = session.profile
+    ? mergeApiProfileWithWorkspace(session.profile, workspaceProfile)
     : workspaceProfile
 
   return {

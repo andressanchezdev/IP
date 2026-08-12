@@ -1,8 +1,8 @@
 import { useAuthForm } from '@/features/auth/hooks/useAuthForm'
 import { AuthField } from './AuthField'
 
-export function LoginForm({ onSubmit, onSwitchMode }) {
-  const { form, setField, validateAll, getError } = useAuthForm('login')
+export function LoginForm({ onSubmit }) {
+  const { form, setField, validateAll, getError } = useAuthForm()
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -46,9 +46,6 @@ export function LoginForm({ onSubmit, onSwitchMode }) {
       <div className="auth-form__actions">
         <button type="submit" className="auth-form__submit">
           Ingresar
-        </button>
-        <button type="button" className="auth-form__secondary" onClick={onSwitchMode}>
-          Registrarme
         </button>
       </div>
     </form>

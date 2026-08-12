@@ -1,0 +1,178 @@
+﻿@media (max-width: 640px) {
+  .espera-card__col-label {
+    font-size: clamp(11px, 3.4cqw, 14px);
+  }
+
+  .espera-card__dispatch-notice,
+  .espera-card__flow-label {
+    font-size: clamp(9px, 2.8cqw, 12px);
+  }
+}
+
+@media (max-width: 768px) {
+  .content-main-espera {
+    max-width: none;
+    overflow-x: hidden;
+    padding: 12px 8px;
+    width: 100%;
+  }
+
+  .content-main-espera__list {
+    gap: 10px;
+  }
+
+  .espera-card {
+    gap: clamp(6px, 1.2dvh, 10px);
+    height: auto;
+    max-height: min(72dvh, 100%);
+    max-width: none;
+    min-height: 0;
+    min-width: 0;
+    padding: clamp(8px, 1.6dvh, 12px) clamp(8px, 2.5vw, 12px);
+    width: 100%;
+  }
+
+  .espera-card__body {
+    flex: 1 1 auto;
+    gap: clamp(6px, 1.5vw, 10px);
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .espera-card__dispatch-notice {
+    flex-shrink: 0;
+    gap: clamp(6px, 1.5vw, 10px);
+    padding: clamp(6px, 1dvh, 8px) clamp(4px, 1vw, 8px);
+    transform: none;
+  }
+
+  .espera-card__flow {
+    flex: 1 1 auto;
+    gap: 0;
+    justify-content: space-between;
+    min-height: 0;
+    overflow: hidden;
+    padding: clamp(4px, 1.2dvh, 10px) clamp(8px, 2.5vw, 14px);
+  }
+
+  .espera-card__flow-col {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    padding: clamp(8px, 1.4dvh, 12px);
+  }
+
+  .espera-card__flow-step {
+    gap: clamp(6px, 1.5vw, 10px);
+    min-height: 0;
+    padding: clamp(2px, 0.7dvh, 6px) 0;
+  }
+
+  .espera-card__header {
+    flex-shrink: 0;
+  }
+
+  .espera-card__header-info {
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-main-espera {
+    padding: 8px 4px;
+  }
+
+  .espera-card {
+    border-radius: 10px;
+    max-height: min(78dvh, 100%);
+  }
+
+  .espera-card__header {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .espera-card__id {
+    font-size: clamp(12px, 3.6cqw, 14px);
+  }
+
+  .espera-card__date {
+    font-size: clamp(9px, 2.6cqw, 11px);
+  }
+
+  .espera-card__total {
+    font-size: clamp(11px, 3.2cqw, 13px);
+  }
+
+  .espera-card__flow-col {
+    height: auto;
+    max-height: none;
+  }
+
+  .espera-card__flow-label {
+    font-size: clamp(9px, 2.8cqw, 12px);
+    line-height: 1.2;
+  }
+
+  .espera-card__dispatch-notice {
+    font-size: clamp(8px, 2.4cqw, 11px);
+    line-height: 1.25;
+  }
+
+  .espera-card__dispatch-notice-icon {
+    height: clamp(26px, 7vw, 32px);
+    width: clamp(26px, 7vw, 32px);
+  }
+
+  .espera-card__dispatch-notice-icon img {
+    height: 14px;
+    width: 14px;
+  }
+}
+
+@media (max-width: 400px) {
+  .content-main-espera {
+    padding: 6px 2px;
+  }
+
+  .espera-card {
+    max-height: min(82dvh, 100%);
+    padding: clamp(6px, 1.2dvh, 8px);
+  }
+
+  .espera-card__body {
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .espera-card__id {
+    font-size: clamp(11px, 3.4cqw, 13px);
+  }
+
+  .espera-card__flow {
+    padding: clamp(2px, 0.8dvh, 6px) clamp(4px, 2vw, 8px);
+  }
+
+  .espera-card__flow-col {
+    height: auto;
+    max-height: none;
+    padding: clamp(6px, 1dvh, 8px);
+  }
+
+  .espera-card__flow-dot {
+    height: 11px;
+    width: 11px;
+  }
+
+  .espera-card__flow-step {
+    gap: 6px;
+    padding: clamp(1px, 0.5dvh, 4px) 0;
+  }
+
+  .espera-card__flow-step:not(:last-child)::after {
+    left: 4.5px;
+    top: 18px;
+  }
+}
