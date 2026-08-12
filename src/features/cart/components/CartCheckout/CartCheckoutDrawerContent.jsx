@@ -7,10 +7,10 @@ import editIcon from '@/assets/icons/edit.svg'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
 import './CheckoutFinalizar.css'
+import { CheckoutDeliveryMap } from './CheckoutDeliveryMap'
 
 const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
-const MAP_ADDRESS_PLACEHOLDER = 'Ubicación seleccionada en mapa — Bogotá, Colombia'
 
 function SummaryRow({ label, value, highlight = false }) {
   return (
@@ -29,6 +29,7 @@ export function CartCheckoutDrawerContent() {
   const [selectedAddressId, setSelectedAddressId] = useState('')
   const [newAddress, setNewAddress] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [mapLocation, setMapLocation] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState(null)
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
   const [paymentDetails, setPaymentDetails] = useState({})
@@ -86,7 +87,11 @@ export function CartCheckoutDrawerContent() {
   }
 
   const confirmMapAddress = () => {
-    setDeliveryAddress(MAP_ADDRESS_PLACEHOLDER)
+    if (!mapLocation?.address) {
+      showToast('Seleccione un punto en el mapa', 'error')
+      return
+    }
+    setDeliveryAddress(mapLocation.address)
     setEditingDelivery(false)
     showToast('Ubicación de mapa establecida', 'success')
   }
@@ -243,13 +248,15 @@ export function CartCheckoutDrawerContent() {
                 <p className="order-payments-panel__intro">
                   Seleccione la ubicación de entrega en el mapa. Se usará la posición confirmada para el despacho.
                 </p>
-                <div className="checkout-finalize__map-slot" aria-hidden="true">
-                  Mapa de entrega
-                </div>
+                <CheckoutDeliveryMap onLocationChange={setMapLocation} />
+                {mapLocation?.address ? (
+                  <p className="order-payments-panel__quota">Seleccionada: {mapLocation.address}</p>
+                ) : null}
                 <button
                   type="button"
                   className="content-main-data-carrito__checkout"
                   onClick={confirmMapAddress}
+                  disabled={!mapLocation?.address}
                 >
                   Confirmar ubicación
                 </button>

@@ -124,7 +124,15 @@ export function AppDrawer() {
         return <ProfileSettingsDrawerContent />
       }
       if (profileSubView === 'bulk-upload') {
-        return <BulkUploadFileContent onCancelOrder={() => setProfileSubView(null)} />
+        return (
+          <BulkUploadFileContent
+            onCancelOrder={() => setProfileSubView(null)}
+            onOrderSent={() => {
+              setProfileSubView(null)
+              closeDrawer()
+            }}
+          />
+        )
       }
       if (profileSubView === 'price-download') {
         return (

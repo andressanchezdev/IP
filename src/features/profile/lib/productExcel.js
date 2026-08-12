@@ -1,10 +1,10 @@
-import formatoExcelUrl from '@/features/profile/docs/formatoexel.xlsx?url'
-
 /** Encabezados oficiales (columna A = codigo, B = cantidad). */
 export const EXCEL_HEADERS = ['Codigo', 'cantidad']
 export const EXCEL_TEMPLATE_FILENAME = 'formatoexel.xlsx'
 /** Línea 1 = header; líneas 2–251 = productos (máx. 251 filas en total). */
 export const MAX_EXCEL_LINES = 251
+/** Mínimo de códigos/productos válidos para enviar el pedido al carrito. */
+export const MIN_PRODUCT_CODES = 5
 
 const EXCEL_EXTENSIONS = ['.xlsx', '.xls']
 const EXCEL_MIME_TYPES = new Set([
@@ -13,8 +13,10 @@ const EXCEL_MIME_TYPES = new Set([
   'application/octet-stream',
   '',
 ])
+const EXCEL_SHEET_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-/** SheetJS solo se descarga la primera vez que Subida masiva lee un .xlsx. */
+/** SheetJS solo se descarga la primera vez que Subida masiva lee/genera un .xlsx. */
 let xlsxModulePromise = null
 
 async function loadXlsx() {
@@ -22,6 +24,23 @@ async function loadXlsx() {
     xlsxModulePromise = import('xlsx').then((mod) => mod.default ?? mod)
   }
   return xlsxModulePromise
+}
+
+/** Plantilla oficial en memoria (sin archivo en el repo). */
+function getOfficialTemplateMatrix() {
+  return [EXCEL_HEADERS]
+}
+
+/**
+ * Genera el .xlsx oficial con SheetJS a partir de la matriz de plantilla.
+ */
+async function buildOfficialExcelTemplateBlob() {
+  const XLSX = await loadXlsx()
+  const workbook = XLSX.utils.book_new()
+  const sheet = XLSX.utils.aoa_to_sheet(getOfficialTemplateMatrix())
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Plantilla')
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+  return new Blob([buffer], { type: EXCEL_SHEET_MIME })
 }
 
 function normalizeHeader(value) {
@@ -231,6 +250,7 @@ function parseCantidadValue(rawCantidad) {
 /**
  * Mapea filas 2…N a JSON de pedido: { codigo, cantidad }.
  * - Ambos campos obligatorios por fila válida
+ * - Código duplicado → suma la cantidad al primer registro del código
  * - Código sin cantidad / cantidad sin código → se omite con motivo
  * - Filas totalmente vacías → se omiten en silencio
  * - Cantidad inválida → se omite con motivo
@@ -238,9 +258,11 @@ function parseCantidadValue(rawCantidad) {
 export function mapExcelRowsToOrderJson(matrix, { codigoIndex = 0, cantidadIndex = 1 } = {}) {
   const items = []
   const omitted = []
+  const merges = []
+  const indexByCodigo = new Map()
 
   if (!Array.isArray(matrix) || matrix.length < 2) {
-    return { items, omitted }
+    return { items, omitted, merges }
   }
 
   const lastIndex = Math.min(matrix.length - 1, MAX_EXCEL_LINES - 1)
@@ -275,13 +297,32 @@ export function mapExcelRowsToOrderJson(matrix, { codigoIndex = 0, cantidadIndex
       continue
     }
 
+    const existingIndex = indexByCodigo.get(codigo)
+    if (existingIndex != null) {
+      const previous = items[existingIndex]
+      const mergedQty = Number(previous.cantidad) + Number(cantidadParsed.value)
+      items[existingIndex] = {
+        ...previous,
+        cantidad: String(mergedQty),
+      }
+      merges.push({
+        line: excelLine,
+        codigo,
+        added: cantidadParsed.value,
+        total: String(mergedQty),
+        reason: `Código duplicado: se sumó ${cantidadParsed.value} (total ${mergedQty})`,
+      })
+      continue
+    }
+
+    indexByCodigo.set(codigo, items.length)
     items.push({
       codigo,
       cantidad: cantidadParsed.value,
     })
   }
 
-  return { items, omitted }
+  return { items, omitted, merges }
 }
 
 export function formatOmittedLinesMessage(omitted = []) {
@@ -309,37 +350,21 @@ export function rowsToSheetMatrix(items = []) {
 }
 
 /**
- * Lee la plantilla oficial y devuelve su matriz visible.
+ * Devuelve la matriz visible de la plantilla oficial (generada en memoria).
  */
 export async function loadTemplateSheetMatrix() {
-  const [XLSX, response] = await Promise.all([
-    loadXlsx(),
-    fetch(formatoExcelUrl),
-  ])
-  if (!response.ok) {
-    throw new Error('No se pudo cargar la plantilla Excel')
-  }
-
-  const buffer = await response.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: 'array' })
-  const sheetName = workbook.SheetNames[0]
-  if (!sheetName) {
-    throw new Error('La plantilla no contiene hojas')
-  }
-
-  const sheet = workbook.Sheets[sheetName]
-  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
-  return trimSheetMatrix(Array.isArray(matrix) ? matrix : [])
+  return trimSheetMatrix(getOfficialTemplateMatrix())
 }
 
-/** Descarga el archivo oficial `formatoexel.xlsx` (sin cargar SheetJS). */
+/** Genera y descarga `formatoexel.xlsx` sin mantener el archivo en el repo. */
 export async function downloadOfficialExcelTemplate() {
-  const response = await fetch(formatoExcelUrl)
-  if (!response.ok) {
-    throw new Error('No se pudo descargar la plantilla')
+  let blob
+  try {
+    blob = await buildOfficialExcelTemplateBlob()
+  } catch {
+    throw new Error('No se pudo generar la plantilla')
   }
 
-  const blob = await response.blob()
   const objectUrl = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = objectUrl
@@ -435,7 +460,7 @@ export async function parseAndValidateProductExcelFile(file) {
     return headerCheck
   }
 
-  const { items, omitted } = mapExcelRowsToOrderJson(orderMatrix, {
+  const { items, omitted, merges } = mapExcelRowsToOrderJson(orderMatrix, {
     codigoIndex: headerCheck.codigoIndex,
     cantidadIndex: headerCheck.cantidadIndex,
   })
@@ -448,7 +473,19 @@ export async function parseAndValidateProductExcelFile(file) {
       valid: false,
       error: `No hay productos válidos (se requieren código y cantidad en cada fila).${omittedHint}`,
       omitted,
+      merges,
       lineCount,
+    }
+  }
+
+  if (items.length < MIN_PRODUCT_CODES) {
+    return {
+      valid: false,
+      error: `El archivo debe tener al menos ${MIN_PRODUCT_CODES} líneas de código válidas (tiene ${items.length})`,
+      omitted,
+      merges,
+      lineCount,
+      items,
     }
   }
 
@@ -460,11 +497,13 @@ export async function parseAndValidateProductExcelFile(file) {
     items,
     rows: items,
     omitted,
+    merges,
     warning: omitted.length > 0 ? formatOmittedLinesMessage(omitted) : '',
     matrix: rowsToSheetMatrix(items),
     processLog: buildConversionProcessLog({
       items,
       omitted,
+      merges,
       swapped: Boolean(headerCheck.swapped),
     }),
   }
@@ -476,6 +515,7 @@ export async function parseAndValidateProductExcelFile(file) {
 export function buildConversionProcessLog({
   items = [],
   omitted = [],
+  merges = [],
   swapped = false,
 } = {}) {
   const log = [
@@ -487,6 +527,13 @@ export function buildConversionProcessLog({
     log.push({ code: 200, message: 'Columnas corregidas' })
   }
 
+  if (merges.length > 0) {
+    log.push({
+      code: 200,
+      message: `${merges.length} código(s) duplicado(s) consolidados`,
+    })
+  }
+
   log.push({
     code: 200,
     message: `${items.length} producto(s) en JSON`,
@@ -495,7 +542,7 @@ export function buildConversionProcessLog({
   if (omitted.length > 0) {
     log.push({
       code: 200,
-      message: `${omitted.length} línea(s) omitida(s)`,
+      message: `${omitted.length} línea(s) con error`,
     })
   }
 

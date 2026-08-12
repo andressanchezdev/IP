@@ -105,16 +105,40 @@
 }
 
 .checkout-finalize__map-slot {
-  align-items: center;
-  background: linear-gradient(135deg, var(--color-gris-claro) 0%, var(--color-gris-casi-invisible) 100%);
-  border: 1px dashed var(--color-border);
+  background: var(--color-gris-claro);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
+  min-height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+.checkout-finalize__map-canvas {
+  height: 220px;
+  width: 100%;
+}
+
+.checkout-finalize__map-status,
+.checkout-finalize__map-hint {
+  background: rgba(255, 255, 255, 0.92);
+  bottom: 8px;
   color: var(--color-text-secondary);
-  display: flex;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  left: 8px;
+  margin: 0;
+  padding: 6px 8px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  text-align: center;
+}
+
+.checkout-finalize__map-status {
+  align-items: center;
+  display: flex;
+  inset: 0;
   justify-content: center;
-  min-height: 120px;
 }
 
 .checkout-finalize__payment-panel {
