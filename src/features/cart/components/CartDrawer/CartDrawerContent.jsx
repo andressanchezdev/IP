@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import searchIcon from '@/assets/icons/search.svg'
 import { useCart, useCatalog } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
+import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
 import './CartDrawer.css'
 
 function CartItemMedia({ item }) {
@@ -162,49 +162,42 @@ export function CartDrawerContent() {
         ) : (
           <>
             <div className="carrito-search">
-              <img src={searchIcon} alt="" className="carrito-search__icon" aria-hidden="true" />
-              <input
-                type="search"
-                className="carrito-search__input"
+              <SearchBar
                 value={cartSearchValue}
-                onChange={(event) => setCartSearchValue(event.target.value)}
-                placeholder="Buscar por categoría, referencia o nombre"
-                aria-label="Buscar en el carrito"
+                onChange={setCartSearchValue}
+                onClear={() => setCartSearchValue('')}
+                placeholder="Buscar en el carrito"
+                ariaLabel="Buscar ítems del carrito"
               />
-              <button
-                type="button"
-                className="carrito-search__clear"
-                onClick={() => setCartSearchValue('')}
-                disabled={!cartSearchValue.trim()}
-                aria-label="Limpiar búsqueda"
-              >
-                ×
-              </button>
             </div>
 
             <div className="carrito-list-scroll">
               <ul className="carrito-list">
-                {filteredItems.map((item) => (
-                  <CartCard
-                    key={item.cartId ?? item.id}
-                    item={item}
-                    catalogStock={catalogStockById.get(String(item.id)) ?? 0}
-                    onQuantityChange={async (productId, quantity) => {
-                      const result = await setCartItemQuantity(productId, quantity)
-                      if (!result?.success) {
-                        showToast(result?.error || 'No se pudo actualizar la cantidad', 'error')
-                      }
-                    }}
-                    onRemove={async (productId) => {
-                      const result = await removeFromCart(productId)
-                      if (!result?.success) {
-                        showToast(result?.error || 'No se pudo retirar el producto', 'error')
-                        return
-                      }
-                      showToast('Producto retirado del carrito', 'success')
-                    }}
-                  />
-                ))}
+                {filteredItems.length === 0 ? (
+                  <li className="content-main-carrito__empty">Sin coincidencias en el carrito</li>
+                ) : (
+                  filteredItems.map((item) => (
+                    <CartCard
+                      key={item.cartId ?? item.id}
+                      item={item}
+                      catalogStock={catalogStockById.get(String(item.id)) ?? 0}
+                      onQuantityChange={async (productId, quantity) => {
+                        const result = await setCartItemQuantity(productId, quantity)
+                        if (!result?.success) {
+                          showToast(result?.error || 'No se pudo actualizar la cantidad', 'error')
+                        }
+                      }}
+                      onRemove={async (productId) => {
+                        const result = await removeFromCart(productId)
+                        if (!result?.success) {
+                          showToast(result?.error || 'No se pudo retirar el producto', 'error')
+                          return
+                        }
+                        showToast('Producto retirado del carrito', 'success')
+                      }}
+                    />
+                  ))
+                )}
               </ul>
             </div>
           </>

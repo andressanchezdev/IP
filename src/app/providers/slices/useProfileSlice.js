@@ -30,8 +30,9 @@ export function useProfileSlice({
     id: profileSettings.personal.userId,
     fullName: profileSettings.personal.fullName,
     documentId: profileSettings.personal.documentId,
+    email: profileSettings.personal.email || profileSettings.access?.email || '',
+    phone: profileSettings.personal.phone || profileSettings.personal.mobile || '',
     mobile: profileSettings.personal.mobile || profileSettings.personal.phone || '',
-    phone: profileSettings.personal.phone || '',
     status: profileSettings.personal.role || '',
     addresses: profileSettings.addresses ?? [],
   }), [profileSettings])

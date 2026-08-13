@@ -49,8 +49,8 @@ export function CheckoutPaymentSection({
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  onTransferProofChange(file ? file.name : '')
+                  const file = event.target.files?.[0] ?? null
+                  onTransferProofChange(file)
                 }}
               />
               {transferProofName && (

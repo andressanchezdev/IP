@@ -72,9 +72,10 @@
 
 .espera-card__col-label {
   color: var(--color-text-primary);
-  font-size: clamp(11px, 3.2cqw, 14px);
+  flex-shrink: 0;
+  font-size: clamp(10px, min(3.4cqi, 5.2cqh), 14px);
   font-weight: 600;
-  line-height: 1.0;
+  line-height: 1.15;
   margin: 0;
   text-transform: uppercase;
 }
@@ -90,15 +91,18 @@
   background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
   border-radius: 10px;
   border: 1px solid #ffb74d;
-  color: #bf360c;
+  color: #ffb74d;
   display: flex;
-  font-size: clamp(8px, 2.4cqw, 10px);
+  flex-shrink: 0;
+  font-size: clamp(8px, min(2.6cqi, 4cqh), 11px);
   font-weight: 700;
-  gap: 12px;
-  line-height: 1.4;
+  gap: clamp(6px, 2.2cqi, 12px);
+  line-height: 1.35;
+  margin-top: auto;
   min-width: 0;
-  padding: 8px 4px;
-  transform: translateY(-20px);
+  overflow-wrap: anywhere;
+  padding: clamp(4px, 1.4cqh, 8px) clamp(6px, 1.8cqi, 10px);
+  width: 100%;
 }
 
 .espera-card__dispatch-notice-icon {
@@ -107,24 +111,27 @@
   border-radius: 50%;
   display: inline-flex;
   flex-shrink: 0;
-  height: 38px;
+  height: clamp(24px, min(8cqi, 12cqh), 38px);
   justify-content: center;
-  width: 38px;
+  width: clamp(24px, min(8cqi, 12cqh), 38px);
 }
 
 .espera-card__dispatch-notice-icon img {
   filter: brightness(0) invert(1);
-  height: 20px;
-  width: 20px;
+  height: 52%;
+  width: 52%;
 }
 
 .espera-card__flow {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: 2px;
+  gap: clamp(0px, 0.6cqh, 4px);
   list-style: none;
   margin: 0;
-  padding: 14px 25px;
+  min-height: 0;
+  overflow: auto;
+  padding: clamp(4px, 1.6cqh, 10px) clamp(10px, 4cqi, 25px);
 }
 
 .espera-card__flow-col {
@@ -132,11 +139,14 @@
   border-radius: 10px;
   border: 1px solid var(--color-border);
   box-sizing: border-box;
+  container-name: espera-flow;
+  container-type: size;
   display: flex;
   flex-direction: column;
   height: clamp(220px, 38dvh, 300px);
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
   padding: 12px;
 }
 
@@ -144,17 +154,17 @@
   background: var(--color-gris-casi-invisible);
   border-radius: 50%;
   flex-shrink: 0;
-  height: 14px;
+  height: clamp(10px, min(3.2cqi, 5cqh), 14px);
   position: relative;
-  width: 14px;
+  width: clamp(10px, min(3.2cqi, 5cqh), 14px);
   z-index: 1;
 }
 
 .espera-card__flow-label {
   color: var(--color-gris);
   flex: 1;
-  font-size: clamp(11px, 3.2cqw, 14px);
-  line-height: 1.3;
+  font-size: clamp(9px, min(3.4cqi, 5cqh), 14px);
+  line-height: 1.25;
   min-width: 0;
   overflow-wrap: anywhere;
   position: relative;

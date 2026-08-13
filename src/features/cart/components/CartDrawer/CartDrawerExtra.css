@@ -9,6 +9,19 @@
   padding: 0 6px 0 10px;
 }
 
+.carrito-search .search-bar {
+  background: transparent;
+  height: auto;
+  max-width: none;
+  padding: 0;
+  width: 100%;
+}
+
+.carrito-search .search-bar__input {
+  font-size: 13px;
+  padding: 10px 0;
+}
+
 .carrito-search__clear {
   align-items: center;
   background: transparent;
@@ -125,6 +138,10 @@
 }
 
 .content-main-carrito {
+  /* Tipografía del carrito (restaura grosor solo aquí) */
+  --drawer-fw: 600;
+  --drawer-fw-regular: 400;
+  --drawer-fw-bold: 700;
   color: var(--color-gris-oscuro);
   display: flex;
   flex-direction: column;

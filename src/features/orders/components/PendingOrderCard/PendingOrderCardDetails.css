@@ -1,19 +1,20 @@
 ﻿.espera-card__flow-step {
   align-items: center;
   display: flex;
-  gap: 12px;
+  gap: clamp(6px, 2.4cqi, 12px);
   isolation: isolate;
-  padding: 6px 0;
+  min-height: 0;
+  padding: clamp(2px, 1.2cqh, 6px) 0;
   position: relative;
 }
 
 .espera-card__flow-step--current .espera-card__flow-dot {
-  background: #e65100;
+  background: #ffb74d;
   box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.22);
 }
 
 .espera-card__flow-step--current .espera-card__flow-label {
-  color: #e65100;
+  color: #ffb74d;
   font-weight: 700;
 }
 
@@ -42,9 +43,9 @@
   background: var(--color-gris-casi-invisible);
   bottom: -2px;
   content: '';
-  left: 6px;
+  left: calc(clamp(10px, min(3.2cqi, 5cqh), 14px) / 2 - 1px);
   position: absolute;
-  top: 22px;
+  top: calc(clamp(10px, min(3.2cqi, 5cqh), 14px) + 4px);
   width: 2px;
   z-index: 0;
 }

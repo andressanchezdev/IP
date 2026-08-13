@@ -37,7 +37,10 @@ export function DrawerAccordionSection({ id, title, isOpen, onToggle, onClose, c
         aria-controls={`drawer-accordion-panel-${id}`}
       >
         <span>{title}</span>
-        <span className="order-accordion__chevron" aria-hidden="true">{isOpen ? '−' : '+'}</span>
+        <span
+          className={`order-accordion__chevron${isOpen ? ' order-accordion__chevron--open' : ''}`}
+          aria-hidden="true"
+        />
       </button>
       {isOpen && (
         <div

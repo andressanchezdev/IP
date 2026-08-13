@@ -1,22 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useCart, useProfile } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
-import { Accordion } from '@/shared/ui/Accordion/Accordion'
-import { formatPrice } from '@/shared/lib/formatPrice'
-import editIcon from '@/assets/icons/edit.svg'
+import { readFileAsDataUrl } from '@/shared/lib/readFileAsDataUrl'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
 import './CheckoutFinalizar.css'
-import { SummaryRow } from './SummaryRow'
 import { CheckoutDeliverySection } from './CheckoutDeliverySection'
 import { CheckoutPaymentSection } from './CheckoutPaymentSection'
+import { CheckoutOrderSummary } from './CheckoutOrderSummary'
 
 const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
 
 export function CartCheckoutDrawerContent() {
   const { cartItems, createOrderFromCheckout } = useCart()
-  const { profile } = useProfile()
+  const { profile, profileSettings } = useProfile()
   const { showToast } = useToast()
 
   const [selectedAddressId, setSelectedAddressId] = useState('')
@@ -27,10 +25,13 @@ export function CartCheckoutDrawerContent() {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
   const [paymentDetails, setPaymentDetails] = useState({})
   const [transferProofName, setTransferProofName] = useState('')
+  const [transferProofDataUrl, setTransferProofDataUrl] = useState('')
   const [contraentregaMethod, setContraentregaMethod] = useState('')
   const [paymentPanel, setPaymentPanel] = useState(null)
   const [editingDelivery, setEditingDelivery] = useState(false)
   const [editingPayment, setEditingPayment] = useState(false)
+
+  const personal = profileSettings?.personal ?? {}
 
   const registeredAddresses = useMemo(() => {
     const fromProfile = profile?.addresses ?? []
@@ -90,8 +91,26 @@ export function CartCheckoutDrawerContent() {
     showToast('Ubicación de mapa establecida', 'success')
   }
 
+  const handleTransferProofChange = async (file) => {
+    if (!file) {
+      setTransferProofName('')
+      setTransferProofDataUrl('')
+      return
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setTransferProofName(file.name)
+      setTransferProofDataUrl(dataUrl || '')
+    } catch {
+      setTransferProofName('')
+      setTransferProofDataUrl('')
+      showToast('No se pudo leer el comprobante', 'error')
+    }
+  }
+
   const handleConfirmTransfer = () => {
-    if (!transferProofName) {
+    if (!transferProofName || !transferProofDataUrl) {
       showToast('Suba el comprobante de transferencia', 'error')
       return
     }
@@ -102,6 +121,8 @@ export function CartCheckoutDrawerContent() {
       bank: 'Bancolombia',
       amount: totalToPay,
       proofName: transferProofName,
+      proofDataUrl: transferProofDataUrl,
+      proofVerified: false,
     })
     setPaymentPanel(null)
     setEditingPayment(false)
@@ -146,11 +167,28 @@ export function CartCheckoutDrawerContent() {
       return
     }
 
+    const phone = personal.phone || personal.mobile || profile?.phone || profile?.mobile || ''
+    const profileAddress = [
+      personal.address,
+      personal.neighborhood,
+      personal.city,
+      personal.department,
+      personal.country,
+    ].map((part) => String(part ?? '').trim()).filter(Boolean).join(', ')
+
     createOrderFromCheckout({
       clientData: {
-        fullName: profile?.fullName || '',
-        address: deliveryAddress,
+        fullName: personal.fullName || profile?.fullName || '',
+        email: personal.email || profileSettings?.access?.email || profile?.email || '',
+        phone,
+        mobile: personal.mobile || personal.phone || profile?.mobile || phone,
+        documentId: personal.documentId || profile?.documentId || '',
+        address: deliveryAddress || profileAddress,
+        profileAddress,
         notes: '',
+        city: personal.city || '',
+        department: personal.department || '',
+        mapLocation,
       },
       paymentType: paymentMethod,
       paymentDetails,
@@ -161,50 +199,18 @@ export function CartCheckoutDrawerContent() {
   return (
     <div className="content-main-carrito">
       <div className="content-main-aux-carrito order-payments-panel checkout-panel checkout-finalize">
-        <Accordion title="Información del pedido" defaultOpen>
-          <div className="checkout-finalize__box">
-            <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-            <SummaryRow label="Costo de envío" value="Gratis" />
-            <SummaryRow label="IVA (19%)" value={formatPrice(iva)} />
-            <SummaryRow label="Total a pagar" value={formatPrice(totalToPay)} highlight />
-            {hasDelivery && (
-              <div className="checkout-finalize__delivery-note">
-                <div className="checkout-finalize__field-head">
-                  <span>Entrega</span>
-                  <button
-                    type="button"
-                    className="checkout-finalize__edit"
-                    aria-label="Editar entrega"
-                    onClick={() => setEditingDelivery(true)}
-                  >
-                    <img src={editIcon} alt="" width={16} height={16} />
-                  </button>
-                </div>
-                <strong>{deliveryAddress}</strong>
-              </div>
-            )}
-            {paymentConfirmed && (
-              <div className="checkout-finalize__delivery-note">
-                <div className="checkout-finalize__field-head">
-                  <span>Pago</span>
-                  <button
-                    type="button"
-                    className="checkout-finalize__edit"
-                    aria-label="Editar método de pago"
-                    onClick={() => setEditingPayment(true)}
-                  >
-                    <img src={editIcon} alt="" width={16} height={16} />
-                  </button>
-                </div>
-                <strong>
-                  {paymentMethod === 'transferencia' && 'Transferencia'}
-                  {paymentMethod === 'contraentrega' && `Contra entrega (${paymentDetails.method})`}
-                  {paymentMethod === 'credito' && 'Crédito'}
-                </strong>
-              </div>
-            )}
-          </div>
-        </Accordion>
+        <CheckoutOrderSummary
+          subtotal={subtotal}
+          iva={iva}
+          totalToPay={totalToPay}
+          hasDelivery={hasDelivery}
+          deliveryAddress={deliveryAddress}
+          paymentConfirmed={paymentConfirmed}
+          paymentMethod={paymentMethod}
+          paymentDetails={paymentDetails}
+          onEditDelivery={() => setEditingDelivery(true)}
+          onEditPayment={() => setEditingPayment(true)}
+        />
 
         {showDeliverySection && (
           <CheckoutDeliverySection
@@ -229,7 +235,7 @@ export function CartCheckoutDrawerContent() {
             onSelectPanel={setPaymentPanel}
             paymentMethod={paymentMethod}
             transferProofName={transferProofName}
-            onTransferProofChange={setTransferProofName}
+            onTransferProofChange={handleTransferProofChange}
             contraentregaMethod={contraentregaMethod}
             onContraentregaMethodChange={setContraentregaMethod}
             onConfirmTransfer={handleConfirmTransfer}

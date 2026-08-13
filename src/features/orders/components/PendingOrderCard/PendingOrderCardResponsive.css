@@ -1,11 +1,11 @@
 ﻿@media (max-width: 640px) {
   .espera-card__col-label {
-    font-size: clamp(11px, 3.4cqw, 14px);
+    font-size: clamp(11px, 3.6cqi, 14px);
   }
 
   .espera-card__dispatch-notice,
   .espera-card__flow-label {
-    font-size: clamp(9px, 2.8cqw, 12px);
+    font-size: clamp(9px, 3cqi, 12px);
   }
 }
 
@@ -42,8 +42,8 @@
   .espera-card__dispatch-notice {
     flex-shrink: 0;
     gap: clamp(6px, 1.5vw, 10px);
+    margin-top: 8px;
     padding: clamp(6px, 1dvh, 8px) clamp(4px, 1vw, 8px);
-    transform: none;
   }
 
   .espera-card__flow {
@@ -56,6 +56,7 @@
   }
 
   .espera-card__flow-col {
+    container-type: inline-size;
     height: auto;
     max-height: none;
     min-height: 0;
@@ -112,12 +113,12 @@
   }
 
   .espera-card__flow-label {
-    font-size: clamp(9px, 2.8cqw, 12px);
+    font-size: clamp(9px, 3.2cqi, 12px);
     line-height: 1.2;
   }
 
   .espera-card__dispatch-notice {
-    font-size: clamp(8px, 2.4cqw, 11px);
+    font-size: clamp(8px, 2.8cqi, 11px);
     line-height: 1.25;
   }
 

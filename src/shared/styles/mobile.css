@@ -91,4 +91,12 @@
   .order-payments-panel__types {
     flex-wrap: wrap;
   }
+
+  .order-accordion__nested-list {
+    --order-product-card-h: 128px;
+    max-height: min(
+      calc((4 * var(--order-product-card-h)) + (3 * var(--order-product-gap))),
+      55dvh
+    );
+  }
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useCatalog } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
+import { downloadPriceListPdf } from '@/shared/lib/downloadPriceListPdf'
 import { uniqueSorted } from '@/shared/lib/uniqueSorted'
 import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
 import {
@@ -15,14 +16,22 @@ import './ProfilePriceList.css'
  * Método de descarga: Excel o PDF (subvista del drawer de perfil).
  */
 export function ProfileDownloadMethodContent({ onSelect }) {
+  const { products } = useCatalog()
   const { showToast } = useToast()
 
   const pick = (method) => {
+    if (method === 'pdf') {
+      downloadPriceListPdf({
+        products,
+        filename: 'listado-precios.pdf',
+      })
+      showToast('PDF de listado descargado', 'success')
+      onSelect?.(method)
+      return
+    }
+
     onSelect?.(method)
-    showToast(
-      method === 'excel' ? 'Método: Excel seleccionado' : 'Método: PDF seleccionado',
-      'success',
-    )
+    showToast('Método: Excel seleccionado', 'success')
   }
 
   return (

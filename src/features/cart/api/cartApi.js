@@ -2,6 +2,7 @@ import { apiRequest } from '@/shared/api'
 
 const CART_PAGE_SIZE = 50
 const CARTS_PATH = '/api/v1/inventory/carts'
+const CARTS_PATH_MASSIVE = '/api/v1/inventory/carts/massive'
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams()
@@ -175,6 +176,32 @@ export async function deleteCartItem({
     carritos,
     item: carritos[0] ?? null,
     meta,
+    raw: payload,
+    request: body,
+  }
+}
+
+/**
+ * DELETE /api/v1/inventory/carts/massive
+ * Vacía todo el carrito del usuario en una sola petición.
+ * Body: { "type": "all" }
+ * El backend emite WS `stock eliminarTodo` para actualizar stock en catálogo.
+ */
+export async function deleteMasiveCartItems({
+  token,
+} = {}) {
+  const body = {
+    type: 'all',
+  }
+  const payload = await apiRequest(CARTS_PATH_MASSIVE, {
+    method: 'DELETE',
+    token,
+    body,
+  })
+  if (payload?.error) {
+    throw new Error(payload.error)
+  }
+  return {
     raw: payload,
     request: body,
   }

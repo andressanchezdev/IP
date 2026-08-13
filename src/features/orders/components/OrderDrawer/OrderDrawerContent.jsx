@@ -27,7 +27,7 @@ export function OrderDrawerContent({
   packagingProductsOpen,
   onTogglePackagingProducts,
 }) {
-  const { selectedOrder, setOrderSubView } = useOrders()
+  const { selectedOrder, setOrderSubView, verifyTransferProof } = useOrders()
   const { showToast } = useToast()
 
   if (!selectedOrder) {
@@ -39,8 +39,34 @@ export function OrderDrawerContent({
   }
 
   const handleDownloadPdf = () => {
-    downloadOrderPdf(`Pedido ${selectedOrder.id}`, selectedOrder.items, selectedOrder.total)
+    downloadOrderPdf(`Pedido ${selectedOrder.id}`, selectedOrder.items, selectedOrder.total, {
+      filename: `pedido-${selectedOrder.id}.pdf`,
+      subtitle: 'Detalles del pedido',
+      metaLines: [
+        selectedOrder.invoiceNumber ? `Factura: ${selectedOrder.invoiceNumber}` : '',
+        selectedOrder.client?.fullName ? `Cliente: ${selectedOrder.client.fullName}` : '',
+        selectedOrder.paymentMethod ? `Pago: ${selectedOrder.paymentMethod}` : '',
+      ].filter(Boolean),
+    })
     showToast('PDF descargado', 'success')
+  }
+
+  const handleVerifyProof = () => {
+    const result = verifyTransferProof(selectedOrder.id, { verified: true })
+    if (!result?.success) {
+      showToast('No se pudo validar el comprobante', 'error')
+      return
+    }
+    if (result.alreadyVerified) {
+      showToast('El comprobante ya estaba validado', 'success')
+      return
+    }
+    showToast(
+      result.isFullyPaid
+        ? 'Comprobante real: pedido pagado al 100%'
+        : 'Comprobante real: abono parcial aplicado',
+      'success',
+    )
   }
 
   const renderSectionContent = (sectionId) => {
@@ -52,6 +78,7 @@ export function OrderDrawerContent({
           <OrderPaymentContent
             order={selectedOrder}
             onOpenPayments={() => setOrderSubView('payments')}
+            onVerifyProof={handleVerifyProof}
           />
         )
       case 'packaging':

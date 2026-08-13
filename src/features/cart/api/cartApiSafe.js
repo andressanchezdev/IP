@@ -1,4 +1,4 @@
-import { deleteCartItem, postCartItem } from './cartApi'
+import { deleteCartItem, deleteMasiveCartItems, postCartItem } from './cartApi'
 
 /**
  * Wrappers que nunca lanzan: devuelven { success, error?, needsAuth? }
@@ -44,6 +44,24 @@ export async function removeCartItemSafe({ token, idCarrito }) {
     return {
       success: false,
       error: error?.message || 'No se pudo eliminar del carrito',
+    }
+  }
+}
+
+/** Una sola petición DELETE /carts/massive { type: 'all' }. El stock se refleja por WS. */
+export async function clearCartMassiveSafe({ token } = {}) {
+  if (!token) {
+    return { success: false, error: 'Sesión requerida', needsAuth: true }
+  }
+
+  try {
+    const result = await deleteMasiveCartItems({ token })
+    return { success: true, ...result }
+  } catch (error) {
+    console.error('[cart] No se pudo limpiar DELETE /api/v1/inventory/carts/massive', error)
+    return {
+      success: false,
+      error: error?.message || 'No se pudo limpiar el carrito',
     }
   }
 }

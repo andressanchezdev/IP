@@ -34,7 +34,7 @@
   display: inline-flex;
   flex-shrink: 0;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 400;
   height: 34px;
   justify-content: center;
   line-height: 1;
@@ -71,7 +71,7 @@
 .order-payment__empty {
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .order-payment__pill {
@@ -80,7 +80,7 @@
   color: #ffffff;
   display: inline-flex;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 400;
   height: 28px;
   justify-content: center;
   width: 28px;
@@ -100,9 +100,13 @@
 }
 
 .order-payment__type--active {
-  background: var(--color-gris-oscuro);
-  border-color: var(--color-gris-oscuro);
-  color: #ffffff;
+  background: var(--color-gris-claro);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.order-payment__type--chosen {
+  cursor: default;
 }
 
 .order-payment__type--selectable {
@@ -174,7 +178,7 @@
 .order-sales-point__id {
   color: var(--color-text-secondary);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 400;
   margin-top: 4px;
 }
 
@@ -190,5 +194,60 @@
 .order-sales-point__name {
   color: var(--color-gris-oscuro);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 400;
+}
+
+.content-list-data__row--block {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-payment__proof,
+.order-payment__credit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.order-payment__proof-preview {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: block;
+  overflow: hidden;
+}
+
+.order-payment__proof-image {
+  display: block;
+  height: 72px;
+  object-fit: cover;
+  width: 96px;
+}
+
+.order-payment__proof-check {
+  align-items: center;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 400;
+  gap: 8px;
+}
+
+.order-payment__proof-meta {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.order-payment__saldo {
+  font-size: 15px;
+}
+
+.order-payment__saldo--due {
+  color: #c62828;
+}
+
+.order-payment__saldo--ok {
+  color: #2e7d32;
 }

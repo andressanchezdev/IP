@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useCatalog } from '@/app/providers'
 import { uniqueSorted } from '@/shared/lib/uniqueSorted'
 import {
@@ -7,51 +7,7 @@ import {
   DrawerSectionList,
   DrawerShell,
 } from '@/shared/ui/DrawerShell/DrawerShell'
-
-function MultiFilterField({ label, options, selected, emptyLabel, onAdd, onRemove }) {
-  const availableOptions = options.filter((option) => !selected.includes(option))
-
-  return (
-    <div className="filter-drawer-field">
-      <span>{label}</span>
-      <select
-        value=""
-        onChange={(event) => {
-          const nextValue = event.target.value
-          if (nextValue) {
-            onAdd(nextValue)
-          }
-        }}
-        aria-label={`Agregar ${label.toLowerCase()}`}
-      >
-        <option value="">{emptyLabel}</option>
-        {availableOptions.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-
-      {selected.length > 0 && (
-        <div className="filter-drawer-selected" aria-label={`${label} seleccionadas`}>
-          {selected.map((item) => (
-            <span key={item} className="filter-drawer-chip">
-              <span className="filter-drawer-chip__label">{item}</span>
-              <button
-                type="button"
-                className="filter-drawer-chip__remove"
-                onClick={() => onRemove(item)}
-                aria-label={`Quitar ${item}`}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+import { MultiFilterField } from './MultiFilterField'
 
 /**
  * Opciones de filtro desde el JSON de productos.
@@ -71,6 +27,8 @@ export function FilterDrawerContent() {
     setDraftWithStock,
     applyCatalogFiltersAndClose,
   } = useCatalog()
+
+  const [openSectionId, setOpenSectionId] = useState(null)
 
   const sourceProducts = searchProducts != null ? searchProducts : products
 
@@ -94,6 +52,10 @@ export function FilterDrawerContent() {
     (draftFilterNuevos ? 1 : 0) +
     (draftFilterPromociones ? 1 : 0) +
     (draftWithStock ? 1 : 0)
+
+  const toggleSection = (sectionId) => {
+    setOpenSectionId((current) => (current === sectionId ? null : sectionId))
+  }
 
   const addFilterValue = (key, value) => {
     setDraftFilters((current) => {
@@ -124,32 +86,43 @@ export function FilterDrawerContent() {
       )}
     >
       <DrawerPanel>
-        <MultiFilterField
-          label="Marca"
-          emptyLabel="Seleccionar marca"
-          options={filterBrands}
-          selected={draftFilters.brands}
-          onAdd={(value) => addFilterValue('brands', value)}
-          onRemove={(value) => removeFilterValue('brands', value)}
-        />
+        <DrawerSectionList>
+          <MultiFilterField
+            id="brands"
+            label="Marca"
+            emptyLabel="Sin marcas disponibles"
+            options={filterBrands}
+            selected={draftFilters.brands}
+            isOpen={openSectionId === 'brands'}
+            onToggle={toggleSection}
+            onAdd={(value) => addFilterValue('brands', value)}
+            onRemove={(value) => removeFilterValue('brands', value)}
+          />
 
-        <MultiFilterField
-          label="Categoría"
-          emptyLabel="Seleccionar categoría"
-          options={filterCategories}
-          selected={draftFilters.categories}
-          onAdd={(value) => addFilterValue('categories', value)}
-          onRemove={(value) => removeFilterValue('categories', value)}
-        />
+          <MultiFilterField
+            id="categories"
+            label="Categoría"
+            emptyLabel="Sin categorías disponibles"
+            options={filterCategories}
+            selected={draftFilters.categories}
+            isOpen={openSectionId === 'categories'}
+            onToggle={toggleSection}
+            onAdd={(value) => addFilterValue('categories', value)}
+            onRemove={(value) => removeFilterValue('categories', value)}
+          />
 
-        <MultiFilterField
-          label="Modelo"
-          emptyLabel="Seleccionar modelo"
-          options={filterModels}
-          selected={draftFilters.models}
-          onAdd={(value) => addFilterValue('models', value)}
-          onRemove={(value) => removeFilterValue('models', value)}
-        />
+          <MultiFilterField
+            id="models"
+            label="Modelo"
+            emptyLabel="Sin modelos disponibles"
+            options={filterModels}
+            selected={draftFilters.models}
+            isOpen={openSectionId === 'models'}
+            onToggle={toggleSection}
+            onAdd={(value) => addFilterValue('models', value)}
+            onRemove={(value) => removeFilterValue('models', value)}
+          />
+        </DrawerSectionList>
       </DrawerPanel>
 
       <DrawerPanel title="Opciones rápidas" variant="quick">

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { buildCheckoutOrder } from '@/features/orders/utils/buildCheckoutOrder'
 import { getCart } from '@/features/cart/api/cartApi'
-import { persistCartItemSafe, removeCartItemSafe } from '@/features/cart/api/cartApiSafe'
+import { persistCartItemSafe, removeCartItemSafe, clearCartMassiveSafe } from '@/features/cart/api/cartApiSafe'
 import { mapApiCartItems } from '@/features/catalog/mappers/mapCartItems'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
@@ -162,18 +162,15 @@ export function useCartSlice({
       return { success: true }
     }
 
-    const previousItems = [...cartItemsRef.current]
-    for (const item of previousItems) {
-      const removed = await removeCartItemFromApi(item.cartId)
-      if (!removed.success) {
-        await refreshCartFromApi()
-        return removed
-      }
+    // Una petición massive; el WS aplica stock (stock eliminarTodo).
+    const cleared = await clearCartMassiveSafe({ token: tokenAccess })
+    if (!cleared.success) {
+      return cleared
     }
 
-    await refreshCartFromApi()
+    commitCart([])
     return { success: true }
-  }, [tokenAccess, commitCart, refreshCartFromApi, removeCartItemFromApi])
+  }, [tokenAccess, commitCart])
 
   const createOrderFromCheckout = useCallback(({ clientData, paymentType, paymentDetails }) => {
     if (cartItems.length === 0 || !currentUserId) {

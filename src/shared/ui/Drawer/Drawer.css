@@ -4,9 +4,9 @@
   --drawer-fs-sm: 12px;
   --drawer-fs-md: 14px;
   --drawer-fs-title: 16px;
-  --drawer-fw: 600;
+  --drawer-fw: 400;
   --drawer-fw-regular: 400;
-  --drawer-fw-bold: 700;
+  --drawer-fw-bold: 400;
   --drawer-color: var(--color-gris-oscuro);
   --drawer-color-muted: var(--color-gris);
 
@@ -128,7 +128,7 @@
   color: var(--drawer-color);
   flex: 1;
   font-size: var(--drawer-fs-title);
-  font-weight: var(--drawer-fw-bold);
+  font-weight: 700;
   text-align: center;
 }
 

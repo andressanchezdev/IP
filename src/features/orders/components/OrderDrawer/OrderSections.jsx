@@ -3,6 +3,9 @@ import { formatPrice } from '@/shared/lib/formatPrice'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
 import eyeIcon from '@/assets/icons/eye.svg'
+import { OrderPaymentAbonos } from './OrderPaymentAbonos'
+
+export { OrderDeliveryContent } from './OrderDeliveryContent'
 
 function PanelRow({ label, value, highlight = false, subdued = false }) {
   return (
@@ -50,68 +53,34 @@ export function OrderDetailsContent({ order, onDownloadPdf }) {
   )
 }
 
-export function OrderPaymentContent({ order, onOpenPayments }) {
+export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
   const { payment } = order
-  const paymentTypes = ['efectivo', 'credito', 'transferencia']
+  const chosenType = String(payment.type ?? '').toLowerCase() || 'efectivo'
   const paidAmount = Number(payment.paidAmount ?? 0)
   const remainingAmount = Math.max(0, Number(payment.amount ?? order.total ?? 0) - paidAmount)
-  const payments = payment.payments ?? []
 
   return (
     <>
       <div className="content-list-data__row">
         <span className="content-list-data__label">Medio</span>
-        <div className="order-payment__types">
-          {paymentTypes.map((type) => (
-            <span
-              key={type}
-              className={`order-payment__type ${payment.type === type ? 'order-payment__type--active' : ''}`}
-            >
-              {type}
-            </span>
-          ))}
+        <div className="order-payment__types" aria-label="Medio de pago del pedido">
+          <span
+            className="order-payment__type order-payment__type--active order-payment__type--chosen"
+            title={`Medio elegido en Finalizar: ${chosenType}`}
+          >
+            {chosenType}
+          </span>
         </div>
       </div>
       <PanelRow label="Fecha límite de pago" value={formatOrderDateTime(payment.deadline)} subdued />
       <PanelRow label="Monto total" value={formatRealAmount(payment.amount)} highlight />
       <PanelRow label="Abonado" value={formatRealAmount(paidAmount)} />
       <PanelRow label="Pendiente" value={formatRealAmount(remainingAmount)} highlight />
-      <div className="content-list-data__row">
-        <span className="content-list-data__label">Abonos</span>
-        <div className="order-payment__pagos">
-          <button
-            type="button"
-            className="order-payment__counter order-payment__counter--link"
-            onClick={onOpenPayments}
-            aria-label="Ver pagos registrados"
-          >
-            {payments.length > 0 ? (
-              payments.map((entry, index) => (
-                <span
-                  key={`${entry.createdAt}-${index}`}
-                  className="order-payment__pill order-payment__pill--paid"
-                  title={formatRealAmount(entry.amount)}
-                >
-                  {index + 1}
-                </span>
-              ))
-            ) : (
-              <span className="order-payment__empty">Sin abonos</span>
-            )}
-          </button>
-          {remainingAmount > 0 && (
-            <button
-              type="button"
-              className="order-payment__add-btn"
-              onClick={onOpenPayments}
-              aria-label="Agregar pago al pedido"
-              title="Agregar pago"
-            >
-              +
-            </button>
-          )}
-        </div>
-      </div>
+      <OrderPaymentAbonos
+        order={order}
+        onOpenPayments={onOpenPayments}
+        onVerifyProof={onVerifyProof}
+      />
     </>
   )
 }
@@ -193,27 +162,6 @@ export function OrderPackagingContent({ order, productsOpen, onToggleProducts })
       <PanelRow label="Cantidades" value={`${packaging.packedQuantity}|${packaging.totalQuantity}`} highlight />
       <PanelRow label="Número de cajas" value={packaging.boxes} subdued />
       <PanelRow label="Número de bolsas" value={packaging.bags} subdued />
-    </>
-  )
-}
-
-export function OrderDeliveryContent({ order }) {
-  const { delivery } = order
-
-  return (
-    <>
-      {order.client && (
-        <>
-          <PanelRow label="Cliente" value={order.client.fullName} highlight />
-          <PanelRow label="Correo" value={order.client.email} subdued />
-          <PanelRow label="Teléfono" value={order.client.phone} subdued />
-        </>
-      )}
-      <PanelRow label="Fecha de entrega" value={formatOrderDateTime(delivery.date)} highlight />
-      <PanelRow label="Dirección" value={delivery.address} highlight />
-      <PanelRow label="Datos de entrega" value={delivery.notes} subdued />
-      <PanelRow label="Quien entrega" value={delivery.deliveredBy} />
-      <PanelRow label="Quien recibe" value={delivery.receivedBy} subdued />
     </>
   )
 }

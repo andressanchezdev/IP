@@ -100,6 +100,85 @@ export function useOrdersSlice({
     return { success: true, isFullyPaid }
   }, [events, pendingOrders, resetOrderDrawer])
 
+  /**
+   * Marca el comprobante de transferencia como real y aplica el abono
+   * (parcial o 100% si cubre el total del pedido).
+   */
+  const verifyTransferProof = useCallback((orderId, { verified = true } = {}) => {
+    if (!verified) {
+      return { success: false, reason: 'not-verified' }
+    }
+
+    const order = pendingOrders.find((entry) => entry.id === orderId)
+    if (!order) {
+      return { success: false, reason: 'not-found' }
+    }
+
+    const payment = order.payment ?? {}
+    if (String(payment.type).toLowerCase() !== 'transferencia') {
+      return { success: false, reason: 'wrong-type' }
+    }
+
+    const details = { ...(payment.checkoutDetails ?? payment.details ?? {}) }
+    if (details.proofVerified) {
+      return { success: true, isFullyPaid: false, alreadyVerified: true }
+    }
+
+    const total = Number(payment.amount ?? order.total ?? 0)
+    const proofAmount = Number(details.amount) || total
+    const paidAmount = Number(payment.paidAmount ?? 0)
+    const applyAmount = Math.min(Math.max(0, proofAmount), Math.max(0, total - paidAmount))
+    const nextPaidAmount = paidAmount + applyAmount
+    const isFullyPaid = nextPaidAmount >= total
+    const now = new Date().toISOString()
+
+    const nextDetails = {
+      ...details,
+      proofVerified: true,
+      proofVerifiedAt: now,
+    }
+
+    const payments = [
+      ...(payment.payments ?? []),
+      {
+        amount: applyAmount,
+        type: 'transferencia',
+        details: { ...nextDetails, source: 'comprobante' },
+        createdAt: now,
+      },
+    ]
+
+    const updatedOrder = {
+      ...order,
+      processStatus: isFullyPaid ? 'completado' : (order.processStatus ?? 'en proceso...'),
+      payment: {
+        ...payment,
+        paidAmount: nextPaidAmount,
+        payments,
+        paymentsMade: payments.length,
+        checkoutDetails: nextDetails,
+        details: nextDetails,
+        lastPaymentAt: now,
+      },
+    }
+
+    if (isFullyPaid) {
+      setPendingOrders((currentOrders) => currentOrders.filter((entry) => entry.id !== orderId))
+      setHistoryOrders((currentOrders) => [
+        updatedOrder,
+        ...currentOrders.filter((entry) => entry.id !== orderId),
+      ])
+      resetOrderDrawer()
+      events.emit(APP_EVENTS.ORDER_COMPLETED)
+    } else {
+      setPendingOrders((currentOrders) =>
+        currentOrders.map((entry) => (entry.id === orderId ? updatedOrder : entry)),
+      )
+    }
+
+    return { success: true, isFullyPaid, appliedAmount: applyAmount }
+  }, [events, pendingOrders, resetOrderDrawer])
+
   const value = useMemo(() => ({
     pendingOrders,
     historyOrders,
@@ -109,6 +188,7 @@ export function useOrdersSlice({
     setOrderSubView,
     openOrderDrawer,
     formalizeOrderPayment,
+    verifyTransferProof,
   }), [
     pendingOrders,
     historyOrders,
@@ -117,6 +197,7 @@ export function useOrdersSlice({
     orderSubView,
     openOrderDrawer,
     formalizeOrderPayment,
+    verifyTransferProof,
   ])
 
   return {

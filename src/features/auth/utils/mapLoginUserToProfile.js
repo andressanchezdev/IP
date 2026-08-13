@@ -55,29 +55,45 @@ export function mapLoginUserToClient(loginEmail, user) {
   const email = text(user?.email) || text(loginEmail)
   const userId = text(user?.id_usuario ?? user?.id ?? user?.userId ?? details.token) || email
   const fullName = text(details.nombre) || text(user?.nombre) || email
-  const documentId = text(details.cedula) || text(user?.cedula) || text(user?.documento)
-  const phone = text(details.telefono) || text(user?.telefono)
-  const mobile = text(details.celular) || text(user?.celular) || phone
+  const documentId = text(details.cedula)
+    || text(user?.cedula)
+    || text(user?.documento)
+    || text(details.documento)
+  const phone = text(details.telefono)
+    || text(details.tel)
+    || text(details.phone)
+    || text(user?.telefono)
+    || text(user?.phone)
+  const mobile = text(details.celular)
+    || text(details.mobile)
+    || text(user?.celular)
+    || text(user?.mobile)
+    || phone
   const role = text(user?.perfil) || text(user?.role)
   const warehouseId = text(user?.id_bodega ?? user?.warehouseId)
+  const address = text(details.direccion)
+    || text(details.address)
+    || text(details.dir)
+    || text(user?.direccion)
+    || text(user?.address)
 
   return {
     userId,
     email,
     fullName,
     documentId,
-    phone,
-    mobile,
+    phone: phone || mobile,
+    mobile: mobile || phone,
     role,
     warehouseId,
     birthDate: text(details.fecha),
     gender: text(details.genero),
     additional: text(details.adicional),
-    address: text(details.direccion),
-    neighborhood: text(details.barrio),
-    city: text(details.ciudad),
-    department: text(details.departamento),
-    country: text(details.pais),
+    address,
+    neighborhood: text(details.barrio) || text(details.neighborhood),
+    city: text(details.ciudad) || text(details.city),
+    department: text(details.departamento) || text(details.department),
+    country: text(details.pais) || text(details.country),
   }
 }
 
@@ -180,7 +196,7 @@ export function toAuthUserSummary(profileSettings) {
     email: personal.email,
     fullName: personal.fullName,
     documentId: personal.documentId,
-    phone: personal.phone,
+    phone: personal.phone || personal.mobile,
     mobile: personal.mobile || personal.phone,
     role: personal.role,
     warehouseId: personal.warehouseId,

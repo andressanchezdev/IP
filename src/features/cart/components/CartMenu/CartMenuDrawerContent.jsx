@@ -21,7 +21,12 @@ export function CartMenuDrawerContent() {
             type="button"
             className="drawer__menu-action"
             onClick={() => {
-              downloadOrderPdf('Pedido Importadora Premium', cartItems, totalCart)
+              downloadOrderPdf('Carrito de compras', cartItems, totalCart, {
+                filename: 'carrito-importadora.pdf',
+                subtitle: 'Resumen de productos en carrito',
+                metaLines: [`Items: ${cartItems.length}`],
+                includeCartId: true,
+              })
               showToast('PDF descargado', 'success')
             }}
             disabled={cartItems.length === 0}

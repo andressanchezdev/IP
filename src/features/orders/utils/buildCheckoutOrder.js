@@ -1,8 +1,27 @@
 import { ORDER_STEPS } from '@/features/orders/constants/orderSteps'
-import { PAYMENT_METHOD_LABELS } from '@/features/orders/constants/paymentConfig'
 import { enrichOrder } from './enrichOrder'
+import {
+  paymentTypeLabel,
+  resolveCheckoutPaymentType,
+} from './resolveCheckoutPaymentType'
 
-/** Construye el pedido que pasa del checkout a la vista de espera. */
+function snapshotCartItems(cartItems = []) {
+  return cartItems.map((item) => ({
+    id: item.id,
+    cartId: item.cartId ?? null,
+    reference: item.reference ?? item.id,
+    category: item.category ?? '',
+    description: item.description ?? '',
+    brand: item.brand ?? '',
+    model: item.model ?? '',
+    quantity: Number(item.quantity) || 0,
+    price: Number(item.price) || 0,
+    imageUrl: item.imageUrl || item.brandLogo || item.brandLogoUrl || '',
+    brandLogo: item.brandLogo || item.brandLogoUrl || '',
+  }))
+}
+
+/** Construye el pedido completo que pasa del checkout a la vista de espera. */
 export function buildCheckoutOrder({
   cartItems,
   userId,
@@ -11,10 +30,36 @@ export function buildCheckoutOrder({
   paymentDetails,
 }) {
   const now = new Date()
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const total = Number(paymentDetails?.amount) || subtotal + Math.round(subtotal * 0.19)
-  const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const methodLabel = PAYMENT_METHOD_LABELS[paymentType] ?? 'Efectivo'
+  const items = snapshotCartItems(cartItems)
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const iva = Math.round(subtotal * 0.19)
+  const total = Number(paymentDetails?.amount) || subtotal + iva
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
+
+  const resolvedType = resolveCheckoutPaymentType(paymentType, paymentDetails)
+  const methodLabel = paymentTypeLabel(resolvedType)
+  const checkoutDetails = {
+    ...paymentDetails,
+    checkoutPaymentType: paymentType,
+    resolvedPaymentType: resolvedType,
+    subtotal,
+    iva,
+    shippingCost: 0,
+    proofVerified: Boolean(paymentDetails?.proofVerified),
+  }
+
+  const client = {
+    fullName: clientData?.fullName || '',
+    email: clientData?.email || '',
+    phone: clientData?.phone || clientData?.mobile || '',
+    mobile: clientData?.mobile || clientData?.phone || '',
+    documentId: clientData?.documentId || '',
+    address: clientData?.address || clientData?.profileAddress || '',
+    profileAddress: clientData?.profileAddress || '',
+    notes: clientData?.notes || '',
+    city: clientData?.city || '',
+    department: clientData?.department || '',
+  }
 
   return enrichOrder({
     id: `PED-${Date.now()}`,
@@ -24,23 +69,25 @@ export function buildCheckoutOrder({
     dateLimit: new Date(Date.now() + 86400000).toISOString(),
     orderType: 'general',
     processStatus: 'en proceso...',
-    items: cartItems,
-    client: clientData,
+    items,
+    client,
     paymentMethod: methodLabel,
     total,
+    subtotal,
+    iva,
     status: ORDER_STEPS[0],
     steps: ORDER_STEPS,
     payment: {
       method: methodLabel,
-      type: paymentType,
+      type: resolvedType,
       deadline: new Date(Date.now() + 7 * 86400000).toISOString(),
       amount: total,
       paidAmount: 0,
       payments: [],
       paymentsMade: 0,
       paymentsTotal: 3,
-      checkoutDetails: paymentDetails,
-      details: paymentDetails,
+      checkoutDetails,
+      details: checkoutDetails,
       lastPaymentAt: null,
     },
     packaging: {
@@ -51,10 +98,11 @@ export function buildCheckoutOrder({
     },
     delivery: {
       date: new Date(Date.now() + 3 * 86400000).toISOString(),
-      address: clientData.address,
-      notes: clientData.notes || 'Entregar en horario de oficina',
+      address: client.address,
+      notes: client.notes || 'Entregar en horario de oficina',
       deliveredBy: 'Transportes Premium',
-      receivedBy: clientData.fullName,
+      receivedBy: client.fullName || 'Cliente autorizado',
+      mapLocation: clientData?.mapLocation ?? null,
     },
     salesPoints: [
       { id: '001', name: 'tienda1online' },
