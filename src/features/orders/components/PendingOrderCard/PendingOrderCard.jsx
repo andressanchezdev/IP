@@ -5,6 +5,7 @@ import shippingIcon from '@/assets/icons/shipping.svg'
 import { useToast } from '@/app/providers/ToastProvider'
 import { copyTextToClipboard } from '@/shared/lib/copyTextToClipboard'
 import { ORDER_STEPS } from '@/features/orders/constants/orderSteps'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './PendingOrderCard.css'
 
 const DESKTOP_VISUAL_QUERY = '(min-width: 769px)'
@@ -67,10 +68,9 @@ export const PendingOrderCard = memo(function PendingOrderCard({
               type="button"
               className="espera-card__copy-btn"
               onClick={handleCopyId}
-              aria-label={`Copiar ID del pedido ${order.id}`}
-              title="Copiar ID"
+              {...namedControl(`Copiar ID del pedido ${order.id}`)}
             >
-              <img src={copyIcon} alt="" className="espera-card__copy-icon" aria-hidden="true" />
+              <img src={copyIcon} className="espera-card__copy-icon" {...namedImage('Copiar ID')} />
             </button>
           </div>
           <p className="espera-card__date">{formatOrderDate(order.createdAt)}</p>
@@ -81,7 +81,7 @@ export const PendingOrderCard = memo(function PendingOrderCard({
             type="button"
             className="espera-card__add-btn"
             onClick={() => onOpenOrder?.(order.id)}
-            aria-label="Agregar productos"
+            {...namedControl(`Abrir detalle del pedido ${order.id}`)}
           >
             <span aria-hidden="true">+</span>
           </button>
@@ -110,7 +110,7 @@ export const PendingOrderCard = memo(function PendingOrderCard({
 
           <p className="espera-card__dispatch-notice">
             <span className="espera-card__dispatch-notice-icon" aria-hidden="true">
-              <img src={shippingIcon} alt="" />
+              <img src={shippingIcon} {...namedImage('Despacho')} />
             </span>
             Su pedido está siendo procesado para su respectivo despacho
           </p>
@@ -118,7 +118,7 @@ export const PendingOrderCard = memo(function PendingOrderCard({
 
         {showVisual && (
           <div className="espera-card__visual">
-            <img src={esperaImage} alt="" className="espera-card__image" aria-hidden="true" loading="lazy" decoding="async" />
+            <img src={esperaImage} className="espera-card__image" loading="lazy" decoding="async" {...namedImage('Pedido en espera')} />
           </div>
         )}
       </div>

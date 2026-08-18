@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './ProductCard.css'
 
 function formatPrice(price) {
@@ -39,6 +40,8 @@ export const ProductCard = memo(function ProductCard({
   const mediaSrc = !imageFailed && imageUrl ? imageUrl : resolvedBrandLogo
   const descriptionText = String(description || '').trim()
   const categoryText = String(category || '').trim()
+  const productName = descriptionText || categoryText || reference || 'Producto'
+  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
 
   const handleChange = (event) => {
     const value = Number(event.target.value)
@@ -54,11 +57,11 @@ export const ProductCard = memo(function ProductCard({
         {mediaSrc ? (
           <img
             src={mediaSrc}
-            alt={descriptionText || categoryText || reference || 'Producto'}
             className="product-card__image"
             loading="lazy"
             decoding="async"
             onError={() => setImageFailed(true)}
+            {...namedImage(productName)}
           />
         ) : (
           <div className="product-card__image product-card__image--empty" aria-hidden="true" />
@@ -106,7 +109,7 @@ export const ProductCard = memo(function ProductCard({
               disabled={isOrdered || isSoldOut}
               tabIndex={isOrdered || isSoldOut ? -1 : undefined}
               aria-hidden={isOrdered || isSoldOut}
-              aria-label="Cantidad de producto"
+              {...namedControl(`Cantidad de ${productName}`)}
             />
             <button
               type="button"
@@ -116,6 +119,7 @@ export const ProductCard = memo(function ProductCard({
                 onOrder?.(id, quantity)
               }}
               disabled={isSoldOut || isOrdered}
+              {...namedControl(orderLabel)}
             >
               {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : 'Ordenar'}
             </button>

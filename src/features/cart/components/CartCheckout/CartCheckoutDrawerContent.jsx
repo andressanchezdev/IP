@@ -8,6 +8,7 @@ import './CheckoutFinalizar.css'
 import { CheckoutDeliverySection } from './CheckoutDeliverySection'
 import { CheckoutPaymentSection } from './CheckoutPaymentSection'
 import { CheckoutOrderSummary } from './CheckoutOrderSummary'
+import { namedControl } from '@/shared/lib/namedControl'
 
 const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
@@ -249,6 +250,7 @@ export function CartCheckoutDrawerContent() {
           className="content-main-data-carrito__checkout checkout-finalize__confirm"
           onClick={handleConfirmOrder}
           disabled={!canConfirmOrder}
+          {...namedControl('Confirmar pedido')}
         >
           Confirmar
         </button>

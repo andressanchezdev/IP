@@ -1,3 +1,4 @@
+import { namedControl } from '@/shared/lib/namedControl'
 import './Drawer.css'
 
 const DRAWER_TITLES = {
@@ -11,9 +12,9 @@ export function Drawer({ isOpen, drawerType, title, onClose, closeAriaLabel, hea
   const resolvedTitle = title ?? DRAWER_TITLES[drawerType] ?? ''
 
   return (
-    <aside className={`drawer ${isOpen ? 'drawer--open' : ''}`}>
+    <aside className={`drawer ${isOpen ? 'drawer--open' : ''}`} {...namedControl(resolvedTitle || 'Panel')}>
       <div className="drawer__header">
-        <button type="button" className="drawer__close" onClick={onClose} aria-label={closeAriaLabel}>
+        <button type="button" className="drawer__close" onClick={onClose} {...namedControl(closeAriaLabel || 'Cerrar panel')}>
           ×
         </button>
 
@@ -28,5 +29,5 @@ export function Drawer({ isOpen, drawerType, title, onClose, closeAriaLabel, hea
 }
 
 export function DrawerBackdrop({ onClick }) {
-  return <div className="drawer-backdrop" onClick={onClick} />
+  return <div className="drawer-backdrop" onClick={onClick} {...namedControl('Cerrar panel')} />
 }

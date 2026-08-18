@@ -4,6 +4,7 @@ import { formatPrice } from '@/shared/lib/formatPrice'
 import { downloadOrderPdf } from '@/shared/lib/downloadOrderPdf'
 import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
 import deleteAccountIcon from '@/assets/icons/delete-account.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 
 export function CartMenuDrawerContent() {
@@ -30,12 +31,12 @@ export function CartMenuDrawerContent() {
               showToast('PDF descargado', 'success')
             }}
             disabled={cartItems.length === 0}
+            {...namedControl('Descargar PDF del carrito')}
           >
             <img
               src={cloudDownloadIcon}
-              alt=""
               className="drawer__menu-action-icon"
-              aria-hidden="true"
+              {...namedImage('Descargar PDF')}
             />
             Descargar PDF
           </button>
@@ -52,12 +53,12 @@ export function CartMenuDrawerContent() {
               closeDrawer()
             }}
             disabled={cartItems.length === 0}
+            {...namedControl('Limpiar carrito')}
           >
             <img
               src={deleteAccountIcon}
-              alt=""
               className="drawer__menu-action-icon"
-              aria-hidden="true"
+              {...namedImage('Limpiar carrito')}
             />
             Limpiar carrito
           </button>

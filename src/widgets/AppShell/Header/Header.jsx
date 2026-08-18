@@ -5,6 +5,7 @@ import promoIcon from '@/assets/icons/promo.svg'
 import cartIcon from '@/assets/icons/cart.svg'
 import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
 import { FilterButton } from '@/shared/ui/FilterButton/FilterButton'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './Header.css'
 
 export function Header({
@@ -70,7 +71,7 @@ export function Header({
   }
 
   return (
-    <header className="header">
+    <header className="header" {...namedControl('Encabezado de la tienda')}>
       <div className="header__main header__main--row">
         <div className="header__search header__search--row">
           <div
@@ -92,13 +93,14 @@ export function Header({
               <div
                 className={`header__filters header__filters--row ${mobileToolsOpen ? 'header__filters--open' : ''}`}
                 id="header-mobile-tools"
+                {...namedControl('Filtros de catálogo')}
               >
               <FilterButton
                 label="Filtrar"
                 icon={filterIcon}
                 variant="filter"
                 onClick={onFilter}
-                isActive={filterActive || (!filterNuevosActive && !filterPromocionesActive)}
+                isActive={filterActive}
               />
               <FilterButton
                 label="Nuevos"
@@ -127,7 +129,7 @@ export function Header({
                   value={paymentFilter}
                   onChange={(event) => onPaymentFilterChange?.(event.target.value)}
                   onFocus={openMobileTools}
-                  aria-label="Filtrar por medio de pago"
+                  {...namedControl('Filtrar por medio de pago')}
                 >
                   <option value="">Todos</option>
                   {paymentMethods.map((method) => (
@@ -145,9 +147,9 @@ export function Header({
           type="button"
           className={`header__cart ${cartActive ? 'header__cart--active' : ''}`}
           onClick={onCart}
-          aria-label="Abrir carrito"
+          {...namedControl(cartCount > 0 ? `Abrir carrito (${cartCount} productos)` : 'Abrir carrito')}
         >
-          <img src={cartIcon} alt="" className="header__cart-icon" aria-hidden="true" />
+          <img src={cartIcon} className="header__cart-icon" {...namedImage('Carrito')} />
           {cartCount > 0 && (
             <span className="header__cart-badge" aria-hidden="true">
               {cartCount}

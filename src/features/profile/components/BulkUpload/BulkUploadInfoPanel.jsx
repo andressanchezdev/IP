@@ -1,4 +1,5 @@
 import { STOCK_STATUS } from '@/features/profile/api/bulkOrderApi'
+import { namedControl } from '@/shared/lib/namedControl'
 
 const STATUS_MODIFIER = {
   [STOCK_STATUS.OK]: 'ok',
@@ -71,7 +72,7 @@ export function InfoPanel({
 
   return (
     <div className="bulk-upload__table-wrap bulk-upload__table-wrap--fill" data-process-log>
-      <div className="bulk-upload__excel-window" role="region" aria-label="Informacion">
+      <div className="bulk-upload__excel-window" role="region" {...namedControl('Informacion')}>
         <div className="bulk-upload__excel-titlebar">
           <span className="bulk-upload__excel-title">Informacion</span>
         </div>
@@ -153,6 +154,7 @@ export function InfoPanel({
                       className="bulk-upload__btn"
                       onClick={() => onContinue(false)}
                       disabled={isSending}
+                      {...namedControl(isSending ? 'Enviando' : 'Continuar')}
                     >
                       {isSending ? 'Enviando…' : 'Continuar'}
                     </button>
@@ -161,6 +163,7 @@ export function InfoPanel({
                       className="bulk-upload__btn"
                       onClick={() => onContinue(true)}
                       disabled={isSending}
+                      {...namedControl('Continuar sin novedad')}
                     >
                       Continuar sin novedad
                     </button>
@@ -169,6 +172,7 @@ export function InfoPanel({
                       className="bulk-upload__btn"
                       onClick={onCancel}
                       disabled={isSending}
+                      {...namedControl('Cancelar')}
                     >
                       Cancelar
                     </button>

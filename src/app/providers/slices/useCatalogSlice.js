@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getGeneral, PRODUCTS_PAGE_SIZE } from '@/features/catalog/api/generalApi'
+import { getGeneral, PRODUCTS_PAGE_SIZE, PRODUCTS_SCROLL_MIN_INTERVAL_MS } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
 import { mergeUniqueProducts } from '@/features/catalog/mappers/mergeUniqueProducts'
 import { useStockWebSocket } from '@/features/catalog/ws/useStockWebSocket'
@@ -34,6 +34,8 @@ export function useCatalogSlice({
   const productsLoadingRef = useRef(false)
   /** Mutual exclusion: 'search' | 'scroll' | null — search always wins. */
   const productFetchModeRef = useRef(null)
+  /** Timestamp del último GET de scroll; rate-limit a PRODUCTS_SCROLL_MIN_INTERVAL_MS. */
+  const lastScrollFetchAtRef = useRef(0)
   productsRef.current = products
 
   // WS independiente del carrito API: solo actualiza stock de productos en catálogo.
@@ -131,6 +133,18 @@ export function useCatalogSlice({
       return { success: false, skipped: true, reason: 'scroll_in_flight' }
     }
 
+    const now = Date.now()
+    const elapsed = now - lastScrollFetchAtRef.current
+    if (lastScrollFetchAtRef.current > 0 && elapsed < PRODUCTS_SCROLL_MIN_INTERVAL_MS) {
+      return {
+        success: false,
+        skipped: true,
+        reason: 'scroll_throttle',
+        retryAfterMs: PRODUCTS_SCROLL_MIN_INTERVAL_MS - elapsed,
+      }
+    }
+
+    lastScrollFetchAtRef.current = now
     productFetchModeRef.current = 'scroll'
     productsLoadingRef.current = true
     setIsLoadingProducts(true)

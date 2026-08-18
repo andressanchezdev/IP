@@ -1,5 +1,8 @@
 import { Accordion } from '@/shared/ui/Accordion/Accordion'
 import { CheckoutDeliveryMap } from './CheckoutDeliveryMap'
+import { namedControl } from '@/shared/lib/namedControl'
+import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
+import '@/shared/ui/FieldHint/FieldHint.css'
 
 export function CheckoutDeliverySection({
   registeredAddresses,
@@ -13,6 +16,18 @@ export function CheckoutDeliverySection({
   onConfirmNew,
   onConfirmMap,
 }) {
+  const registeredHint = registeredAddresses.length === 0
+    ? 'No hay direcciones registradas. Agregue una nueva o use el mapa.'
+    : !selectedAddressId
+      ? 'Seleccione una dirección registrada'
+      : ''
+  const newAddressHint = newAddress.trim()
+    ? ''
+    : 'La nueva dirección es obligatoria (calle, número, ciudad)'
+  const mapHint = mapLocation?.address
+    ? ''
+    : 'Seleccione un punto en el mapa para confirmar la entrega'
+
   return (
     <Accordion title="Entrega" defaultOpen>
       <div className="checkout-finalize__box">
@@ -25,6 +40,7 @@ export function CheckoutDeliverySection({
                   name="registered-address"
                   checked={selectedAddressId === entry.id}
                   onChange={() => onSelectAddress(entry.id)}
+                  {...namedControl(`Dirección ${entry.label}`)}
                 />
                 <span>
                   <strong>{entry.label}</strong>
@@ -32,11 +48,13 @@ export function CheckoutDeliverySection({
                 </span>
               </label>
             ))}
+            <FieldHint message={registeredHint} />
             <button
               type="button"
               className="content-main-data-carrito__checkout"
               onClick={onConfirmRegistered}
               disabled={registeredAddresses.length === 0}
+              {...namedControl('Establecer dirección registrada')}
             >
               Establecer dirección
             </button>
@@ -51,12 +69,17 @@ export function CheckoutDeliverySection({
               value={newAddress}
               onChange={(event) => onNewAddressChange(event.target.value)}
               placeholder="Calle, número, ciudad"
+              className={newAddressHint ? 'order-payments-panel__input--error' : ''}
+              aria-invalid={Boolean(newAddressHint)}
+              {...namedControl('Nueva dirección')}
             />
+            <FieldHint id="checkout-new-address-hint" message={newAddressHint} />
           </label>
           <button
             type="button"
             className="content-main-data-carrito__checkout"
             onClick={onConfirmNew}
+            {...namedControl('Establecer nueva dirección')}
           >
             Establecer dirección
           </button>
@@ -69,12 +92,15 @@ export function CheckoutDeliverySection({
           <CheckoutDeliveryMap onLocationChange={onMapLocationChange} />
           {mapLocation?.address ? (
             <p className="order-payments-panel__quota">Seleccionada: {mapLocation.address}</p>
-          ) : null}
+          ) : (
+            <FieldHint message={mapHint} />
+          )}
           <button
             type="button"
             className="content-main-data-carrito__checkout"
             onClick={onConfirmMap}
             disabled={!mapLocation?.address}
+            {...namedControl('Confirmar ubicación')}
           >
             Confirmar ubicación
           </button>

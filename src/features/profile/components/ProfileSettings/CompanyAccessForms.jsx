@@ -1,4 +1,5 @@
 import { SettingsField } from './SettingsField'
+import { namedControl } from '@/shared/lib/namedControl'
 
 export function CompanyDataForm({ draft, onDraftChange, onSave }) {
   return (
@@ -42,6 +43,7 @@ export function CompanyDataForm({ draft, onDraftChange, onSave }) {
         type="button"
         className="content-main-data-carrito__checkout profile-settings-inline-action"
         onClick={onSave}
+        {...namedControl('Guardar datos')}
       >
         Guardar datos
       </button>
@@ -70,6 +72,7 @@ export function AccessForm({ draft, onDraftChange, onSave }) {
         type="button"
         className="content-main-data-carrito__checkout profile-settings-inline-action"
         onClick={onSave}
+        {...namedControl('Guardar acceso')}
       >
         Guardar acceso
       </button>

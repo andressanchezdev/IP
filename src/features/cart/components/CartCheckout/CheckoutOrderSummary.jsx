@@ -2,6 +2,7 @@ import { Accordion } from '@/shared/ui/Accordion/Accordion'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import editIcon from '@/assets/icons/edit.svg'
 import { SummaryRow } from './SummaryRow'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export function CheckoutOrderSummary({
   subtotal,
@@ -29,10 +30,10 @@ export function CheckoutOrderSummary({
               <button
                 type="button"
                 className="checkout-finalize__edit"
-                aria-label="Editar entrega"
                 onClick={onEditDelivery}
+                {...namedControl('Editar entrega')}
               >
-                <img src={editIcon} alt="" width={16} height={16} />
+                <img src={editIcon} width={16} height={16} {...namedImage('Editar entrega')} />
               </button>
             </div>
             <strong>{deliveryAddress}</strong>
@@ -45,10 +46,10 @@ export function CheckoutOrderSummary({
               <button
                 type="button"
                 className="checkout-finalize__edit"
-                aria-label="Editar método de pago"
                 onClick={onEditPayment}
+                {...namedControl('Editar método de pago')}
               >
-                <img src={editIcon} alt="" width={16} height={16} />
+                <img src={editIcon} width={16} height={16} {...namedImage('Editar método de pago')} />
               </button>
             </div>
             <strong>

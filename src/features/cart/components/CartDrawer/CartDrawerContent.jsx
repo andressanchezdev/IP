@@ -4,12 +4,14 @@ import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './CartDrawer.css'
 
 function CartItemMedia({ item }) {
   const [failed, setFailed] = useState(false)
   // imageUrl viene de imagen_producto / imagenArray (mapApiCartItem). Fallback: logo (imagen).
   const src = !failed && item.imageUrl ? item.imageUrl : (item.brandLogo || item.brandLogoUrl)
+  const imageAlt = String(item.description || item.category || item.reference || item.id || 'Producto').trim()
 
   if (!src) {
     return <div className="carrito-card__image-slot" aria-hidden="true" />
@@ -19,11 +21,11 @@ function CartItemMedia({ item }) {
     <div className="carrito-card__image-slot">
       <img
         src={src}
-        alt=""
         className="carrito-card__image"
         loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}
+        {...namedImage(imageAlt)}
       />
     </div>
   )
@@ -79,7 +81,7 @@ function CartCard({ item, catalogStock = 0, onQuantityChange, onRemove }) {
               const nextQty = Number(event.target.value)
               onQuantityChange(item.id, Number.isNaN(nextQty) ? item.quantity : nextQty)
             }}
-            aria-label="Cantidad del producto"
+            {...namedControl(`Cantidad de ${descriptionText || referenceText || 'producto'}`)}
           />
 
           <div className="carrito-card__prices">
@@ -92,7 +94,7 @@ function CartCard({ item, catalogStock = 0, onQuantityChange, onRemove }) {
             type="button"
             className="carrito-card__remove"
             onClick={() => onRemove(item.id)}
-            aria-label="Eliminar producto"
+            {...namedControl(`Eliminar ${descriptionText || referenceText || 'producto'}`)}
           >
             🗑
           </button>
@@ -214,6 +216,7 @@ export function CartDrawerContent() {
           className="content-main-data-carrito__checkout"
           onClick={handleCheckout}
           disabled={cartItems.length === 0}
+          {...namedControl('Finalizar compra')}
         >
           Finalizar compra
         </button>

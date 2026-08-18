@@ -2,21 +2,29 @@ import { useMemo, useState } from 'react'
 import { useCatalog } from '@/app/providers'
 import { uniqueSorted } from '@/shared/lib/uniqueSorted'
 import {
+  FILTER_OPTIONS_VISIBLE_IDLE,
+  FILTER_OPTIONS_VISIBLE_SEARCH,
+} from '@/features/catalog/api/generalApi'
+import { useGeneralFilter } from '@/features/catalog/hooks/useGeneralFilter'
+import {
   DrawerFooterBar,
   DrawerPanel,
   DrawerSectionList,
   DrawerShell,
 } from '@/shared/ui/DrawerShell/DrawerShell'
 import { MultiFilterField } from './MultiFilterField'
+import { namedControl } from '@/shared/lib/namedControl'
+
+function labelsFrom(items) {
+  return uniqueSorted(items.map((entry) => entry.label))
+}
 
 /**
- * Opciones de filtro desde el JSON de productos.
+ * Marca, categoría y modelo: GET /api/v1/general/filter (token de login).
  * Edita solo el draft; el filtro combinado se aplica con "Aplicar filtro".
  */
 export function FilterDrawerContent() {
   const {
-    products,
-    searchProducts,
     draftFilters,
     setDraftFilters,
     draftFilterNuevos,
@@ -29,21 +37,18 @@ export function FilterDrawerContent() {
   } = useCatalog()
 
   const [openSectionId, setOpenSectionId] = useState(null)
+  const {
+    categorias,
+    marcas,
+    modelos,
+    status: filterStatus,
+    error: filterError,
+  } = useGeneralFilter()
 
-  const sourceProducts = searchProducts != null ? searchProducts : products
-
-  const filterBrands = useMemo(
-    () => uniqueSorted(sourceProducts.map((product) => product.brand)),
-    [sourceProducts],
-  )
-  const filterCategories = useMemo(
-    () => uniqueSorted(sourceProducts.map((product) => product.category)),
-    [sourceProducts],
-  )
-  const filterModels = useMemo(
-    () => uniqueSorted(sourceProducts.map((product) => product.model)),
-    [sourceProducts],
-  )
+  const filterBrands = useMemo(() => labelsFrom(marcas), [marcas])
+  const filterCategories = useMemo(() => labelsFrom(categorias), [categorias])
+  const filterModels = useMemo(() => labelsFrom(modelos), [modelos])
+  const isFilterLoading = filterStatus === 'loading'
 
   const activeFilterCount =
     draftFilters.brands.length +
@@ -97,6 +102,10 @@ export function FilterDrawerContent() {
             onToggle={toggleSection}
             onAdd={(value) => addFilterValue('brands', value)}
             onRemove={(value) => removeFilterValue('brands', value)}
+            visibleIdleRows={FILTER_OPTIONS_VISIBLE_IDLE}
+            visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
+            isLoading={isFilterLoading}
+            errorMessage={filterError}
           />
 
           <MultiFilterField
@@ -109,6 +118,10 @@ export function FilterDrawerContent() {
             onToggle={toggleSection}
             onAdd={(value) => addFilterValue('categories', value)}
             onRemove={(value) => removeFilterValue('categories', value)}
+            visibleIdleRows={FILTER_OPTIONS_VISIBLE_IDLE}
+            visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
+            isLoading={isFilterLoading}
+            errorMessage={filterError}
           />
 
           <MultiFilterField
@@ -121,6 +134,10 @@ export function FilterDrawerContent() {
             onToggle={toggleSection}
             onAdd={(value) => addFilterValue('models', value)}
             onRemove={(value) => removeFilterValue('models', value)}
+            visibleIdleRows={FILTER_OPTIONS_VISIBLE_IDLE}
+            visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
+            isLoading={isFilterLoading}
+            errorMessage={filterError}
           />
         </DrawerSectionList>
       </DrawerPanel>
@@ -133,6 +150,7 @@ export function FilterDrawerContent() {
               type="checkbox"
               checked={draftFilterPromociones}
               onChange={(event) => setDraftFilterPromociones(event.target.checked)}
+              {...namedControl('Promociones')}
             />
           </label>
           <label className="filter-drawer-check">
@@ -141,6 +159,7 @@ export function FilterDrawerContent() {
               type="checkbox"
               checked={draftFilterNuevos}
               onChange={(event) => setDraftFilterNuevos(event.target.checked)}
+              {...namedControl('Nuevos')}
             />
           </label>
           <label className="filter-drawer-check">
@@ -149,6 +168,7 @@ export function FilterDrawerContent() {
               type="checkbox"
               checked={draftWithStock}
               onChange={(event) => setDraftWithStock(event.target.checked)}
+              {...namedControl('Con cantidad')}
             />
           </label>
         </DrawerSectionList>

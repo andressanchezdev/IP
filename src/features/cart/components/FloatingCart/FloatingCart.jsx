@@ -1,5 +1,6 @@
 import { useCart, useUi } from '@/app/providers'
 import cartIcon from '@/assets/icons/cart.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './FloatingCart.css'
 
 export function FloatingCart() {
@@ -17,9 +18,9 @@ export function FloatingCart() {
       type="button"
       className="floating-cart"
       onClick={() => openDrawer('cart')}
-      aria-label="Abrir carrito"
+      {...namedControl(cartCount > 0 ? `Abrir carrito (${cartCount} productos)` : 'Abrir carrito')}
     >
-      <img src={cartIcon} alt="" className="floating-cart__icon" aria-hidden="true" />
+      <img src={cartIcon} className="floating-cart__icon" {...namedImage('Carrito')} />
       {cartCount > 0 && (
         <span className="floating-cart__badge" aria-hidden="true">
           {cartCount}

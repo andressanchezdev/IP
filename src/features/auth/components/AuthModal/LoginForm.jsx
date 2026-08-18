@@ -1,5 +1,6 @@
 import { useAuthForm } from '@/features/auth/hooks/useAuthForm'
 import { AuthField } from './AuthField'
+import { namedControl } from '@/shared/lib/namedControl'
 
 export function LoginForm({ onSubmit }) {
   const { form, setField, validateAll, getError } = useAuthForm()
@@ -14,7 +15,7 @@ export function LoginForm({ onSubmit }) {
 
   return (
     <form className="auth-form auth-form--login" onSubmit={handleSubmit} noValidate>
-      <h2 className="auth-form__title">Ingresar</h2>
+      <h2 id="auth-modal-title" className="auth-form__title">Ingresar</h2>
       <p className="auth-form__subtitle">Accede a tu cuenta de Importadora Premium</p>
 
       <AuthField
@@ -39,12 +40,13 @@ export function LoginForm({ onSubmit }) {
           type="checkbox"
           checked={form.rememberMe}
           onChange={(event) => setField('rememberMe', event.target.checked)}
+          {...namedControl('Recordarme')}
         />
         <span>Recordarme</span>
       </label>
 
       <div className="auth-form__actions">
-        <button type="submit" className="auth-form__submit">
+        <button type="submit" className="auth-form__submit" {...namedControl('Ingresar')}>
           Ingresar
         </button>
       </div>

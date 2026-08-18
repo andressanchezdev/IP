@@ -1,0 +1,54 @@
+---
+description: Cobertura de pruebas y qué testear
+globs: **/*.test.ts,**/*.test.tsx
+alwaysApply: false
+---
+
+# Cobertura de Pruebas
+
+## Qué Probar
+
+```typescript
+// Siempre probar:
+// - Lógica de negocio
+// - Casos edge (null, undefined, arrays vacíos)
+// - Manejo de errores
+// - Funciones públicas/exportadas
+
+// No probar:
+// - Getters/setters simples
+// - Código de librerías externas
+// - Configuración/constantes
+```
+
+## Happy Path y Edge Cases
+
+```typescript
+describe('divide', () => {
+  // Happy path
+  it('should divide two positive numbers', () => {
+    expect(divide(10, 2)).toBe(5);
+  });
+  
+  // Edge cases
+  it('should throw error when dividing by zero', () => {
+    expect(() => divide(10, 0)).toThrow('Cannot divide by zero');
+  });
+  
+  it('should handle negative numbers', () => {
+    expect(divide(-10, 2)).toBe(-5);
+  });
+  
+  it('should handle decimal results', () => {
+    expect(divide(5, 2)).toBe(2.5);
+  });
+});
+```
+
+## Reglas de Cobertura
+
+- Mínimo 80% de cobertura para código crítico
+- 100% de paths en lógica de negocio importante
+- Todos los edge cases deben tener tests
+- Casos de error siempre deben probarse
+- No perseguir 100% global. Enfocarse en código crítico

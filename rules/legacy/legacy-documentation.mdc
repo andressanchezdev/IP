@@ -1,0 +1,47 @@
+---
+description: Documentar código legacy antes de modificar
+globs: **/*.js,**/*.ts,**/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Trabajando con Código Legacy
+
+## Documentar Antes de Modificar
+
+```typescript
+// Correcto - Documentar comportamiento actual primero
+/**
+ * LEGACY CODE - Do not modify without tests
+ * 
+ * Este método procesa pagos. Comportamiento actual:
+ * - Acepta amounts negativos (bug conocido)
+ * - No valida currency
+ * - Retorna null en caso de error (no throw)
+ * 
+ * TODO: Refactorizar después de agregar tests
+ */
+function processPayment(amount: number, currency: string) {
+  // código legacy...
+}
+```
+
+## Agregar Tests Antes de Cambiar
+
+```typescript
+// Correcto - Characterization tests
+describe('processPayment (legacy)', () => {
+  it('should handle current behavior', () => {
+    // Documenta comportamiento ACTUAL, incluso si es incorrecto
+    const result = processPayment(-10, 'USD');
+    expect(result).toBe(null); // Bug actual documentado
+  });
+});
+```
+
+## Reglas de Código Legacy
+
+- NUNCA modificar sin tests. Crear characterization tests primero
+- Documentar bugs conocidos con comentarios claros
+- Cambios incrementales. Refactorizar en pasos pequeños
+- Mantener compatibilidad. Usar deprecation warnings antes de remover
+- Preguntar antes de grandes cambios. El código puede tener razones históricas

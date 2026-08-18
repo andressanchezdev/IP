@@ -1,0 +1,66 @@
+---
+description: Patrones antiguos y sus alternativas modernas
+globs: **/*.js,**/*.ts,**/*.jsx,**/*.tsx
+alwaysApply: false
+---
+
+# Migrando Patrones Antiguos
+
+## Callbacks a Promises/Async
+
+```javascript
+// Antiguo - Callback hell
+function getData(callback) {
+  api.fetch('url', (err, data) => {
+    if (err) return callback(err);
+    callback(null, data);
+  });
+}
+
+// Moderno - Async/await
+async function getData() {
+  try {
+    return await api.fetch('url');
+  } catch (error) {
+    throw new Error('Failed to fetch data');
+  }
+}
+```
+
+## var a const/let
+
+```javascript
+// Antiguo
+var count = 0;
+var name = 'user';
+
+// Moderno
+let count = 0;      // Si necesita cambiar
+const name = 'user'; // Si no cambia
+```
+
+## Class Components a Function Components
+
+```jsx
+// Antiguo
+class Counter extends React.Component {
+  state = { count: 0 };
+  
+  render() {
+    return <div>{this.state.count}</div>;
+  }
+}
+
+// Moderno
+const Counter = () => {
+  const [count, setCount] = useState(0);
+  return <div>{count}</div>;
+};
+```
+
+## Reglas de Migración
+
+- Migrar gradualmente. No reescribir todo de golpe
+- Mantener consistencia. Si un archivo se migra, migrarlo completo
+- Usar ESLint. Configurar reglas para detectar patrones antiguos
+- Priorizar archivos activos. Migrar código que se modifica frecuentemente

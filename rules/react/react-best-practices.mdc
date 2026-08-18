@@ -1,0 +1,56 @@
+---
+description: Mejores prácticas generales para React
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Mejores Prácticas React
+
+## Componentes Pequeños y Enfocados
+
+```tsx
+// Incorrecto - Componente muy grande
+const UserDashboard = () => {
+  // 200 líneas de código...
+};
+
+// Correcto - Componentes pequeños y composables
+const UserDashboard = () => (
+  <div>
+    <UserHeader />
+    <UserStats />
+    <UserActivity />
+  </div>
+);
+```
+
+## Lógica Fuera del JSX
+
+```tsx
+// Incorrecto - Lógica en JSX
+return (
+  <div>
+    {users.filter(u => u.active).map(u => (
+      <div key={u.id}>{u.name}</div>
+    ))}
+  </div>
+);
+
+// Correcto - Lógica extraída
+const activeUsers = users.filter(u => u.active);
+return (
+  <div>
+    {activeUsers.map(u => (
+      <div key={u.id}>{u.name}</div>
+    ))}
+  </div>
+);
+```
+
+## Reglas Fundamentales
+
+- Mantener componentes bajo 150 líneas
+- Extraer lógica compleja fuera del JSX
+- Usar fragments <> en lugar de divs innecesarios
+- Nombres descriptivos: UserList no List, handleSubmit no handle
+- Evitar any en TypeScript. Tipar correctamente siempre

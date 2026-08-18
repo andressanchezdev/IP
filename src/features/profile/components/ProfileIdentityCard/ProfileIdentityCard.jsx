@@ -1,5 +1,6 @@
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import profileAvatar from '@/assets/logos/icon.ico'
+import { namedControl } from '@/shared/lib/namedControl'
 import '../ProfileDrawer/ProfileDrawer.css'
 
 function displayValue(value) {
@@ -22,8 +23,8 @@ export function ProfileIdentityCard({ personal, avatar }) {
   return (
     <div
       className="content-perfil-perfil"
-      aria-label="Datos del cliente"
       style={{ backgroundImage }}
+      {...namedControl('Datos del cliente')}
     >
       <div className="content-perfil-perfil__fields">
         <div className="content-perfil-perfil__field" data-field="identidad">

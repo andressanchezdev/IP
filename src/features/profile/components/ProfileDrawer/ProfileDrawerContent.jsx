@@ -17,6 +17,7 @@ import shoppingBagIcon from '@/assets/icons/shopping-bag.svg'
 import walletIcon from '@/assets/icons/wallet.svg'
 import mapPinIcon from '@/assets/icons/map-pin.svg'
 import cloudUploadIcon from '@/assets/icons/cloud-upload.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './ProfileDrawer.css'
 import '@/features/profile/components/ProfilePriceList/ProfilePriceList.css'
 
@@ -73,6 +74,7 @@ export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) 
                 type="button"
                 className="content-list-data__row content-list-data__row--action"
                 onClick={() => onOpenPriceListView?.(action.id)}
+                {...namedControl(action.label)}
               >
                 <span className="content-list-data__label">{action.label}</span>
                 <span className="content-list-data__value content-list-data__value--highlight" aria-hidden="true">
@@ -125,13 +127,13 @@ export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) 
                 <DrawerCheckRow
                   active={isOpen}
                   onClick={() => toggleSection(section.id)}
+                  label={section.label}
                 >
                   <span className="profile-drawer-section__label">
                     <img
                       src={section.icon}
-                      alt=""
                       className="profile-drawer-section__icon"
-                      aria-hidden="true"
+                      {...namedImage(section.label)}
                     />
                     {section.label}
                   </span>

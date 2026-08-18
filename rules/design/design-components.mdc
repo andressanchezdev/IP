@@ -1,0 +1,75 @@
+---
+description: Componentes de UI reutilizables y simples
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Componentes UI Minimalistas
+
+## Button Component
+
+```tsx
+// Correcto - Button simple y reutilizable
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+
+const Button = ({ 
+  variant = 'primary', 
+  size = 'md', 
+  children,
+  onClick 
+}: ButtonProps) => {
+  return (
+    <button 
+      className={`btn btn-${variant} btn-${size}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+};
+
+// CSS
+.btn {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-md {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+```
+
+## Input Component
+
+```tsx
+// Correcto - Input limpio
+const Input = ({ label, error, ...props }) => (
+  <div className="input-group">
+    {label && <label>{label}</label>}
+    <input {...props} />
+    {error && <span className="error">{error}</span>}
+  </div>
+);
+```
+
+## Reglas de Componentes
+
+- Props simples: solo lo necesario
+- Variantes limitadas: 2-3 variantes máximo
+- Composable: permitir combinar componentes
+- Accesible: usar roles y labels ARIA
+- Estados visuales claros: hover, focus, disabled, error

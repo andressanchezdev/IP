@@ -1,3 +1,4 @@
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './FilterButton.css'
 
 const VARIANTS = {
@@ -13,8 +14,9 @@ export function FilterButton({ label, icon, variant = 'filter', onClick, isActiv
       className={`filter-button ${VARIANTS[variant] ?? VARIANTS.filter} ${isActive ? 'filter-button--active' : ''}`}
       onClick={onClick}
       aria-pressed={isActive}
+      {...namedControl(label)}
     >
-      {icon && <img src={icon} alt="" className="filter-button__icon" aria-hidden="true" />}
+      {icon && <img src={icon} className="filter-button__icon" {...namedImage(label)} />}
       {label}
     </button>
   )

@@ -1,0 +1,68 @@
+---
+description: Manejo de errores y casos edge en React
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Manejo de Errores en React
+
+## Error Boundaries
+
+```tsx
+// Correcto - Error boundary para capturar errores de renderizado
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error, info) {
+    console.error('Error:', error, info);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return <h1>Algo salió mal.</h1>;
+    }
+    return this.props.children;
+  }
+}
+```
+
+## Manejo de Errores Asíncronos
+
+```tsx
+// Correcto - Estados completos: loading, error, success
+const Component = () => {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await fetch('/api/data');
+        setData(await result.json());
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+  
+  if (loading) return <div>Cargando...</div>;
+  if (error) return <div>Error: {error}</div>;
+  return <div>{data}</div>;
+};
+```
+
+## Reglas de Manejo de Errores
+
+- Siempre manejar estados: loading, error, success
+- Usar Error Boundaries para errores de renderizado
+- Validar props con PropTypes o TypeScript
+- Mostrar estados de loading para mejor UX

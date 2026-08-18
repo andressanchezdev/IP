@@ -4,6 +4,7 @@ import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
 import eyeIcon from '@/assets/icons/eye.svg'
 import { OrderPaymentAbonos } from './OrderPaymentAbonos'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export { OrderDeliveryContent } from './OrderDeliveryContent'
 
@@ -33,9 +34,9 @@ export function OrderDetailsContent({ order, onDownloadPdf }) {
             type="button"
             className="order-details__pdf-btn"
             onClick={onDownloadPdf}
-            aria-label="Descargar PDF"
+            {...namedControl('Descargar PDF')}
           >
-            <img src={cloudDownloadIcon} alt="" className="order-details__pdf-icon" aria-hidden="true" />
+            <img src={cloudDownloadIcon} className="order-details__pdf-icon" {...namedImage('Descargar PDF')} />
           </button>
         </div>
       </div>
@@ -66,7 +67,7 @@ export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
         <div className="order-payment__types" aria-label="Medio de pago del pedido">
           <span
             className="order-payment__type order-payment__type--active order-payment__type--chosen"
-            title={`Medio elegido en Finalizar: ${chosenType}`}
+            {...namedControl(`Medio elegido en Finalizar: ${chosenType}`)}
           >
             {chosenType}
           </span>
@@ -101,10 +102,10 @@ export function OrderPackagingContent({ order, productsOpen, onToggleProducts })
             type="button"
             className={`order-packaging__view-btn ${productsOpen ? 'order-packaging__view-btn--active' : ''}`}
             onClick={onToggleProducts}
-            aria-label={productsOpen ? 'Ocultar productos' : 'Ver productos'}
             aria-pressed={productsOpen}
+            {...namedControl(productsOpen ? 'Ocultar productos' : 'Ver productos')}
           >
-            <img src={eyeIcon} alt="" className="order-packaging__view-icon" aria-hidden="true" />
+            <img src={eyeIcon} className="order-packaging__view-icon" {...namedImage(productsOpen ? 'Ocultar productos' : 'Ver productos')} />
           </button>
         </div>
       </div>
@@ -122,7 +123,7 @@ export function OrderPackagingContent({ order, productsOpen, onToggleProducts })
                 <li key={item.id} className="carrito-card">
                   <div className="carrito-card__image-slot">
                     {imageSrc ? (
-                      <img src={imageSrc} alt="" className="carrito-card__image" loading="lazy" />
+                      <img src={imageSrc} className="carrito-card__image" loading="lazy" {...namedImage(descriptionText || categoryText || item.reference || 'Producto')} />
                     ) : null}
                   </div>
                   <div className="carrito-card__content">

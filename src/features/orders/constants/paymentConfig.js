@@ -27,9 +27,10 @@ export const PAYMENT_FIELDS = {
   ],
 }
 
-export function validatePaymentDetails(paymentType, formValues) {
+export function validatePaymentDetails(paymentType, formValues, options = {}) {
   const fields = PAYMENT_FIELDS[paymentType] ?? []
   const errors = {}
+  const remainingAmount = options.remainingAmount
 
   fields.forEach((field) => {
     if (!field.required) {
@@ -40,8 +41,15 @@ export function validatePaymentDetails(paymentType, formValues) {
       errors[field.key] = `${field.label} es obligatorio`
       return
     }
-    if (field.type === 'number' && (!Number.isFinite(Number(value)) || Number(value) <= 0)) {
-      errors[field.key] = `${field.label} debe ser mayor que cero`
+    if (field.type === 'number') {
+      const amount = Number(value)
+      if (!Number.isFinite(amount) || amount <= 0) {
+        errors[field.key] = `${field.label} debe ser mayor que cero`
+        return
+      }
+      if (Number.isFinite(remainingAmount) && ['amount', 'amountReceived'].includes(field.key) && amount > remainingAmount) {
+        errors[field.key] = `${field.label} supera el saldo pendiente`
+      }
     }
   })
 

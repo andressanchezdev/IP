@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import eyeIcon from '@/assets/icons/eye.svg'
 import eyeOffIcon from '@/assets/icons/eye-off.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export function AuthField({ id, label, type = 'text', value, error, onChange }) {
   const [showPassword, setShowPassword] = useState(false)
@@ -19,20 +20,20 @@ export function AuthField({ id, label, type = 'text', value, error, onChange }) 
           className={`auth-field__input ${isPassword ? 'auth-field__input--password' : ''} ${error ? 'auth-field__input--error' : ''}`}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
+          {...namedControl(label)}
         />
         {isPassword && (
           <button
             type="button"
             className="auth-field__toggle"
             onClick={() => setShowPassword((current) => !current)}
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={showPassword}
+            {...namedControl(showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña')}
           >
             <img
               src={showPassword ? eyeOffIcon : eyeIcon}
-              alt=""
               className="auth-field__toggle-icon"
-              aria-hidden="true"
+              {...namedImage(showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña')}
             />
           </button>
         )}

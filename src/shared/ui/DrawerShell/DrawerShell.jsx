@@ -1,3 +1,4 @@
+import { namedControl } from '@/shared/lib/namedControl'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import './DrawerShell.css'
 
@@ -39,6 +40,7 @@ export function DrawerFooterBar({ label, value, actionLabel, onAction, disabled 
           className="content-main-data-carrito__checkout"
           onClick={onAction}
           disabled={disabled}
+          {...namedControl(actionLabel)}
         >
           {actionLabel}
         </button>
@@ -47,12 +49,13 @@ export function DrawerFooterBar({ label, value, actionLabel, onAction, disabled 
   )
 }
 
-export function DrawerCheckRow({ children, active = false, onClick }) {
+export function DrawerCheckRow({ children, active = false, onClick, label }) {
   return (
     <button
       type="button"
       className={`filter-drawer-check${active ? ' filter-drawer-check--active' : ''}`}
       onClick={onClick}
+      {...namedControl(label)}
     >
       {children}
     </button>

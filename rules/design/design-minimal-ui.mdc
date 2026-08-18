@@ -1,0 +1,53 @@
+---
+description: Principios de diseño UI minimal y limpio
+globs: **/*.tsx,**/*.jsx,**/*.css,**/*.scss
+alwaysApply: false
+---
+
+# Diseño Minimal y Limpio
+
+## Principios de UI Minimal
+
+```tsx
+// Correcto - UI limpio y minimal
+const Card = ({ title, content }) => (
+  <div className="card">
+    <h2>{title}</h2>
+    <p>{content}</p>
+  </div>
+);
+
+// CSS correspondiente
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+```
+
+## Espaciado Consistente
+
+```css
+/* Correcto - Escala de espaciado consistente */
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+.container {
+  padding: var(--space-lg);
+  gap: var(--space-md);
+}
+```
+
+## Reglas de Diseño
+
+- Espaciado consistente: escala de 4px, 8px, 16px, 24px, 32px
+- Colores limitados: máximo 3-4 colores principales
+- Tipografía simple: 2 tipos de fuente máximo
+- Bordes sutiles: border-radius de 4px-8px
+- Sombras suaves: box-shadow discreto, no exagerado

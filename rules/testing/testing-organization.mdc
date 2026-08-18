@@ -1,0 +1,67 @@
+---
+description: Organización y estructura de archivos de prueba
+globs: **/*.test.ts,**/*.test.tsx,**/*.spec.ts
+alwaysApply: false
+---
+
+# Organización de Pruebas
+
+## Estructura de Carpetas
+
+```
+src/
+  components/
+    Button/
+      Button.tsx
+      Button.test.tsx
+      Button.styles.ts
+  utils/
+    math.ts
+    math.test.ts
+  __tests__/
+    integration/
+    e2e/
+```
+
+## Agrupación con describe
+
+```typescript
+// Correcto - Agrupación lógica
+describe('UserService', () => {
+  describe('createUser', () => {
+    it('should create user with valid data', () => { ... });
+    it('should throw error with invalid email', () => { ... });
+  });
+  
+  describe('deleteUser', () => {
+    it('should delete existing user', () => { ... });
+    it('should return false for non-existent user', () => { ... });
+  });
+});
+```
+
+## Setup y Teardown
+
+```typescript
+// Correcto - Setup compartido
+describe('Database tests', () => {
+  beforeAll(async () => {
+    await connectDatabase();
+  });
+  
+  afterAll(async () => {
+    await closeDatabase();
+  });
+  
+  beforeEach(() => {
+    // Reset para cada test
+  });
+});
+```
+
+## Reglas de Organización
+
+- Colocar tests junto al código en mismo directorio
+- Usar describe para agrupar conceptos relacionados
+- beforeEach/afterEach para setup/cleanup repetitivo
+- Nombres de archivo consistentes: .test.ts o .spec.ts

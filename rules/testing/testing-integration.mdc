@@ -1,0 +1,39 @@
+---
+description: Pruebas de integración y E2E
+globs: **/*.test.ts,**/*.spec.ts,**/e2e/**,**/integration/**
+alwaysApply: false
+---
+
+# Pruebas de Integración
+
+## Testing Library - Pruebas de Comportamiento
+
+```tsx
+// Incorrecto - Probar detalles de implementación
+const button = container.querySelector('.submit-button');
+expect(button.classList.contains('active')).toBe(true);
+
+// Correcto - Probar comportamiento del usuario
+const button = screen.getByRole('button', { name: /submit/i });
+expect(button).toBeEnabled();
+```
+
+## Manejo de Operaciones Asíncronas
+
+```tsx
+// Correcto - Espera apropiada de elementos async
+it('should display user data after loading', async () => {
+  render(<UserProfile userId="123" />);
+  
+  const userName = await screen.findByText(/john doe/i);
+  expect(userName).toBeInTheDocument();
+});
+```
+
+## Reglas de Integración
+
+- Usar queries por accesibilidad: getByRole, getByLabelText
+- Evitar selectores CSS. Usar texto visible o roles ARIA
+- Simular interacción real: userEvent en lugar de fireEvent
+- Esperar correctamente: usar findBy para elementos async
+- Cleanup automático con Testing Library

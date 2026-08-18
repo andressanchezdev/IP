@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { namedControl } from '@/shared/lib/namedControl'
 
 export function DrawerAccordionSection({ id, title, isOpen, onToggle, onClose, children }) {
   const sectionRef = useRef(null)
@@ -35,6 +36,7 @@ export function DrawerAccordionSection({ id, title, isOpen, onToggle, onClose, c
         onClick={() => onToggle(id)}
         aria-expanded={isOpen}
         aria-controls={`drawer-accordion-panel-${id}`}
+        {...namedControl(title)}
       >
         <span>{title}</span>
         <span

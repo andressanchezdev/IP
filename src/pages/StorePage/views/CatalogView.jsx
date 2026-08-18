@@ -20,6 +20,7 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
   } = useCatalog()
   const sentinelRef = useRef(null)
   const requestLockRef = useRef(false)
+  const retryTimeoutRef = useRef(null)
 
   // Search or applied filters: no scroll pagination (avoids request storms on short lists).
   const canPaginateOnScroll =
@@ -37,17 +38,43 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
 
     const scrollRoot = getLandingScrollRoot(sentinel)
 
+    const clearRetry = () => {
+      if (retryTimeoutRef.current != null) {
+        window.clearTimeout(retryTimeoutRef.current)
+        retryTimeoutRef.current = null
+      }
+    }
+
+    const requestNextPage = () => {
+      if (requestLockRef.current || isLoadingProducts) {
+        return
+      }
+
+      requestLockRef.current = true
+      Promise.resolve(loadMoreProducts())
+        .then((result) => {
+          if (result?.reason === 'scroll_throttle' && result.retryAfterMs > 0) {
+            retryTimeoutRef.current = window.setTimeout(() => {
+              retryTimeoutRef.current = null
+              requestLockRef.current = false
+              requestNextPage()
+            }, result.retryAfterMs)
+            return
+          }
+          requestLockRef.current = false
+        })
+        .catch(() => {
+          requestLockRef.current = false
+        })
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const isVisible = entries.some((entry) => entry.isIntersecting)
-        if (!isVisible || requestLockRef.current || isLoadingProducts) {
+        if (!isVisible) {
           return
         }
-
-        requestLockRef.current = true
-        Promise.resolve(loadMoreProducts()).finally(() => {
-          requestLockRef.current = false
-        })
+        requestNextPage()
       },
       {
         root: scrollRoot,
@@ -57,7 +84,11 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
     )
 
     observer.observe(sentinel)
-    return () => observer.disconnect()
+    return () => {
+      clearRetry()
+      requestLockRef.current = false
+      observer.disconnect()
+    }
   }, [canPaginateOnScroll, isLoadingProducts, loadMoreProducts, products.length])
 
   if (products.length === 0 && isLoadingProducts && !isCatalogSearchActive) {

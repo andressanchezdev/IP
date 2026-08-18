@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import eyeIcon from '@/assets/icons/eye.svg'
 import eyeOffIcon from '@/assets/icons/eye-off.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export function SettingsField({ id, label, type = 'text', value, onChange, disabled = false }) {
   const [showPassword, setShowPassword] = useState(false)
@@ -22,20 +23,20 @@ export function SettingsField({ id, label, type = 'text', value, onChange, disab
           disabled={disabled}
           readOnly={disabled}
           className={isPassword ? 'profile-settings-field__input--password' : ''}
+          {...namedControl(label)}
         />
         {isPassword && (
           <button
             type="button"
             className="profile-settings-field__toggle"
             onClick={() => setShowPassword((current) => !current)}
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={showPassword}
+            {...namedControl(showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña')}
           >
             <img
               src={showPassword ? eyeOffIcon : eyeIcon}
-              alt=""
               className="profile-settings-field__toggle-icon"
-              aria-hidden="true"
+              {...namedImage(showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña')}
             />
           </button>
         )}

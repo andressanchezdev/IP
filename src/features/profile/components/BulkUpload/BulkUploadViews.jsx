@@ -8,6 +8,7 @@ import {
 import { ExcelWindowPreview } from './ExcelWindowPreview'
 import { InfoPanel } from './BulkUploadInfoPanel'
 import { useBulkUpload } from './useBulkUpload'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './BulkUpload.css'
 
 /**
@@ -82,13 +83,13 @@ export function BulkUploadFileContent({ onCancelOrder, onOrderSent } = {}) {
             className="bulk-upload__btn"
             onClick={handleDownloadTemplate}
             disabled={uploadState.isDownloading || isBusy}
+            {...namedControl(uploadState.isDownloading ? 'Descargando plantilla' : 'Descargar plantilla')}
           >
             <span className="bulk-upload__btn-content">
               <img
                 src={cloudDownloadIcon}
-                alt=""
                 className="bulk-upload__btn-icon"
-                aria-hidden="true"
+                {...namedImage('Descargar plantilla')}
               />
               {uploadState.isDownloading ? 'Descargando…' : 'Descargar plantilla'}
             </span>
@@ -101,6 +102,7 @@ export function BulkUploadFileContent({ onCancelOrder, onOrderSent } = {}) {
             onClick={handlePrimaryAction}
             disabled={isBusy}
             aria-busy={isBusy}
+            {...namedControl(primaryLabel)}
           >
             {processState.isProcessing || processState.isSending ? (
               <>
@@ -120,9 +122,8 @@ export function BulkUploadFileContent({ onCancelOrder, onOrderSent } = {}) {
               <span className="bulk-upload__btn-content">
                 <img
                   src={cloudUploadIcon}
-                  alt=""
                   className="bulk-upload__btn-icon"
-                  aria-hidden="true"
+                  {...namedImage('Cargar archivo')}
                 />
                 {primaryLabel}
               </span>
@@ -137,6 +138,7 @@ export function BulkUploadFileContent({ onCancelOrder, onOrderSent } = {}) {
           accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
           className="bulk-upload__file-input"
           onChange={handleFileChange}
+          {...namedControl('Seleccionar archivo Excel')}
         />
       </div>
 

@@ -1,4 +1,5 @@
 import searchIcon from '@/assets/icons/search.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './SearchBar.css'
 
 export function SearchBar({
@@ -23,7 +24,7 @@ export function SearchBar({
 
   return (
     <div className="search-bar">
-      <img src={searchIcon} alt="" className="search-bar__icon" aria-hidden="true" />
+      <img src={searchIcon} className="search-bar__icon" {...namedImage(ariaLabel)} />
       <input
         type="search"
         className="search-bar__input"
@@ -32,8 +33,8 @@ export function SearchBar({
         onFocus={(event) => onFocus?.(event)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        aria-label={ariaLabel}
         enterKeyHint="search"
+        {...namedControl(ariaLabel)}
       />
       {onClear && (
         <button
@@ -41,7 +42,7 @@ export function SearchBar({
           className="search-bar__clear"
           onClick={onClear}
           disabled={!isClearEnabled}
-          aria-label="Limpiar búsqueda y filtros"
+          {...namedControl('Limpiar búsqueda y filtros')}
         >
           ×
         </button>

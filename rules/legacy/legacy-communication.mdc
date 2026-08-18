@@ -1,0 +1,42 @@
+---
+description: Comunicación clara al trabajar con código legacy
+alwaysApply: true
+---
+
+# Comunicación en Código Legacy
+
+## Al Encontrar Código Legacy
+
+El agente debe:
+
+1. Identificar claramente que es código legacy
+2. Preguntar antes de cambiar si hay dudas sobre el impacto
+3. Proponer estrategia antes de hacer cambios grandes
+4. Documentar hallazgos: bugs, patrones extraños, dependencias
+
+## Template de Comunicación
+
+```
+He encontrado código legacy en [archivo]:
+
+Situación actual:
+- [Descripción del código]
+- [Posibles problemas]
+
+Propuesta:
+1. [Paso 1]
+2. [Paso 2]
+
+Riesgos:
+- [Riesgo 1]
+
+¿Procedo con esta estrategia?
+```
+
+## Reglas de Comunicación
+
+- Nunca asumir. Si el código parece raro, preguntar antes de cambiar
+- Ser explícito sobre qué se va a cambiar y por qué
+- Alertar sobre breaking changes potenciales
+- Proponer antes de ejecutar cambios que afecten múltiples archivos
+- Documentar decisiones. Dejar comentarios explicando el "por qué"

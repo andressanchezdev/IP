@@ -1,0 +1,59 @@
+---
+description: Sistema de colores simple y efectivo
+globs: **/*.css,**/*.scss,**/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Sistema de Colores Minimal
+
+## Paleta Básica
+
+```css
+/* Correcto - Paleta limitada y clara */
+:root {
+  /* Primary */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  
+  /* Neutrals */
+  --color-text: #1f2937;
+  --color-text-light: #6b7280;
+  --color-background: #ffffff;
+  --color-background-alt: #f9fafb;
+  
+  /* Semantic */
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+}
+```
+
+## Uso Consistente
+
+```tsx
+// Correcto - Usar variables CSS
+const Button = () => (
+  <button style={{ 
+    backgroundColor: 'var(--color-primary)',
+    color: 'white'
+  }}>
+    Click me
+  </button>
+);
+
+// Incorrecto - Colores hardcodeados
+const Button = () => (
+  <button style={{ backgroundColor: '#2563eb' }}>
+    Click me
+  </button>
+);
+```
+
+## Reglas de Colores
+
+- Usar CSS variables. Centralizar colores en :root
+- Máximo 3-4 colores principales. No más
+- Colores semánticos: success, error, warning claramente definidos
+- Contraste suficiente: mínimo 4.5:1 para texto
+- Evitar colores puros: usar tonos sutiles (#333 en vez de #000)

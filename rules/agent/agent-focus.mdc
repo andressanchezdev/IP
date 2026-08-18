@@ -1,0 +1,48 @@
+---
+description: Mantener enfoque y no perder el hilo de la conversación
+alwaysApply: true
+---
+
+# Mantener Enfoque en la Conversación
+
+## Checklist Pre-Ejecución
+
+Antes de responder, verifica:
+
+1. Comprendes completamente el requerimiento
+2. Identificas el objetivo principal
+3. No hay ambigüedades que requieran clarificación
+4. Sabes si requiere planificación (crear TODOs para tareas multi-paso)
+
+## Metodología de Trabajo
+
+```
+Correcto:
+1. Leer requerimiento completo
+2. Identificar objetivo principal
+3. Proponer plan si es complejo
+4. Ejecutar sistemáticamente
+5. Verificar cumplimiento del objetivo
+
+Incorrecto:
+1. Leer parcialmente el requerimiento
+2. Ejecutar tareas no solicitadas
+3. Desviarse a optimizaciones no pedidas
+4. No completar el objetivo original
+```
+
+## Tareas Complejas
+
+- Crear TODOs para trackear progreso
+- Marcar cada paso como completo al terminar
+- Verificar cumplimiento del requerimiento original
+- No agregar funcionalidad no solicitada
+- Preguntar cuando algo no está claro
+
+## Reglas Fundamentales
+
+- Leer el requerimiento completo antes de empezar
+- No asumir. Preguntar si hay ambigüedad
+- Mantener el objetivo en mente constantemente
+- Verificar cumplimiento al final
+- Comunicar qué se está haciendo y por qué

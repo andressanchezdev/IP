@@ -1,0 +1,105 @@
+---
+description: Comunicación eficiente y uso óptimo de tokens
+alwaysApply: true
+---
+
+# Eficiencia en Uso de Tokens
+
+## Principio Fundamental
+
+Trabajar en silencio. Comunicar solo resultados y decisiones críticas.
+
+## Qué NO Comunicar
+
+### Narraciones de Proceso
+
+No malgastar tokens con:
+- "Voy a leer el archivo para entender..."
+- "Ahora usaré Grep para buscar..."
+- "Déjame verificar si hay errores..."
+- "Estoy pensando en la mejor manera..."
+
+### Explicaciones de Herramientas
+
+No narrar uso de herramientas:
+- "Usaré la herramienta Read para..."
+- "Ejecutaré Shell para..."
+- "Llamaré a StrReplace para..."
+
+### Pensamientos en Voz Alta
+
+No verbalizar proceso mental:
+- "Parece que este código necesita..."
+- "Estoy considerando si debería..."
+- "Me pregunto si la mejor opción es..."
+
+### Confirmaciones Triviales
+
+No confirmar cada acción:
+- "Archivo leído"
+- "Búsqueda completada"
+- "Ahora procederé con..."
+
+## Qué SÍ Comunicar
+
+### Resultados Finales
+
+Comunicar outcome de forma concisa:
+"Agregada validación de email en UserForm.tsx. Sin errores."
+
+### Cambios Significativos
+
+Listar modificaciones importantes:
+"Modificados 3 archivos:
+- UserForm.tsx: Agregada validación
+- utils.ts: Nueva función validateEmail
+- types.ts: Actualizado interface UserInput"
+
+### Decisiones Requeridas
+
+Presentar opciones cuando sea necesario:
+"Dos enfoques posibles:
+1. Validación frontend con regex
+2. Validación backend con librería
+¿Cuál prefieres?"
+
+### Bloqueos
+
+Comunicar impedimentos claros:
+"No puedo continuar. El archivo config.ts no existe.
+¿Debo crearlo o está en otra ubicación?"
+
+## Patrón de Trabajo
+
+1. Leer requerimiento (silencio)
+2. Planear solución (silencio)
+3. Leer archivos necesarios (silencio)
+4. Buscar código relevante (silencio)
+5. Implementar cambios (silencio)
+6. Verificar errores (silencio)
+7. Comunicar resultado (una vez)
+
+Resultado: Usuario solo ve outcome final y resumen de cambios.
+
+## Reglas Estrictas
+
+1. No narrar acciones. Usuario no necesita saber qué herramienta usas
+2. No pensar en voz alta. Usar pensamiento interno
+3. No explicar el proceso. Solo mostrar resultados
+4. No confirmar cada paso. Agrupar comunicación al final
+5. Ser conciso. Menos palabras, más valor
+
+## Excepciones
+
+Mostrar proceso solo cuando:
+- Tarea muy larga (>5 min): Un update por minuto
+- Usuario pregunta explícitamente: "¿qué estás haciendo?"
+- Debugging complejo: Explicar hallazgos importantes
+- Múltiples opciones: Requiere decisión del usuario
+
+## Impacto Esperado
+
+- Ahorro de tokens: 60-80% por tarea
+- Respuestas más rápidas: Menos texto que generar
+- Comunicación clara: Sin ruido, solo señal
+- Mejor experiencia: Usuario ve resultados, no procesos internos

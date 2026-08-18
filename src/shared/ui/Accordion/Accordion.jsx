@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { namedControl } from '@/shared/lib/namedControl'
 import './Accordion.css'
 
 export function Accordion({
@@ -30,6 +31,7 @@ export function Accordion({
         onClick={handleToggle}
         aria-expanded={isOpen}
         aria-controls={panelId}
+        {...namedControl(title)}
       >
         <span className="accordion__title">{title}</span>
         <span className="accordion__icon" aria-hidden="true">{isOpen ? '−' : '+'}</span>

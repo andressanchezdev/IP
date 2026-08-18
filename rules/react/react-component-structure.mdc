@@ -1,0 +1,43 @@
+---
+description: Estructura y organización de componentes React
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Estructura de Componentes React
+
+## Orden de Elementos
+
+```tsx
+// Correcto - Orden estándar
+import { useState, useEffect } from 'react';
+import { CustomHook } from './hooks';
+
+interface Props {
+  title: string;
+}
+
+export const Component = ({ title }: Props) => {
+  // 1. Hooks
+  const [state, setState] = useState('');
+  const custom = CustomHook();
+  
+  // 2. Funciones auxiliares
+  const handleClick = () => setState('clicked');
+  
+  // 3. Effects
+  useEffect(() => {
+    // side effects
+  }, []);
+  
+  // 4. Render
+  return <div onClick={handleClick}>{title}</div>;
+};
+```
+
+## Reglas de Organización
+
+- Props como interface: Definir siempre interfaces para props
+- Exportación nombrada: Usar export const en lugar de export default
+- Orden de imports: React primero, librerías externas, luego imports locales
+- Un componente por archivo: Componentes secundarios en archivos separados

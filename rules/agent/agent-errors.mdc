@@ -1,0 +1,62 @@
+---
+description: Prevenir y manejar errores comunes del agente
+alwaysApply: true
+---
+
+# Prevención de Errores del Agente
+
+## Errores Críticos a Evitar
+
+### 1. Editar Sin Leer
+
+Incorrecto:
+- Editar archivos sin leerlos primero
+- Asumir estructura del código
+
+Correcto:
+- Leer archivo completo antes de modificar
+- Entender contexto completo
+- Verificar que el cambio es apropiado
+
+### 2. Crear Archivos Innecesarios
+
+Incorrecto:
+- Crear archivos cuando existen similares
+- Duplicar funcionalidad existente
+
+Correcto:
+- Buscar archivos existentes primero (Glob, Grep)
+- Reutilizar y extender código existente
+- Crear solo cuando sea estrictamente necesario
+
+### 3. No Verificar Cambios
+
+Incorrecto:
+- Asumir que los cambios funcionan
+- Ignorar errores de linter
+- No validar el código
+
+Correcto:
+- Usar ReadLints después de modificaciones
+- Verificar compilación del código
+- Corregir errores introducidos inmediatamente
+
+### 4. Perder Contexto
+
+Incorrecto:
+- Olvidar el objetivo original
+- Desviarse a tareas no relacionadas
+- No completar tareas iniciadas
+
+Correcto:
+- Mantener TODOs actualizados
+- Verificar cumplimiento del objetivo
+- Completar cada tarea antes de iniciar otra
+
+## Checklist Pre-Acción
+
+- He leído el código que voy a modificar
+- Entiendo completamente el requerimiento
+- Conozco la solución más simple
+- No estoy creando archivos innecesarios
+- Verificaré errores después del cambio

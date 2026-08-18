@@ -1,4 +1,5 @@
 import { formatCurrencyInput, parseCurrencyInput } from '@/shared/lib/currencyInput'
+import { namedControl } from '@/shared/lib/namedControl'
 
 /** Input de moneda reutilizable; conserva clases del contenedor padre. */
 export function CurrencyInput({
@@ -10,6 +11,7 @@ export function CurrencyInput({
   max,
   className = '',
   disabled = false,
+  invalid = false,
 }) {
   const displayValue = value === '' || value === null || value === undefined
     ? ''
@@ -39,7 +41,8 @@ export function CurrencyInput({
       placeholder={placeholder}
       className={className}
       disabled={disabled}
-      aria-label="Monto en pesos"
+      {...namedControl('Monto en pesos')}
+      aria-invalid={invalid}
     />
   )
 }

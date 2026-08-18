@@ -1,0 +1,48 @@
+---
+description: Pruebas unitarias - estructura y mejores prácticas
+globs: **/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx
+alwaysApply: false
+---
+
+# Pruebas Unitarias
+
+## Estructura AAA (Arrange, Act, Assert)
+
+```typescript
+// Correcto - Patrón AAA claramente definido
+describe('calculateTotal', () => {
+  it('should sum item prices correctly', () => {
+    // Arrange
+    const items = [
+      { price: 10 },
+      { price: 20 },
+      { price: 30 }
+    ];
+    
+    // Act
+    const result = calculateTotal(items);
+    
+    // Assert
+    expect(result).toBe(60);
+  });
+});
+```
+
+## Nombres Descriptivos
+
+```typescript
+// Incorrecto
+it('works', () => { ... });
+
+// Correcto
+it('should return empty array when no items are provided', () => { ... });
+it('should throw error when price is negative', () => { ... });
+```
+
+## Reglas de Pruebas Unitarias
+
+- Un concepto por test. No probar múltiples cosas en un solo test
+- Nombres descriptivos que expliquen qué y por qué
+- Tests independientes. No deben depender entre sí
+- Setup claro. Usar beforeEach para setup común
+- Mock solo lo necesario. No mockear todo indiscriminadamente

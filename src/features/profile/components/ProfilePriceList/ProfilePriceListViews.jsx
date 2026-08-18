@@ -38,11 +38,11 @@ export function ProfileDownloadMethodContent({ onSelect }) {
     <DrawerShell>
       <DrawerPanel title="Método de descarga" variant="quick">
         <DrawerSectionList>
-          <DrawerCheckRow onClick={() => pick('excel')}>
+          <DrawerCheckRow onClick={() => pick('excel')} label="Excel">
             <span>Excel</span>
             <span className="filter-drawer-check__caret" aria-hidden="true" />
           </DrawerCheckRow>
-          <DrawerCheckRow onClick={() => pick('pdf')}>
+          <DrawerCheckRow onClick={() => pick('pdf')} label="PDF">
             <span>PDF</span>
             <span className="filter-drawer-check__caret" aria-hidden="true" />
           </DrawerCheckRow>
@@ -99,7 +99,7 @@ export function ProfileCatalogPickerContent({
             <p className="profile-price-list__empty">Sin coincidencias</p>
           ) : (
             filtered.map((option) => (
-              <DrawerCheckRow key={option} onClick={() => handlePick(option)}>
+              <DrawerCheckRow key={option} onClick={() => handlePick(option)} label={option}>
                 <span>{option}</span>
                 <span className="filter-drawer-check__caret" aria-hidden="true" />
               </DrawerCheckRow>

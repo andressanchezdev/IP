@@ -1,5 +1,6 @@
 import { formatRealAmount } from '@/features/orders/utils/orderFormat'
 import { paymentTypeLabel } from '@/features/orders/utils/resolveCheckoutPaymentType'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
   return (
@@ -10,14 +11,14 @@ function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
           type="button"
           className="order-payment__counter order-payment__counter--link"
           onClick={onOpenPayments}
-          aria-label="Ver pagos registrados"
+          {...namedControl('Ver pagos registrados')}
         >
           {payments.length > 0 ? (
             payments.map((entry, index) => (
               <span
                 key={`${entry.createdAt}-${index}`}
                 className="order-payment__pill order-payment__pill--paid"
-                title={formatRealAmount(entry.amount)}
+                {...namedControl(`Abono ${index + 1}: ${formatRealAmount(entry.amount)}`)}
               >
                 {index + 1}
               </span>
@@ -31,8 +32,7 @@ function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
             type="button"
             className="order-payment__add-btn"
             onClick={onOpenPayments}
-            aria-label="Agregar pago al pedido"
-            title="Agregar pago"
+            {...namedControl('Agregar pago al pedido')}
           >
             +
           </button>
@@ -61,9 +61,9 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
               target="_blank"
               rel="noopener noreferrer"
               className="order-payment__proof-preview"
-              title={proofName}
+              {...namedControl(`Ver comprobante ${proofName}`)}
             >
-              <img src={proofUrl} alt={proofName} className="order-payment__proof-image" />
+              <img src={proofUrl} className="order-payment__proof-image" {...namedImage(proofName)} />
             </a>
           ) : (
             <a
@@ -71,6 +71,7 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
               target="_blank"
               rel="noopener noreferrer"
               className="order-payment__empty"
+              {...namedControl(`Abrir comprobante ${proofName}`)}
             >
               {proofName}
             </a>
@@ -89,6 +90,7 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
                 onVerifyProof?.({ verified: true })
               }
             }}
+            {...namedControl('Comprobante real')}
           />
           <span>Comprobante real</span>
         </label>
@@ -105,8 +107,7 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
             type="button"
             className="order-payment__add-btn"
             onClick={onOpenPayments}
-            aria-label="Registrar abono manual"
-            title="Abono manual"
+            {...namedControl('Registrar abono manual')}
           >
             +
           </button>
@@ -142,8 +143,7 @@ function CreditSaldoPendiente({ payment, orderTotal, remainingAmount, onOpenPaym
             type="button"
             className="order-payment__add-btn"
             onClick={onOpenPayments}
-            aria-label="Registrar abono a crédito"
-            title="Abonar a crédito"
+            {...namedControl('Registrar abono a crédito')}
           >
             +
           </button>

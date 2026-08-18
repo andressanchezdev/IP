@@ -1,0 +1,45 @@
+---
+description: Manejo de estado en React - hooks y patrones
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Manejo de Estado en React
+
+## useState - Agrupación Correcta
+
+```tsx
+// Incorrecto - Estados relacionados separados
+const [firstName, setFirstName] = useState('');
+const [lastName, setLastName] = useState('');
+const [email, setEmail] = useState('');
+
+// Correcto - Estado agrupado
+const [user, setUser] = useState({
+  firstName: '',
+  lastName: '',
+  email: ''
+});
+```
+
+## Custom Hooks para Reutilización
+
+```tsx
+// Correcto - Lógica extraída a custom hook
+const useForm = (initialValues) => {
+  const [values, setValues] = useState(initialValues);
+  
+  const handleChange = (e) => {
+    setValues({ ...values, [e.target.name]: e.target.value });
+  };
+  
+  return { values, handleChange };
+};
+```
+
+## Reglas de Estado
+
+- Agrupar estado relacionado en un solo useState
+- Extraer lógica compleja a custom hooks
+- Evitar prop drilling. Usar Context para estado global
+- Inicializar con valores apropiados. Evitar null cuando sea posible

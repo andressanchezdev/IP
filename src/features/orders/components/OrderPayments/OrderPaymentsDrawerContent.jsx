@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useOrders } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { Accordion } from '@/shared/ui/Accordion/Accordion'
@@ -9,6 +9,9 @@ import {
   validatePaymentDetails,
 } from '@/features/orders/constants/paymentConfig'
 import { formatRealAmount } from '@/features/orders/utils/orderFormat'
+import { namedControl } from '@/shared/lib/namedControl'
+import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
+import '@/shared/ui/FieldHint/FieldHint.css'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import '@/shared/ui/Drawer/Drawer.css'
 import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
@@ -19,6 +22,18 @@ export function OrderPaymentsDrawerContent() {
   const [paymentType, setPaymentType] = useState(selectedOrder?.payment?.type ?? 'efectivo')
   const [formValues, setFormValues] = useState({})
 
+  const payment = selectedOrder?.payment
+  const fields = PAYMENT_FIELDS[paymentType] ?? []
+  const totalAmount = Number(payment?.amount ?? selectedOrder?.total ?? 0)
+  const paidAmount = Number(payment?.paidAmount ?? 0)
+  const remainingAmount = Math.max(0, totalAmount - paidAmount)
+  const payments = payment?.payments ?? []
+
+  const validation = useMemo(
+    () => validatePaymentDetails(paymentType, formValues, { remainingAmount }),
+    [paymentType, formValues, remainingAmount],
+  )
+
   if (!selectedOrder) {
     return (
       <div className="content-main-carrito">
@@ -27,19 +42,11 @@ export function OrderPaymentsDrawerContent() {
     )
   }
 
-  const { payment } = selectedOrder
-  const fields = PAYMENT_FIELDS[paymentType] ?? []
-  const totalAmount = Number(payment.amount ?? selectedOrder.total ?? 0)
-  const paidAmount = Number(payment.paidAmount ?? 0)
-  const remainingAmount = Math.max(0, totalAmount - paidAmount)
-  const payments = payment.payments ?? []
-
   const handleFieldChange = (key, value) => {
     setFormValues((current) => ({ ...current, [key]: value }))
   }
 
   const handleSubmit = () => {
-    const validation = validatePaymentDetails(paymentType, formValues)
     if (!validation.isValid) {
       showToast('Complete los datos de pago', 'error')
       return
@@ -122,6 +129,7 @@ export function OrderPaymentsDrawerContent() {
                 setPaymentType(id)
                 setFormValues({})
               }}
+              {...namedControl(label)}
             >
               {label}
             </button>
@@ -129,27 +137,40 @@ export function OrderPaymentsDrawerContent() {
         </div>
 
         <Accordion title={`Datos — ${PAYMENT_TYPES.find((t) => t.id === paymentType)?.label}`} defaultOpen>
-          {fields.map((field) => (
-            <label key={field.key} className="order-payments-panel__field">
-              <span>{field.label}</span>
-              {['amount', 'amountReceived'].includes(field.key) ? (
-                <CurrencyInput
-                  id={`payment-${field.key}`}
-                  value={formValues[field.key] ?? ''}
-                  onChange={(nextValue) => handleFieldChange(field.key, nextValue)}
-                  placeholder={field.placeholder}
-                  max={remainingAmount}
-                />
-              ) : (
-                <input
-                  type={field.type}
-                  value={formValues[field.key] ?? ''}
-                  onChange={(event) => handleFieldChange(field.key, event.target.value)}
-                  placeholder={field.placeholder}
-                />
-              )}
-            </label>
-          ))}
+          {fields.map((field) => {
+            const fieldError = validation.errors[field.key] ?? ''
+            const inputId = `payment-${field.key}`
+
+            return (
+              <label key={field.key} className="order-payments-panel__field">
+                <span>{field.label}</span>
+                {['amount', 'amountReceived'].includes(field.key) ? (
+                  <CurrencyInput
+                    id={inputId}
+                    value={formValues[field.key] ?? ''}
+                    onChange={(nextValue) => handleFieldChange(field.key, nextValue)}
+                    placeholder={field.placeholder}
+                    max={remainingAmount}
+                    invalid={Boolean(fieldError)}
+                    className={fieldError ? 'order-payments-panel__input--error' : ''}
+                  />
+                ) : (
+                  <input
+                    id={inputId}
+                    type={field.type}
+                    value={formValues[field.key] ?? ''}
+                    onChange={(event) => handleFieldChange(field.key, event.target.value)}
+                    placeholder={field.placeholder}
+                    className={fieldError ? 'order-payments-panel__input--error' : ''}
+                    aria-invalid={Boolean(fieldError)}
+                    aria-describedby={fieldError ? `${inputId}-error` : undefined}
+                    {...namedControl(field.label)}
+                  />
+                )}
+                <FieldHint id={`${inputId}-error`} message={fieldError} />
+              </label>
+            )
+          })}
         </Accordion>
       </div>
 
@@ -162,7 +183,8 @@ export function OrderPaymentsDrawerContent() {
           type="button"
           className="content-main-data-carrito__checkout"
           onClick={handleSubmit}
-          disabled={remainingAmount === 0}
+          disabled={remainingAmount === 0 || !validation.isValid}
+          {...namedControl('Formalizar pago')}
         >
           Formalizar pago
         </button>

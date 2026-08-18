@@ -191,6 +191,21 @@
   width: 100%;
 }
 
+.drawer-shell-section-options {
+  --filter-option-row-h: 28px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-x: hidden;
+}
+
+.drawer-shell-section-options--scroll {
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(var(--filter-option-rows) * var(--filter-option-row-h));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .drawer-shell-section-body .content-list-data__row {
   align-items: baseline;
   display: flex;

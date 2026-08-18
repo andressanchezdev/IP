@@ -10,7 +10,7 @@
   padding: 14px 0 12px;
   position: sticky;
   top: 0;
-  width: calc(var(--sidebar-width) - 20px);
+  width: calc(var(--sidebar-width) - 22px);
   z-index: 10;
 }
 

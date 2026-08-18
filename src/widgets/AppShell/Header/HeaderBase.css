@@ -82,6 +82,11 @@
   padding: clamp(4px, 0.8vw, 8px) clamp(6px, 1.2vw, 14px);
 }
 
+.header__filters .filter-button.filter-button--active {
+  background: var(--color-gris-claro);
+  color: var(--color-text-primary);
+}
+
 .header__filters .filter-button__icon {
   flex-shrink: 0;
   height: clamp(12px, 1.4vw, 16px);

@@ -21,6 +21,7 @@ import deleteAccountIcon from '@/assets/icons/delete-account.svg'
 import { PersonalDataForm } from './PersonalDataForm'
 import { AccessForm, CompanyDataForm } from './CompanyAccessForms'
 import { LegalLinksSection, NotificationsSection } from './SettingsStaticSections'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import '@/features/profile/components/ProfileDrawer/ProfileDrawer.css'
 import './ProfileSettings.css'
 
@@ -174,7 +175,7 @@ export function ProfileSettingsDrawerContent() {
         )
       case 'cache':
         return (
-          <button type="button" className="profile-settings-cache-btn" onClick={handleClearCache}>
+          <button type="button" className="profile-settings-cache-btn" onClick={handleClearCache} {...namedControl('Presionar para liberar caché')}>
             Presionar para liberar caché
           </button>
         )
@@ -190,8 +191,8 @@ export function ProfileSettingsDrawerContent() {
         return <LegalLinksSection />
       case 'delete':
         return (
-          <button type="button" className="profile-settings-delete" onClick={handleDeleteAccount}>
-            <img src={deleteAccountIcon} alt="" className="profile-settings-delete__icon" aria-hidden="true" />
+          <button type="button" className="profile-settings-delete" onClick={handleDeleteAccount} {...namedControl('Eliminar cuenta')}>
+            <img src={deleteAccountIcon} className="profile-settings-delete__icon" {...namedImage('Eliminar cuenta')} />
             Eliminar cuenta
           </button>
         )
@@ -218,13 +219,13 @@ export function ProfileSettingsDrawerContent() {
                 <DrawerCheckRow
                   active={isOpen}
                   onClick={() => toggleSection(section.id)}
+                  label={section.label}
                 >
                   <span className="profile-drawer-section__label">
                     <img
                       src={section.icon}
-                      alt=""
                       className="profile-drawer-section__icon"
-                      aria-hidden="true"
+                      {...namedImage(section.label)}
                     />
                     {section.label}
                   </span>

@@ -1,0 +1,46 @@
+---
+description: Optimización y rendimiento en React
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Optimización de Rendimiento React
+
+## useMemo para Cálculos Costosos
+
+```tsx
+// Incorrecto - Cálculo en cada render
+const Component = ({ items }) => {
+  const total = items.reduce((sum, item) => sum + item.price, 0);
+  return <div>{total}</div>;
+};
+
+// Correcto - Memoizado
+const Component = ({ items }) => {
+  const total = useMemo(
+    () => items.reduce((sum, item) => sum + item.price, 0),
+    [items]
+  );
+  return <div>{total}</div>;
+};
+```
+
+## useCallback para Funciones
+
+```tsx
+// Correcto - Función estable para componentes hijos
+const Parent = () => {
+  const handleClick = useCallback(() => {
+    console.log('clicked');
+  }, []);
+  
+  return <Child onClick={handleClick} />;
+};
+```
+
+## Reglas de Optimización
+
+- useMemo: Cálculos costosos que dependen de props/state
+- useCallback: Funciones pasadas a componentes hijos memorizados
+- React.memo: Componentes que renderizan frecuentemente con mismas props
+- Key prop: Usar keys estables en listas. No usar índices como keys

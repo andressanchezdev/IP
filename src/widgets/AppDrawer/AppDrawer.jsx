@@ -12,6 +12,7 @@ import { OrderPaymentsDrawerContent } from '@/features/orders/components/OrderPa
 import { FilterDrawerContent } from '@/features/catalog/components/FilterDrawer/FilterDrawerContent'
 import { ProfileDrawerSubViews } from './ProfileDrawerSubViews'
 import { getCloseAriaLabel, getDrawerTitle } from './appDrawerMeta'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export function AppDrawer() {
   const { clearFilters } = useCatalog()
@@ -154,7 +155,7 @@ export function AppDrawer() {
             type="button"
             className="drawer__menu"
             onClick={() => setCartMenuOpen(true)}
-            aria-label="Opciones del carrito"
+            {...namedControl('Opciones del carrito')}
           >
             ☰
           </button>
@@ -169,9 +170,9 @@ export function AppDrawer() {
             type="button"
             className="drawer__settings"
             onClick={() => setProfileSubView('settings')}
-            aria-label="Configuración del perfil"
+            {...namedControl('Configuración del perfil')}
           >
-            <img src={settingsIcon} alt="" className="drawer__settings-icon" aria-hidden="true" />
+            <img src={settingsIcon} className="drawer__settings-icon" {...namedImage('Configuración del perfil')} />
           </button>
         </div>
       )
@@ -188,10 +189,9 @@ export function AppDrawer() {
               closeDrawer()
               showToast('Filtros limpiados', 'success')
             }}
-            aria-label="Limpiar filtros"
-            title="Limpiar filtros"
+            {...namedControl('Limpiar filtros')}
           >
-            <img src={clearFilterIcon} alt="" className="drawer__clear-filters-icon" aria-hidden="true" />
+            <img src={clearFilterIcon} className="drawer__clear-filters-icon" {...namedImage('Limpiar filtros')} />
           </button>
         </div>
       )

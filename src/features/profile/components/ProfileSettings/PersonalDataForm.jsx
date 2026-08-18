@@ -1,4 +1,5 @@
 import { SettingsField } from './SettingsField'
+import { namedControl } from '@/shared/lib/namedControl'
 
 const PERSONAL_FIELDS = [
   { key: 'fullName', label: 'Nombre' },
@@ -37,6 +38,7 @@ export function PersonalDataForm({ draft, onDraftChange, onSave }) {
         type="button"
         className="content-main-data-carrito__checkout profile-settings-inline-action"
         onClick={onSave}
+        {...namedControl('Guardar datos')}
       >
         Guardar datos
       </button>

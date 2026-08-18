@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadLeaflet } from '@/shared/maps/loadLeaflet'
+import { namedControl } from '@/shared/lib/namedControl'
 
 const BOGOTA = { lat: 4.711, lng: -74.0721 }
 
@@ -111,7 +112,7 @@ export function CheckoutDeliveryMap({ onLocationChange }) {
   }, [])
 
   return (
-    <div className="checkout-finalize__map-slot" role="application" aria-label="Mapa de entrega">
+    <div className="checkout-finalize__map-slot" role="application" {...namedControl('Mapa de entrega')}>
       <div ref={containerRef} className="checkout-finalize__map-canvas" />
       <p
         className={

@@ -1,4 +1,5 @@
 import { EXCEL_TEMPLATE_FILENAME } from '@/features/profile/lib/productExcel'
+import { namedControl } from '@/shared/lib/namedControl'
 
 /**
  * Ventana tipo Excel (plantilla): solo columnas Codigo y cantidad.
@@ -11,7 +12,7 @@ export function ExcelWindowPreview({ matrix, caption, loading = false, emptyText
 
   return (
     <div className="bulk-upload__table-wrap" data-excel-preview>
-      <div className="bulk-upload__excel-window" role="region" aria-label={caption || 'Vista Excel'}>
+      <div className="bulk-upload__excel-window" role="region" {...namedControl(caption || 'Vista Excel')}>
         <div className="bulk-upload__excel-titlebar">
           <span className="bulk-upload__excel-title">
             {caption || EXCEL_TEMPLATE_FILENAME}

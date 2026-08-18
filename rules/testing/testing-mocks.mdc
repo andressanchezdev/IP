@@ -1,0 +1,52 @@
+---
+description: Mocking y stubs en pruebas
+globs: **/*.test.ts,**/*.test.tsx,**/*.spec.ts
+alwaysApply: false
+---
+
+# Mocking en Pruebas
+
+## Mock de Funciones
+
+```typescript
+// Correcto - Mock con jest
+const mockFetch = jest.fn();
+
+beforeEach(() => {
+  mockFetch.mockClear();
+  global.fetch = mockFetch;
+});
+
+it('should call API with correct params', async () => {
+  mockFetch.mockResolvedValue({
+    json: async () => ({ data: 'test' })
+  });
+  
+  await fetchUserData('123');
+  
+  expect(mockFetch).toHaveBeenCalledWith('/api/users/123');
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+});
+```
+
+## Mock de Módulos
+
+```typescript
+// Correcto - Mock de módulo completo
+jest.mock('./api', () => ({
+  fetchUsers: jest.fn(),
+  createUser: jest.fn()
+}));
+
+// En el test
+import { fetchUsers } from './api';
+(fetchUsers as jest.Mock).mockResolvedValue([{ id: 1 }]);
+```
+
+## Reglas de Mocking
+
+- Limpiar mocks entre tests: mockClear o mockReset
+- Mock lo mínimo necesario: solo dependencias externas
+- Verificar llamadas: usar toHaveBeenCalledWith
+- Mock responses realistas: usar datos similares a producción
+- Evitar spies globales: restaurar después del test

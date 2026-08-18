@@ -1,0 +1,72 @@
+---
+description: Layouts limpios con Flexbox y Grid
+globs: **/*.css,**/*.scss,**/*.tsx,**/*.jsx
+alwaysApply: false
+---
+
+# Layouts Minimalistas
+
+## Flexbox para Componentes
+
+```css
+/* Correcto - Flexbox para layouts simples */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+```
+
+## Grid para Layouts Complejos
+
+```css
+/* Correcto - Grid para layouts de página */
+.page-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 24px;
+  min-height: 100vh;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+```
+
+## Responsive Design
+
+```css
+/* Correcto - Mobile first */
+.container {
+  padding: 16px;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding: 32px;
+  }
+}
+```
+
+## Reglas de Layout
+
+- Mobile first: diseñar para móvil primero
+- Gap en vez de margins: usar gap en flex/grid
+- Evitar position absolute: usar flex/grid cuando sea posible
+- Max-width para contenido: no más de 1200px para texto
+- Centrar con auto margins: margin: 0 auto para centrar bloques

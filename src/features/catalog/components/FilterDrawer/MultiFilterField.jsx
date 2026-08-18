@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
+import { namedControl } from '@/shared/lib/namedControl'
 import {
   DrawerCheckRow,
   DrawerSectionBody,
@@ -19,6 +20,10 @@ export function MultiFilterField({
   onToggle,
   onAdd,
   onRemove,
+  visibleIdleRows = 0,
+  visibleSearchRows = 0,
+  isLoading = false,
+  errorMessage = '',
 }) {
   const [query, setQuery] = useState('')
 
@@ -27,6 +32,9 @@ export function MultiFilterField({
       setQuery('')
     }
   }, [isOpen])
+
+  const hasQuery = Boolean(query.trim())
+  const visibleRows = hasQuery ? visibleSearchRows : visibleIdleRows
 
   const filteredOptions = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('es')
@@ -40,7 +48,7 @@ export function MultiFilterField({
 
   return (
     <div className="drawer-shell-section">
-      <DrawerCheckRow active={isOpen} onClick={() => onToggle(id)}>
+      <DrawerCheckRow active={isOpen} onClick={() => onToggle(id)} label={label}>
         <span>{label}</span>
         <span
           className={`filter-drawer-check__caret${isOpen ? ' filter-drawer-check__caret--open' : ''}`}
@@ -57,7 +65,7 @@ export function MultiFilterField({
                 type="button"
                 className="filter-drawer-chip__remove"
                 onClick={() => onRemove(item)}
-                aria-label={`Quitar ${item}`}
+                {...namedControl(`Quitar ${item}`)}
               >
                 ×
               </button>
@@ -82,33 +90,47 @@ export function MultiFilterField({
             />
           </div>
 
-          {filteredOptions.length === 0 ? (
+          {isLoading ? (
+            <div className="content-list-data__row">
+              <span className="content-list-data__label">Cargando {label.toLowerCase()}…</span>
+            </div>
+          ) : errorMessage ? (
+            <div className="content-list-data__row">
+              <span className="content-list-data__label">{errorMessage}</span>
+            </div>
+          ) : filteredOptions.length === 0 ? (
             <div className="content-list-data__row">
               <span className="content-list-data__label">
                 {options.length === 0 ? emptyLabel : 'Sin coincidencias'}
               </span>
             </div>
           ) : (
-            filteredOptions.map((option) => {
-              const isSelected = selected.includes(option)
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  className="content-list-data__row content-list-data__row--action"
-                  onClick={() => (isSelected ? onRemove(option) : onAdd(option))}
-                  aria-pressed={isSelected}
-                >
-                  <span className="content-list-data__label">{option}</span>
-                  <span
-                    className={`content-list-data__value${isSelected ? ' content-list-data__value--highlight' : ''}`}
-                    aria-hidden="true"
+            <div
+              className={`drawer-shell-section-options${visibleRows > 0 ? ' drawer-shell-section-options--scroll' : ''}`}
+              style={visibleRows > 0 ? { '--filter-option-rows': visibleRows } : undefined}
+            >
+              {filteredOptions.map((option) => {
+                const isSelected = selected.includes(option)
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className="content-list-data__row content-list-data__row--action"
+                    onClick={() => (isSelected ? onRemove(option) : onAdd(option))}
+                    aria-pressed={isSelected}
+                    {...namedControl(isSelected ? `Quitar ${option}` : `Seleccionar ${option}`)}
                   >
-                    {isSelected ? '✓' : '›'}
-                  </span>
-                </button>
-              )
-            })
+                    <span className="content-list-data__label">{option}</span>
+                    <span
+                      className={`content-list-data__value${isSelected ? ' content-list-data__value--highlight' : ''}`}
+                      aria-hidden="true"
+                    >
+                      {isSelected ? '✓' : '›'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           )}
         </DrawerSectionBody>
       ) : null}

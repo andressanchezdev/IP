@@ -1,6 +1,14 @@
 import { apiRequest } from '@/shared/api'
 
 export const PRODUCTS_PAGE_SIZE = 25
+/** Filas visibles al abrir Marca / Categoría / Modelo (el resto, scroll interno). */
+export const FILTER_OPTIONS_VISIBLE_IDLE = 10
+/** Filas visibles al buscar en Marca / Categoría / Modelo (el resto, scroll interno). */
+export const FILTER_OPTIONS_VISIBLE_SEARCH = 15
+/** JSON de GET /api/v1/general/filter en memoria, máximo 3 minutos. */
+export const FILTER_CACHE_TTL_MS = 3 * 60 * 1000
+/** Mínimo entre GET de paginación por scroll (evita ráfagas / DoS al scrollear). */
+export const PRODUCTS_SCROLL_MIN_INTERVAL_MS = 3_500
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams()
@@ -124,6 +132,152 @@ export async function searchInventoryProducts({
         raw: error.payload ?? null,
         search: searchText,
         path,
+        emptyBy404: true,
+      }
+    }
+    throw error
+  }
+}
+
+function generalFilterList(payload, key) {
+  const data = payload?.data ?? payload
+
+  if (Array.isArray(data?.[key])) {
+    return data[key]
+  }
+
+  return []
+}
+
+function mapFilterOption(entry, { idKeys, labelKeys }) {
+  if (!entry || typeof entry !== 'object') {
+    return null
+  }
+
+  let label = ''
+  for (const key of labelKeys) {
+    label = String(entry[key] ?? '').trim()
+    if (label) {
+      break
+    }
+  }
+  if (!label) {
+    return null
+  }
+
+  let id = label
+  for (const key of idKeys) {
+    if (entry[key] != null && String(entry[key]).trim()) {
+      id = entry[key]
+      break
+    }
+  }
+
+  const image = String(entry.imagen ?? '').trim()
+
+  return {
+    id: String(id),
+    label,
+    ...(image ? { image } : {}),
+  }
+}
+
+function mapGeneralFilterPayload(payload) {
+  const categorias = generalFilterList(payload, 'categorias')
+    .map((entry) => mapFilterOption(entry, {
+      idKeys: ['id_categoria', 'id'],
+      labelKeys: ['categoria', 'nombre'],
+    }))
+    .filter(Boolean)
+
+  const marcas = generalFilterList(payload, 'marcas')
+    .map((entry) => mapFilterOption(entry, {
+      idKeys: ['id_marca', 'id'],
+      labelKeys: ['marca', 'nombre'],
+    }))
+    .filter(Boolean)
+
+  const modelos = generalFilterList(payload, 'modelos')
+    .map((entry) => mapFilterOption(entry, {
+      idKeys: ['id_modelo', 'id'],
+      labelKeys: ['modelo', 'nombre'],
+    }))
+    .filter(Boolean)
+
+  return { categorias, marcas, modelos }
+}
+
+const EMPTY_FILTER_LISTS = {
+  categorias: [],
+  marcas: [],
+  modelos: [],
+}
+
+const EMPTY_FILTER_MEMORY = {
+  raw: null,
+  ...EMPTY_FILTER_LISTS,
+  savedAt: 0,
+}
+
+let generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
+
+function writeGeneralFilterMemory(raw, lists) {
+  generalFilterMemory = {
+    raw,
+    categorias: lists.categorias,
+    marcas: lists.marcas,
+    modelos: lists.modelos,
+    savedAt: Date.now(),
+  }
+}
+
+export function clearGeneralFilterMemory() {
+  generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
+}
+
+/** Copia en memoria del JSON de filter, o null si expiró / no hay. */
+export function readGeneralFilterMemory(now = Date.now()) {
+  if (!generalFilterMemory.raw) {
+    return null
+  }
+
+  if (now - generalFilterMemory.savedAt >= FILTER_CACHE_TTL_MS) {
+    clearGeneralFilterMemory()
+    return null
+  }
+
+  return generalFilterMemory
+}
+
+/**
+ * GET /api/v1/general/filter
+ * Guarda el JSON completo (categorías, marcas, modelos) en memoria (máx. 3 min).
+ * Bearer = token de login.
+ */
+export async function getGeneralFilter({
+  token,
+  signal,
+} = {}) {
+  try {
+    const payload = await apiRequest('/api/v1/general/filter', {
+      method: 'GET',
+      token,
+      signal,
+    })
+
+    const lists = mapGeneralFilterPayload(payload)
+    writeGeneralFilterMemory(payload, lists)
+
+    return {
+      ...lists,
+      raw: payload,
+    }
+  } catch (error) {
+    if (error?.name === 'ApiError' && error.status === 404) {
+      writeGeneralFilterMemory(error.payload ?? { data: EMPTY_FILTER_LISTS }, EMPTY_FILTER_LISTS)
+      return {
+        ...EMPTY_FILTER_LISTS,
+        raw: error.payload ?? null,
         emptyBy404: true,
       }
     }

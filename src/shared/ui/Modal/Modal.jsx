@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { namedControl } from '@/shared/lib/namedControl'
 import './Modal.css'
 
 export function Modal({
@@ -39,7 +40,7 @@ export function Modal({
       <div
         className={`modal-backdrop ${backdropClassName}`.trim()}
         onClick={onClose}
-        aria-hidden="true"
+        {...namedControl('Cerrar')}
       />
       <div
         className={`modal ${className}`.trim()}

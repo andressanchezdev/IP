@@ -1,0 +1,43 @@
+---
+description: Manejo de dependencias obsoletas en código legacy
+globs: package.json,requirements.txt,pom.xml,Gemfile
+alwaysApply: false
+---
+
+# Dependencias en Código Legacy
+
+## Actualización Gradual
+
+```json
+// Correcto - Actualizar una dependencia a la vez
+// package.json
+{
+  "dependencies": {
+    "react": "^18.0.0",      // Actualizada + testeada
+    "old-lib": "^2.0.0",     // Legacy - pendiente actualización
+    "another-lib": "^1.5.0"  // Legacy - pendiente actualización
+  }
+}
+```
+
+## Documentar Versiones Bloqueadas
+
+```json
+// Correcto - Explicar por qué está bloqueada
+{
+  "dependencies": {
+    // Bloqueada en v2 por breaking changes en v3
+    // Ver: https://github.com/lib/issues/123
+    // TODO: Migrar a v3 después de actualizar auth system
+    "old-package": "2.5.9"
+  }
+}
+```
+
+## Reglas de Dependencias
+
+- Una dependencia a la vez. No actualizar todo junto
+- Leer changelogs. Buscar breaking changes antes de actualizar
+- Probar después de actualizar. Tests automáticos + manual
+- Documentar versiones fijas. Explicar por qué está bloqueada
+- Crear issues para updates. No dejar TODOs en el olvido

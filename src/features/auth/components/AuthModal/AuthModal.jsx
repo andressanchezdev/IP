@@ -1,6 +1,7 @@
 import brandImage from '@/assets/images/Captura de pantalla 2026-08-05 090935.png'
 import { Modal } from '@/shared/ui/Modal'
 import { LoginForm } from './LoginForm'
+import { namedControl } from '@/shared/lib/namedControl'
 import './AuthModal.css'
 
 export function AuthModal({ isOpen, onClose, onLogin }) {
@@ -16,7 +17,7 @@ export function AuthModal({ isOpen, onClose, onLogin }) {
         type="button"
         className="auth-modal__close"
         onClick={onClose}
-        aria-label="Cerrar"
+        {...namedControl('Cerrar')}
       >
         ×
       </button>
@@ -26,7 +27,7 @@ export function AuthModal({ isOpen, onClose, onLogin }) {
           className="auth-modal__brand"
           style={{ backgroundImage: `url(${brandImage})` }}
           role="img"
-          aria-label="Importadora Premium Online"
+          {...namedControl('Importadora Premium Online')}
         />
 
         <div className="auth-modal__form-col">

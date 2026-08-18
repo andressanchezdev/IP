@@ -17,11 +17,6 @@
   width: 16px;
 }
 
-.filter-button--active {
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
-  transform: translateY(-1px);
-}
-
 .filter-button--filter {
   background: var(--color-filter);
 }

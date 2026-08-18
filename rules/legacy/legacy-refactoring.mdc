@@ -1,0 +1,50 @@
+---
+description: Estrategias de refactorización de código antiguo
+globs: **/*.js,**/*.ts
+alwaysApply: false
+---
+
+# Refactorizando Código Legacy
+
+## Strangler Fig Pattern
+
+```typescript
+// Incorrecto - Reescribir todo de una vez
+// function oldComplexFunction() { ... 500 líneas ... }
+
+// Correcto - Extraer funcionalidad gradualmente
+function oldComplexFunction(data) {
+  // Nuevo código extraído y testeado
+  const validated = validateData(data);
+  
+  // Código legacy que aún funciona
+  const processed = legacyProcessing(validated);
+  
+  return processed;
+}
+
+// Nueva función con tests
+function validateData(data) {
+  // Lógica nueva, limpia, testeada
+}
+```
+
+## Feature Flags para Código Nuevo
+
+```typescript
+// Correcto - Feature flag permite rollback
+function processOrder(order) {
+  if (config.useNewOrderProcessing) {
+    return newProcessOrder(order);
+  }
+  return oldProcessOrder(order); // Fallback
+}
+```
+
+## Reglas de Refactorización
+
+- Pasos pequeños. Commit después de cada cambio funcional
+- Tests siempre en verde. Nunca dejar tests rotos
+- Feature flags para cambios grandes. Permite rollback inmediato
+- Extraer antes de modificar. Sacar funciones pequeñas primero
+- No optimizar prematuramente. Primero hacer funcionar, luego mejorar
