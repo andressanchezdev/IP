@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getGeneral, PRODUCTS_PAGE_SIZE, PRODUCTS_SCROLL_MIN_INTERVAL_MS } from '@/features/catalog/api/generalApi'
+import { getGeneral, PRODUCTS_PAGE_SIZE } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
 import { mergeUniqueProducts } from '@/features/catalog/mappers/mergeUniqueProducts'
 import { useStockWebSocket } from '@/features/catalog/ws/useStockWebSocket'
@@ -31,11 +31,10 @@ export function useCatalogSlice({
   } = filtersApi
 
   const productsRef = useRef(products)
+  const lastProductIdRef = useRef(null)
   const productsLoadingRef = useRef(false)
   /** Mutual exclusion: 'search' | 'scroll' | null — search always wins. */
   const productFetchModeRef = useRef(null)
-  /** Timestamp del último GET de scroll; rate-limit a PRODUCTS_SCROLL_MIN_INTERVAL_MS. */
-  const lastScrollFetchAtRef = useRef(0)
   productsRef.current = products
 
   // WS independiente del carrito API: solo actualiza stock de productos en catálogo.
@@ -58,6 +57,14 @@ export function useCatalogSlice({
     }
   }, [])
 
+  const rememberLastProductId = (list) => {
+    const last = list.length > 0 ? list[list.length - 1] : null
+    const cursor = last?.id ?? null
+    lastProductIdRef.current = cursor
+    setLastProductId(cursor)
+    return cursor
+  }
+
   const fetchProductsPage = useCallback(async ({
     token,
     lastId = null,
@@ -71,7 +78,6 @@ export function useCatalogSlice({
     })
 
     const mappedProducts = mapApiProducts(result.productos).map(normalizeProduct)
-    const cursor = result.nextCursor ?? result.lastId ?? null
 
     // If search took priority while scroll was in flight, discard catalog page apply.
     if (!replace && isCatalogSearchActive()) {
@@ -79,7 +85,7 @@ export function useCatalogSlice({
         mappedProducts,
         addedCount: 0,
         hasMore: false,
-        lastId: cursor,
+        lastId: lastProductIdRef.current,
         skipped: true,
         reason: 'search_active',
       }
@@ -87,7 +93,7 @@ export function useCatalogSlice({
 
     if (replace) {
       setProducts(mappedProducts)
-      setLastProductId(cursor)
+      const cursor = rememberLastProductId(mappedProducts)
       setHasMoreProducts(result.hasMore)
 
       if (includeCart) {
@@ -104,7 +110,7 @@ export function useCatalogSlice({
 
     const { merged, addedCount } = mergeUniqueProducts(productsRef.current, mappedProducts)
     setProducts(merged)
-    setLastProductId(cursor)
+    const cursor = rememberLastProductId(merged)
     const hasMore = result.hasMore && addedCount > 0
     setHasMoreProducts(hasMore)
 
@@ -118,6 +124,8 @@ export function useCatalogSlice({
 
   const loadMoreProducts = useCallback(async () => {
     const token = tokenAccess
+    const lastFromList = productsRef.current[productsRef.current.length - 1]
+    const lastId = lastFromList?.id ?? lastProductIdRef.current
     // Search GET has priority: never paginate catalog scroll while the bar has a query.
     if (isCatalogSearchActive()) {
       return { success: false, skipped: true, reason: 'search_active' }
@@ -126,25 +134,13 @@ export function useCatalogSlice({
     if (hasAppliedFilters()) {
       return { success: false, skipped: true, reason: 'filters_active' }
     }
-    if (!token || !hasMoreProducts || productsLoadingRef.current || lastProductId == null) {
+    if (!token || !hasMoreProducts || productsLoadingRef.current || lastId == null) {
       return { success: false }
     }
     if (productFetchModeRef.current === 'scroll') {
       return { success: false, skipped: true, reason: 'scroll_in_flight' }
     }
 
-    const now = Date.now()
-    const elapsed = now - lastScrollFetchAtRef.current
-    if (lastScrollFetchAtRef.current > 0 && elapsed < PRODUCTS_SCROLL_MIN_INTERVAL_MS) {
-      return {
-        success: false,
-        skipped: true,
-        reason: 'scroll_throttle',
-        retryAfterMs: PRODUCTS_SCROLL_MIN_INTERVAL_MS - elapsed,
-      }
-    }
-
-    lastScrollFetchAtRef.current = now
     productFetchModeRef.current = 'scroll'
     productsLoadingRef.current = true
     setIsLoadingProducts(true)
@@ -156,7 +152,7 @@ export function useCatalogSlice({
 
       const result = await fetchProductsPage({
         token,
-        lastId: lastProductId,
+        lastId,
         replace: false,
       })
 
@@ -178,16 +174,16 @@ export function useCatalogSlice({
       productsLoadingRef.current = false
       setIsLoadingProducts(false)
     }
-  }, [tokenAccess, fetchProductsPage, hasAppliedFilters, hasMoreProducts, lastProductId])
+  }, [tokenAccess, fetchProductsPage, hasAppliedFilters, hasMoreProducts])
 
   useEffect(() => {
+    if (!tokenAccess || !userId) {
+      return undefined
+    }
+
     let cancelled = false
 
     async function hydrateFromApiSession() {
-      if (!tokenAccess || !userId) {
-        return
-      }
-
       productsLoadingRef.current = true
       if (cartHydratingRef) {
         cartHydratingRef.current = true
@@ -207,13 +203,11 @@ export function useCatalogSlice({
           console.error('[hydrate] No se pudo cargar inventory/products + carts', error)
         }
       } finally {
-        if (!cancelled) {
-          productsLoadingRef.current = false
-          if (cartHydratingRef) {
-            cartHydratingRef.current = false
-          }
-          setIsLoadingProducts(false)
+        productsLoadingRef.current = false
+        if (cartHydratingRef) {
+          cartHydratingRef.current = false
         }
+        setIsLoadingProducts(false)
       }
     }
 
@@ -231,6 +225,7 @@ export function useCatalogSlice({
 
   const resetCatalogProducts = useCallback(() => {
     setProducts([])
+    lastProductIdRef.current = null
     setLastProductId(null)
     setHasMoreProducts(false)
   }, [])

@@ -1,4 +1,5 @@
 import { formatPrice } from '@/shared/lib/formatPrice'
+import { summarizeCartItems } from '@/shared/lib/money'
 import {
   PDF_COLORS,
   createPdfDocument,
@@ -111,7 +112,7 @@ function drawItemRow(doc, row, y, alt, columns) {
   return y + rowH
 }
 
-function drawTotals(doc, y, { itemCount, units, total }) {
+function drawTotals(doc, y, { itemCount, units, total, subtotal, iva }) {
   const { marginX, contentWidth } = getPdfPageMetrics(doc)
   let cursor = y + 4
   doc.setDrawColor(...PDF_COLORS.line)
@@ -125,11 +126,26 @@ function drawTotals(doc, y, { itemCount, units, total }) {
   doc.text(pdfText(`Productos: ${itemCount}`), marginX, cursor)
   doc.text(pdfText(`Unidades: ${units}`), marginX + 45, cursor)
 
+  const amountX = marginX + contentWidth
+  const labelX = amountX - 55
+
+  if (subtotal != null && iva != null) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(...PDF_COLORS.ink)
+    doc.text(pdfText('Subtotal'), labelX, cursor)
+    doc.text(pdfText(formatPrice(subtotal)), amountX, cursor, { align: 'right' })
+    cursor += 6
+    doc.text(pdfText('IVA (19%)'), labelX, cursor)
+    doc.text(pdfText(formatPrice(iva)), amountX, cursor, { align: 'right' })
+    cursor += 7
+  }
+
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
   doc.setTextColor(...PDF_COLORS.ink)
-  doc.text(pdfText('TOTAL'), marginX + contentWidth - 55, cursor)
-  doc.text(pdfText(formatPrice(total)), marginX + contentWidth, cursor, { align: 'right' })
+  doc.text(pdfText('TOTAL'), labelX, cursor)
+  doc.text(pdfText(formatPrice(total)), amountX, cursor, { align: 'right' })
   return cursor + 6
 }
 
@@ -144,8 +160,8 @@ export function downloadOrderPdf(title, items = [], total = 0, options = {}) {
   const includeCartId = Boolean(options.includeCartId)
   const columns = getColumns(includeCartId)
   const rows = normalizeItems(items, { includeCartId })
-  const computedTotal =
-    Number(total) || rows.reduce((sum, row) => sum + row.price * row.quantity, 0)
+  const breakdown = options.totals || summarizeCartItems(items)
+  const computedTotal = Number(total) || breakdown.total
   const units = rows.reduce((sum, row) => sum + row.quantity, 0)
 
   const doc = createPdfDocument()
@@ -172,12 +188,18 @@ export function downloadOrderPdf(title, items = [], total = 0, options = {}) {
     })
   }
 
-  y = ensurePdfSpace(doc, y, 20, () => drawPdfBrandHeader(doc, {
+  y = ensurePdfSpace(doc, y, 36, () => drawPdfBrandHeader(doc, {
     title,
     subtitle: options.subtitle,
     metaLines: options.metaLines,
   }) + 4)
-  drawTotals(doc, y, { itemCount: rows.length, units, total: computedTotal })
+  drawTotals(doc, y, {
+    itemCount: rows.length,
+    units,
+    total: computedTotal,
+    subtotal: breakdown.subtotal,
+    iva: breakdown.iva,
+  })
 
   finalizePdfPages(doc)
   doc.save(options.filename || 'pedido-importadora.pdf')

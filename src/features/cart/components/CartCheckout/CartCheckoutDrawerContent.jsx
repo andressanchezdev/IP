@@ -8,6 +8,7 @@ import './CheckoutFinalizar.css'
 import { CheckoutDeliverySection } from './CheckoutDeliverySection'
 import { CheckoutPaymentSection } from './CheckoutPaymentSection'
 import { CheckoutOrderSummary } from './CheckoutOrderSummary'
+import { summarizeCartItems } from '@/shared/lib/money'
 import { namedControl } from '@/shared/lib/namedControl'
 
 const CREDIT_AVAILABLE = 20000000
@@ -28,6 +29,7 @@ export function CartCheckoutDrawerContent() {
   const [transferProofName, setTransferProofName] = useState('')
   const [transferProofDataUrl, setTransferProofDataUrl] = useState('')
   const [contraentregaMethod, setContraentregaMethod] = useState('')
+  const [creditLimitDays, setCreditLimitDays] = useState(1)
   const [paymentPanel, setPaymentPanel] = useState(null)
   const [editingDelivery, setEditingDelivery] = useState(false)
   const [editingPayment, setEditingPayment] = useState(false)
@@ -45,13 +47,11 @@ export function CartCheckoutDrawerContent() {
     }
   }, [registeredAddresses, selectedAddressId])
 
-  const subtotal = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    [cartItems],
-  )
+  const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
+  const subtotal = cartTotals.subtotal
   const shippingCost = 0
-  const iva = Math.round(subtotal * 0.19)
-  const totalToPay = subtotal + shippingCost + iva
+  const iva = cartTotals.iva
+  const totalToPay = cartTotals.total + shippingCost
 
   const hasDelivery = Boolean(deliveryAddress.trim())
   const showDeliverySection = !hasDelivery || editingDelivery
@@ -147,6 +147,11 @@ export function CartCheckoutDrawerContent() {
   }
 
   const handleConfirmCredit = () => {
+    const days = Number(creditLimitDays)
+    if (!Number.isFinite(days) || days < 1 || days > 30) {
+      showToast('Ingrese un límite de pago entre 1 y 30 días', 'error')
+      return
+    }
     if (totalToPay > CREDIT_AVAILABLE) {
       showToast('El pedido supera el cupo de crédito', 'error')
       return
@@ -155,7 +160,7 @@ export function CartCheckoutDrawerContent() {
     setPaymentConfirmed(true)
     setPaymentDetails({
       availableCredit: CREDIT_AVAILABLE,
-      paymentLimitMonths: 2,
+      paymentLimitDays: days,
       amount: totalToPay,
     })
     setPaymentPanel(null)
@@ -242,6 +247,8 @@ export function CartCheckoutDrawerContent() {
             onConfirmTransfer={handleConfirmTransfer}
             onConfirmContraentrega={handleConfirmContraentrega}
             onConfirmCredit={handleConfirmCredit}
+            creditLimitDays={creditLimitDays}
+            onCreditLimitDaysChange={setCreditLimitDays}
           />
         )}
 

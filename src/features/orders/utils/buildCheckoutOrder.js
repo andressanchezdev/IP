@@ -4,6 +4,7 @@ import {
   paymentTypeLabel,
   resolveCheckoutPaymentType,
 } from './resolveCheckoutPaymentType'
+import { summarizeCartItems } from '@/shared/lib/money'
 
 function snapshotCartItems(cartItems = []) {
   return cartItems.map((item) => ({
@@ -31,9 +32,10 @@ export function buildCheckoutOrder({
 }) {
   const now = new Date()
   const items = snapshotCartItems(cartItems)
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const iva = Math.round(subtotal * 0.19)
-  const total = Number(paymentDetails?.amount) || subtotal + iva
+  const totals = summarizeCartItems(items)
+  const subtotal = totals.subtotal
+  const iva = totals.iva
+  const total = Number(paymentDetails?.amount) || totals.total
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
 
   const resolvedType = resolveCheckoutPaymentType(paymentType, paymentDetails)

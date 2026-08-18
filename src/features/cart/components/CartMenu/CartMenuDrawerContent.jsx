@@ -1,10 +1,12 @@
+import { useMemo } from 'react'
 import { useCart, useUi } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
-import { formatPrice } from '@/shared/lib/formatPrice'
+import { summarizeCartItems } from '@/shared/lib/money'
 import { downloadOrderPdf } from '@/shared/lib/downloadOrderPdf'
 import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
 import deleteAccountIcon from '@/assets/icons/delete-account.svg'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import { CartTotals } from '@/features/cart/components/CartTotals/CartTotals'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 
 export function CartMenuDrawerContent() {
@@ -12,7 +14,7 @@ export function CartMenuDrawerContent() {
   const { closeDrawer } = useUi()
   const { showToast } = useToast()
 
-  const totalCart = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
 
   return (
     <div className="content-main-carrito">
@@ -22,11 +24,12 @@ export function CartMenuDrawerContent() {
             type="button"
             className="drawer__menu-action"
             onClick={() => {
-              downloadOrderPdf('Carrito de compras', cartItems, totalCart, {
+              downloadOrderPdf('Carrito de compras', cartItems, cartTotals.total, {
                 filename: 'carrito-importadora.pdf',
                 subtitle: 'Resumen de productos en carrito',
                 metaLines: [`Items: ${cartItems.length}`],
                 includeCartId: true,
+                totals: cartTotals,
               })
               showToast('PDF descargado', 'success')
             }}
@@ -65,11 +68,12 @@ export function CartMenuDrawerContent() {
         </div>
       </div>
 
-      <div className="content-main-data-carrito">
-        <div className="content-main-data-carrito__total">
-          <span>Total</span>
-          <strong>{formatPrice(totalCart)}</strong>
-        </div>
+      <div className="content-main-data-carrito content-main-data-carrito--stack">
+        <CartTotals
+          subtotal={cartTotals.subtotal}
+          iva={cartTotals.iva}
+          total={cartTotals.total}
+        />
       </div>
     </div>
   )

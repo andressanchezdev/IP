@@ -168,6 +168,7 @@
 .drawer .carrito-card__description,
 .drawer .carrito-card__footer,
 .drawer .content-main-data-carrito__total,
+.drawer .content-main-data-carrito__row,
 .drawer .order-accordion__trigger,
 .drawer .accordion__trigger,
 .drawer .checkout-finalize__row {
@@ -206,6 +207,17 @@
 .drawer .content-main-data-carrito__total strong {
   color: var(--drawer-color);
   font-size: var(--drawer-fs-md);
+  font-weight: var(--drawer-fw-bold);
+}
+
+.drawer .content-main-data-carrito__row--total,
+.drawer .content-main-data-carrito__row--total span,
+.drawer .content-main-data-carrito__row--total strong {
+  font-size: 20px;
+  font-weight: 1000
+}
+
+.drawer .content-main-data-carrito__row--total strong {
   font-weight: var(--drawer-fw-bold);
 }
 

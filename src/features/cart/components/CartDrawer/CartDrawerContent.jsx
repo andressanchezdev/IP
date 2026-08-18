@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react'
 import { useCart, useCatalog } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
+import { summarizeCartItems } from '@/shared/lib/money'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import { CartTotals } from '@/features/cart/components/CartTotals/CartTotals'
 import './CartDrawer.css'
 
 function CartItemMedia({ item }) {
@@ -123,7 +125,7 @@ export function CartDrawerContent() {
     return map
   }, [products])
 
-  const totalCart = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
 
   const filteredItems = useMemo(() => {
     const query = cartSearchValue.trim().toLowerCase()
@@ -206,11 +208,12 @@ export function CartDrawerContent() {
         )}
       </div>
 
-      <div className="content-main-data-carrito">
-        <div className="content-main-data-carrito__total">
-          <span>Total</span>
-          <strong>{formatPrice(totalCart)}</strong>
-        </div>
+      <div className="content-main-data-carrito content-main-data-carrito--stack">
+        <CartTotals
+          subtotal={cartTotals.subtotal}
+          iva={cartTotals.iva}
+          total={cartTotals.total}
+        />
         <button
           type="button"
           className="content-main-data-carrito__checkout"

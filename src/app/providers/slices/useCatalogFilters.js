@@ -17,6 +17,7 @@ export function useCatalogFilters() {
   const [draftWithStock, setDraftWithStock] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [searchProducts, setSearchProducts] = useState(null)
+  const [latestProducts, setLatestProducts] = useState(null)
 
   const filtersRef = useRef(filters)
   const filterNuevosRef = useRef(filterNuevos)
@@ -69,6 +70,7 @@ export function useCatalogFilters() {
     setDraftFilterNuevos(false)
     setDraftFilterPromociones(false)
     setDraftWithStock(false)
+    setLatestProducts(null)
   }, [])
 
   const resetFiltersAndSearch = useCallback(() => {
@@ -78,6 +80,7 @@ export function useCatalogFilters() {
     setWithStock(false)
     setSearchValue('')
     setSearchProducts(null)
+    setLatestProducts(null)
   }, [])
 
   const hasAppliedFilters = useCallback(() => (
@@ -110,6 +113,8 @@ export function useCatalogFilters() {
     setSearchValue,
     searchProducts,
     setSearchProducts,
+    latestProducts,
+    setLatestProducts,
     syncFilterDraftFromApplied,
     commitFilterDraft,
     clearFilters,
@@ -126,6 +131,7 @@ export function useCatalogFilters() {
     draftWithStock,
     searchValue,
     searchProducts,
+    latestProducts,
     syncFilterDraftFromApplied,
     commitFilterDraft,
     clearFilters,

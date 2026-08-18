@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PRODUCTS_PAGE_SIZE, searchInventoryProducts } from '@/features/catalog/api/generalApi'
+import { PRODUCTS_PAGE_SIZE, getLatestInventoryProducts, searchInventoryProducts } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
 import { matchesOrderIdSearch } from '@/features/orders/utils/orderSearch'
 import { getApiAuthToken } from '@/shared/api'
@@ -24,7 +24,6 @@ function normalizeProduct(product) {
  */
 function applyCatalogFilters(list, {
   filters,
-  filterNuevos,
   filterPromociones,
   withStock,
 }) {
@@ -35,9 +34,7 @@ function applyCatalogFilters(list, {
     const matchesModel = filters.models.length === 0 || filters.models.includes(product.model)
 
     const matchesQuickOptions =
-      (!filterNuevos && !filterPromociones) ||
-      (filterNuevos && product.stock >= 5) ||
-      (filterPromociones && product.price <= 17500)
+      !filterPromociones || (filterPromociones && product.price <= 17500)
 
     const matchesWithStock = !withStock || product.stock > 0
 
@@ -63,6 +60,7 @@ export function useStorePageFilters({
   activeView,
   products,
   searchProducts,
+  latestProducts,
   pendingOrders,
   historyOrders,
   cartItems,
@@ -75,6 +73,7 @@ export function useStorePageFilters({
   drawerOpen,
   drawerType,
   setSearchProducts,
+  setLatestProducts,
   beginCatalogSearch,
   endCatalogSearch,
 }) {
@@ -85,6 +84,7 @@ export function useStorePageFilters({
   // Source of truth for results: context `searchProducts` (no local duplicate).
   const [committedProductSearch, setCommittedProductSearch] = useState('')
   const [productSearchNonce, setProductSearchNonce] = useState(0)
+  const [isLoadingLatest, setIsLoadingLatest] = useState(false)
 
   const headerSearch = {
     tienda: { placeholder: 'Buscar productos ', ariaLabel: 'Buscar productos' },
@@ -187,7 +187,57 @@ export function useStorePageFilters({
     endCatalogSearch,
   ])
 
+  useEffect(() => {
+    if (!isStoreView || !filterNuevos) {
+      setIsLoadingLatest(false)
+      setLatestProducts?.(null)
+      return undefined
+    }
+
+    const token = getApiAuthToken()
+    if (!token) {
+      setLatestProducts?.([])
+      setIsLoadingLatest(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    let cancelled = false
+    setIsLoadingLatest(true)
+
+    getLatestInventoryProducts({
+      token,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (cancelled) return
+        const mapped = mapApiProducts(result.productos).map(normalizeProduct)
+        setLatestProducts?.(mapped)
+      })
+      .catch((error) => {
+        if (cancelled || isAbortError(error) || controller.signal.aborted) {
+          return
+        }
+        console.error('[nuevos] Falló GET /api/v1/inventory/products/latest', error?.status || '', error)
+        setLatestProducts?.([])
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingLatest(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [isStoreView, filterNuevos, setLatestProducts])
+
   const filteredProducts = useMemo(() => {
+    if (filterNuevos && isStoreView) {
+      return latestProducts ?? []
+    }
+
     const source = (hasCommittedProductSearch && isStoreView)
       ? (searchProducts ?? [])
       : products
@@ -198,12 +248,16 @@ export function useStorePageFilters({
 
     const filtered = applyCatalogFilters(source, {
       filters,
-      filterNuevos,
       filterPromociones,
       withStock,
     })
 
-    return filtered.slice(0, FILTER_RESULT_LIMIT)
+    // Cap only search/filter results. Catalog scroll must show every loaded page.
+    if (hasCommittedProductSearch || hasActiveFilters) {
+      return filtered.slice(0, FILTER_RESULT_LIMIT)
+    }
+
+    return filtered
   }, [
     hasCommittedProductSearch,
     isStoreView,
@@ -212,8 +266,10 @@ export function useStorePageFilters({
     filterDrawerOpen,
     filters,
     filterNuevos,
+    latestProducts,
     filterPromociones,
     withStock,
+    hasActiveFilters,
   ])
 
   const filteredPendingOrders = useMemo(() => {
@@ -258,5 +314,6 @@ export function useStorePageFilters({
     cartProductIds,
     submitProductSearch,
     clearCommittedProductSearch,
+    isLoadingLatest,
   }
 }

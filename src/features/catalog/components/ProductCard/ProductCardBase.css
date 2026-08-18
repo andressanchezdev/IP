@@ -133,9 +133,9 @@
   flex: 0 0 60%;
   font-weight: 800;
   height: 36px;
-  max-width: 60%;
+  max-width: 40%;
   min-height: 36px;
-  width: 60%;
+  width: 30%;
 }
 
 .product-card__order--ordered {
@@ -177,6 +177,8 @@
 }
 
 .product-card__qty-input {
+  -moz-appearance: number-input;
+  appearance: auto;
   border-radius: 10px;
   border: 1px solid var(--color-border);
   box-sizing: border-box;
@@ -184,9 +186,18 @@
   font-size: 14px;
   height: 36px;
   min-width: 56px;
-  padding: 0 10px;
+  padding: 0 6px 0 10px;
   text-align: center;
   width: clamp(56px, 20%, 80px);
+}
+
+.product-card__qty-input::-webkit-inner-spin-button,
+.product-card__qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: inner-spin-button;
+  appearance: auto;
+  height: 24px;
+  margin: 0;
+  opacity: 1;
 }
 
 .product-card__qty-input--hidden {

@@ -11,6 +11,30 @@ const PAYMENT_TYPES = [
   { id: 'credito', label: 'Crédito' },
 ]
 
+const CREDIT_DAYS_MIN = 1
+const CREDIT_DAYS_MAX = 30
+
+function clampCreditDays(raw) {
+  if (raw === '') {
+    return ''
+  }
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) {
+    return ''
+  }
+  return Math.max(CREDIT_DAYS_MIN, Math.min(CREDIT_DAYS_MAX, parsed))
+}
+
+function creditAmountClass(amount) {
+  if (amount > 0) {
+    return 'checkout-finalize__amount--positive'
+  }
+  if (amount < 0) {
+    return 'checkout-finalize__amount--negative'
+  }
+  return ''
+}
+
 export function CheckoutPaymentSection({
   totalToPay,
   creditAvailable,
@@ -24,6 +48,8 @@ export function CheckoutPaymentSection({
   onConfirmTransfer,
   onConfirmContraentrega,
   onConfirmCredit,
+  creditLimitDays,
+  onCreditLimitDaysChange,
 }) {
   const methodHint = paymentPanel
     ? ''
@@ -34,9 +60,12 @@ export function CheckoutPaymentSection({
   const contraentregaHint = contraentregaMethod
     ? ''
     : 'Elija transferencia o efectivo para el pago en entrega'
+  const creditDaysHint = creditLimitDays === '' || creditLimitDays < CREDIT_DAYS_MIN || creditLimitDays > CREDIT_DAYS_MAX
+    ? `Ingrese un plazo de ${CREDIT_DAYS_MIN} a ${CREDIT_DAYS_MAX} días`
+    : ''
   const creditHint = totalToPay > creditAvailable
     ? 'El pedido supera el cupo de crédito disponible'
-    : ''
+    : creditDaysHint
 
   return (
     <Accordion title="Método de pago" defaultOpen>
@@ -129,8 +158,31 @@ export function CheckoutPaymentSection({
         {paymentPanel === 'credito' && (
           <div className="checkout-finalize__payment-panel">
             <SummaryRow label="Total del pedido" value={formatPrice(totalToPay)} highlight />
-            <SummaryRow label="Crédito disponible" value={formatPrice(creditAvailable)} />
-            <SummaryRow label="Límite de pago" value="2 meses desde la creación" />
+            <SummaryRow
+              label="Crédito disponible"
+              value={formatPrice(creditAvailable)}
+              valueClassName={creditAmountClass(creditAvailable)}
+            />
+            <label className="order-payments-panel__field">
+              <span>Límite de pago (días)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={CREDIT_DAYS_MIN}
+                max={CREDIT_DAYS_MAX}
+                step="1"
+                value={creditLimitDays}
+                onChange={(event) => onCreditLimitDaysChange(clampCreditDays(event.target.value))}
+                onBlur={() => {
+                  if (creditLimitDays === '') {
+                    onCreditLimitDaysChange(CREDIT_DAYS_MIN)
+                  }
+                }}
+                className={creditDaysHint ? 'order-payments-panel__input--error' : ''}
+                aria-invalid={Boolean(creditDaysHint)}
+                {...namedControl('Límite de pago en días')}
+              />
+            </label>
             <FieldHint message={creditHint} />
             <button
               type="button"

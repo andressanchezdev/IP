@@ -136,7 +136,7 @@ function CreditSaldoPendiente({ payment, orderTotal, remainingAmount, onOpenPaym
           {availableCredit > 0 ? ` · Cupo: ${formatRealAmount(availableCredit)}` : ''}
         </span>
         <span className="order-payment__proof-meta">
-          Medio: {paymentTypeLabel(payment?.type)} · Límite: {details.paymentLimitMonths ?? 2} meses
+          Medio: {paymentTypeLabel(payment?.type)} · Límite: {details.paymentLimitDays ?? ((details.paymentLimitMonths ?? 2) * 30)} días
         </span>
         {remainingAmount > 0 && (
           <button

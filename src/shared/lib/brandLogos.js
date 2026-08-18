@@ -25,10 +25,3 @@ export function getBrandLogoUrl(brand) {
   const key = normalizeBrandKey(brand)
   return BRAND_LOGO_URLS[key] ?? DEFAULT_BRAND_LOGO_URL
 }
-
-export function withBrandLogo(product) {
-  return {
-    ...product,
-    brandLogo: getBrandLogoUrl(product.brand),
-  }
-}

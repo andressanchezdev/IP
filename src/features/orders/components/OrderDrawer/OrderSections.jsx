@@ -134,7 +134,7 @@ export function OrderPackagingContent({ order, productsOpen, onToggleProducts })
                         </span>
                         <span className="carrito-card__title-sep" aria-hidden="true">-</span>
                         <strong className="carrito-card__description">
-                          {descriptionText ? descriptionText.toUpperCase() : '—'}
+                          {descriptionText ? descriptionText.toUpperCase() : ''}
                         </strong>
                       </div>
                       <BrandLogo brand={item.brand} logoUrl={item.brandLogo || item.brandLogoUrl} className="carrito-card__brand" />

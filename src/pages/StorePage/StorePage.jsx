@@ -29,6 +29,7 @@ export function StorePage() {
   const {
     products,
     searchProducts,
+    latestProducts,
     filters,
     clearFilters,
     filterNuevos,
@@ -40,6 +41,7 @@ export function StorePage() {
     searchValue,
     setSearchValue,
     setSearchProducts,
+    setLatestProducts,
     beginCatalogSearch,
     endCatalogSearch,
   } = useCatalog()
@@ -67,10 +69,12 @@ export function StorePage() {
     cartProductIds,
     submitProductSearch,
     clearCommittedProductSearch,
+    isLoadingLatest,
   } = useStorePageFilters({
     activeView,
     products,
     searchProducts,
+    latestProducts,
     pendingOrders,
     historyOrders,
     cartItems,
@@ -83,6 +87,7 @@ export function StorePage() {
     drawerOpen,
     drawerType,
     setSearchProducts,
+    setLatestProducts,
     beginCatalogSearch,
     endCatalogSearch,
   })
@@ -99,7 +104,7 @@ export function StorePage() {
     handleLogin,
     handleLogout,
   } = useStorePageActions({
-    products,
+    products: filteredProducts.length ? filteredProducts : products,
     addToCart,
     showToast,
     navigateToView,
@@ -180,6 +185,7 @@ export function StorePage() {
         products={filteredProducts}
         cartProductIds={cartProductIds}
         onOrder={handleOrderProduct}
+        isLoadingLatest={isLoadingLatest}
       />
     )
   }

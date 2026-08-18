@@ -28,6 +28,16 @@ function mapPrecio(product) {
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0
 }
 
+/** id de inventario: `id` | `id_producto` (cursor `last_id` y cards). */
+export function getCatalogProductId(product) {
+  const value = product?.id ?? product?.id_producto ?? product?.idProducto
+  if (value == null || value === '') {
+    return null
+  }
+  const text = String(value).trim()
+  return text && text !== 'undefined' && text !== 'null' ? text : null
+}
+
 /**
  * API fields → ProductCard model
  * precio → price (y precio)
@@ -46,8 +56,10 @@ export function mapApiProduct(product) {
   const imageUrl = pickProductImageUrl(product.imagen_producto)
   const precio = mapPrecio(product)
 
+  const id = getCatalogProductId(product)
+
   return {
-    id: String(product.id),
+    id: id ?? '',
     precio,
     price: precio,
     description: String(product.descripcion ?? '').trim(),
@@ -68,5 +80,5 @@ export function mapApiProducts(productos = []) {
     return []
   }
 
-  return productos.map(mapApiProduct)
+  return productos.map(mapApiProduct).filter((product) => Boolean(product.id))
 }

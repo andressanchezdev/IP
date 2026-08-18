@@ -63,6 +63,13 @@ export function AppProvider({ children }) {
     cartHydratingRef,
   })
   productsRef.current = catalog.products
+  if (Array.isArray(catalog.value?.latestProducts) && catalog.value.latestProducts.length > 0) {
+    const seen = new Set(catalog.products.map((product) => String(product.id)))
+    productsRef.current = [
+      ...catalog.products,
+      ...catalog.value.latestProducts.filter((product) => !seen.has(String(product.id))),
+    ]
+  }
 
   // Único punto de acoplamiento entre dominios: cada slice emite eventos y
   // aquí se decide cómo reaccionan los demás.

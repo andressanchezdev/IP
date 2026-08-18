@@ -24,7 +24,6 @@
 }
 
 .content-list-data__row {
-  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 4px;

@@ -7,8 +7,6 @@ export const FILTER_OPTIONS_VISIBLE_IDLE = 10
 export const FILTER_OPTIONS_VISIBLE_SEARCH = 15
 /** JSON de GET /api/v1/general/filter en memoria, máximo 3 minutos. */
 export const FILTER_CACHE_TTL_MS = 3 * 60 * 1000
-/** Mínimo entre GET de paginación por scroll (evita ráfagas / DoS al scrollear). */
-export const PRODUCTS_SCROLL_MIN_INTERVAL_MS = 3_500
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams()
@@ -42,9 +40,27 @@ function extractProducts(payload) {
   return []
 }
 
+/** Query `last_id`: número si es id numérico; si no, el valor tal cual. */
+function toLastIdQuery(lastId) {
+  if (lastId == null || lastId === '') {
+    return null
+  }
+  const numeric = Number(lastId)
+  return Number.isFinite(numeric) ? numeric : lastId
+}
+
+function getRawProductId(product) {
+  const value = product?.id ?? product?.id_producto ?? product?.idProducto
+  if (value == null || value === '') {
+    return null
+  }
+  return toLastIdQuery(value)
+}
+
 /**
  * GET /api/v1/inventory/products
- * Paginación por cursor: `last_id` + `limit`.
+ * Paginación por scroll: `last_id` + `limit`.
+ * Primera página: solo `limit=25`. Siguientes: `last_id` = id del último producto obtenido.
  */
 export async function getGeneral({
   token,
@@ -53,7 +69,7 @@ export async function getGeneral({
 } = {}) {
   const query = buildQuery({
     limit,
-    last_id: lastId,
+    last_id: toLastIdQuery(lastId),
   })
 
   const payload = await apiRequest(`/api/v1/inventory/products${query}`, {
@@ -64,8 +80,7 @@ export async function getGeneral({
   const productos = extractProducts(payload)
   const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
   const lastProduct = productos.length > 0 ? productos[productos.length - 1] : null
-  const resolvedLastId = lastProduct?.id ?? lastId ?? null
-  const nextCursor = meta.next_cursor ?? resolvedLastId
+  const resolvedLastId = getRawProductId(lastProduct) ?? toLastIdQuery(lastId)
   const hasMore = typeof meta.has_more === 'boolean'
     ? meta.has_more
     : productos.length >= limit
@@ -73,7 +88,7 @@ export async function getGeneral({
   return {
     productos,
     lastId: resolvedLastId,
-    nextCursor,
+    nextCursor: resolvedLastId,
     limit,
     hasMore,
     meta,
@@ -131,6 +146,46 @@ export async function searchInventoryProducts({
         meta: {},
         raw: error.payload ?? null,
         search: searchText,
+        path,
+        emptyBy404: true,
+      }
+    }
+    throw error
+  }
+}
+
+/**
+ * GET /api/v1/inventory/products/latest
+ * Productos nuevos. Bearer token requerido.
+ */
+export async function getLatestInventoryProducts({
+  token,
+  signal,
+} = {}) {
+  const path = '/api/v1/inventory/products/latest'
+
+  try {
+    const payload = await apiRequest(path, {
+      method: 'GET',
+      token,
+      signal,
+    })
+
+    const productos = extractProducts(payload)
+    const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+
+    return {
+      productos,
+      meta,
+      raw: payload,
+      path,
+    }
+  } catch (error) {
+    if (error?.name === 'ApiError' && error.status === 404) {
+      return {
+        productos: [],
+        meta: {},
+        raw: error.payload ?? null,
         path,
         emptyBy404: true,
       }
@@ -231,7 +286,7 @@ function writeGeneralFilterMemory(raw, lists) {
   }
 }
 
-export function clearGeneralFilterMemory() {
+function clearGeneralFilterMemory() {
   generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
 }
 

@@ -42,13 +42,57 @@ export const ProductCard = memo(function ProductCard({
   const categoryText = String(category || '').trim()
   const productName = descriptionText || categoryText || reference || 'Producto'
   const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
+  const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
+
+  const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
   const handleChange = (event) => {
-    const value = Number(event.target.value)
-    if (Number.isNaN(value)) {
+    const raw = event.target.value
+    if (raw === '') {
+      setQuantity('')
       return
     }
-    setQuantity(Math.max(1, Math.min(maxQuantity, value)))
+
+    const value = Number.parseInt(raw, 10)
+    if (!Number.isFinite(value) || value < 0) {
+      return
+    }
+
+    setQuantity(Math.min(maxQuantity, value))
+  }
+
+  const handleFocus = (event) => {
+    event.target.select()
+  }
+
+  const handleMouseUp = (event) => {
+    const input = event.currentTarget
+    const rect = input.getBoundingClientRect()
+    const clickedStepper = rect.width - (event.clientX - rect.left) <= 22
+    if (clickedStepper) {
+      return
+    }
+    event.preventDefault()
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+      return
+    }
+
+    event.preventDefault()
+    const parsed = Number(quantity)
+    const current = quantity === '' || !Number.isFinite(parsed) ? 0 : parsed
+    const delta = event.key === 'ArrowUp' ? 1 : -1
+    setQuantity(clampQuantity(current + delta))
+  }
+
+  const handleBlur = () => {
+    if (quantity === '' || !Number.isFinite(Number(quantity)) || Number(quantity) < 1) {
+      setQuantity(1)
+      return
+    }
+    setQuantity(clampQuantity(Number(quantity)))
   }
 
   return (
@@ -101,11 +145,17 @@ export const ProductCard = memo(function ProductCard({
           <div className="product-card__order-row product-card__order-row--row">
             <input
               type="number"
+              inputMode="numeric"
               className={`product-card__qty-input ${isOrdered || isSoldOut ? 'product-card__qty-input--hidden' : ''}`}
               value={quantity}
               min="1"
-              max={stock}
+              max={maxQuantity}
+              step="1"
               onChange={handleChange}
+              onFocus={handleFocus}
+              onMouseUp={handleMouseUp}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
               disabled={isOrdered || isSoldOut}
               tabIndex={isOrdered || isSoldOut ? -1 : undefined}
               aria-hidden={isOrdered || isSoldOut}
@@ -116,7 +166,7 @@ export const ProductCard = memo(function ProductCard({
               className={`product-card__order ${isOrdered ? 'product-card__order--ordered' : ''} ${isSoldOut ? 'product-card__order--sold-out' : ''}`}
               onClick={() => {
                 if (isOrdered || isSoldOut) return
-                onOrder?.(id, quantity)
+                onOrder?.(id, orderQuantity)
               }}
               disabled={isSoldOut || isOrdered}
               {...namedControl(orderLabel)}

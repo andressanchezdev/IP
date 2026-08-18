@@ -10,7 +10,7 @@ function getLandingScrollRoot(node) {
   return node.closest('.landing__content')
 }
 
-export function CatalogView({ products, cartProductIds, onOrder }) {
+export function CatalogView({ products, cartProductIds, onOrder, isLoadingLatest = false }) {
   const {
     hasMoreProducts,
     isLoadingProducts,
@@ -20,7 +20,10 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
   } = useCatalog()
   const sentinelRef = useRef(null)
   const requestLockRef = useRef(false)
-  const retryTimeoutRef = useRef(null)
+  const loadMoreRef = useRef(loadMoreProducts)
+  const isLoadingRef = useRef(isLoadingProducts)
+  loadMoreRef.current = loadMoreProducts
+  isLoadingRef.current = isLoadingProducts
 
   // Search or applied filters: no scroll pagination (avoids request storms on short lists).
   const canPaginateOnScroll =
@@ -38,29 +41,14 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
 
     const scrollRoot = getLandingScrollRoot(sentinel)
 
-    const clearRetry = () => {
-      if (retryTimeoutRef.current != null) {
-        window.clearTimeout(retryTimeoutRef.current)
-        retryTimeoutRef.current = null
-      }
-    }
-
     const requestNextPage = () => {
-      if (requestLockRef.current || isLoadingProducts) {
+      if (requestLockRef.current || isLoadingRef.current) {
         return
       }
 
       requestLockRef.current = true
-      Promise.resolve(loadMoreProducts())
-        .then((result) => {
-          if (result?.reason === 'scroll_throttle' && result.retryAfterMs > 0) {
-            retryTimeoutRef.current = window.setTimeout(() => {
-              retryTimeoutRef.current = null
-              requestLockRef.current = false
-              requestNextPage()
-            }, result.retryAfterMs)
-            return
-          }
+      Promise.resolve(loadMoreRef.current())
+        .then(() => {
           requestLockRef.current = false
         })
         .catch(() => {
@@ -85,13 +73,12 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
 
     observer.observe(sentinel)
     return () => {
-      clearRetry()
-      requestLockRef.current = false
       observer.disconnect()
+      requestLockRef.current = false
     }
-  }, [canPaginateOnScroll, isLoadingProducts, loadMoreProducts, products.length])
+  }, [canPaginateOnScroll, products.length])
 
-  if (products.length === 0 && isLoadingProducts && !isCatalogSearchActive) {
+  if (isLoadingLatest || (products.length === 0 && isLoadingProducts && !isCatalogSearchActive)) {
     return (
       <section className="landing__panel">
         <div className="landing__empty-state">Cargando productos…</div>
@@ -126,8 +113,7 @@ export function CatalogView({ products, cartProductIds, onOrder }) {
         </p>
       ) : isCatalogFilterActive ? (
         <p className="catalog-scroll-sentinel__done">
-          Mostrando {products.length} producto{products.length === 1 ? '' : 's'} filtrado
-          {products.length === 1 ? '' : 's'}
+          Mostrando {products.length} producto{products.length === 1 ? '' : 's'}
         </p>
       ) : canPaginateOnScroll ? (
         <div className="catalog-scroll-sentinel" ref={sentinelRef} aria-hidden="true">
