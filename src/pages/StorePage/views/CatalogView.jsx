@@ -87,9 +87,15 @@ export function CatalogView({ products, cartProductIds, onOrder, isLoadingLatest
   }
 
   if (products.length === 0) {
+    const emptyMessage = isCatalogFilterActive
+      ? 'Ningún producto coincide con el filtro aplicado'
+      : isCatalogSearchActive
+        ? 'No se encontraron productos con esa búsqueda.'
+        : 'No se encontraron productos.'
+
     return (
       <section className="landing__panel">
-        <div className="landing__empty-state">No se encontraron productos con esos filtros.</div>
+        <div className="landing__empty-state">{emptyMessage}</div>
       </section>
     )
   }

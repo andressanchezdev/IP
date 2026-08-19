@@ -1,7 +1,24 @@
-import { useState } from 'react'
-import { useProfile } from '@/app/providers'
+import { useMemo, useState } from 'react'
+import { useAuth, useProfile } from '@/app/providers'
+import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { ProfileIdentityCard } from '@/features/profile/components/ProfileIdentityCard/ProfileIdentityCard'
+import { useGeneralFilter } from '@/features/catalog/hooks/useGeneralFilter'
+import { MultiFilterField } from '@/features/catalog/components/FilterDrawer/MultiFilterField'
+import {
+  FILTER_OPTIONS_VISIBLE_IDLE,
+  FILTER_OPTIONS_VISIBLE_SEARCH,
+  postInventoryProductsList,
+} from '@/features/catalog/api/generalApi'
+import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
+import {
+  buildFilterLabelLookup,
+  buildProductsListBody,
+  isFilterSelectionBlocked,
+  resolveSelectedLabels,
+} from '@/features/catalog/utils/catalogFilters'
+import { downloadPriceListPdf } from '@/shared/lib/downloadPriceListPdf'
+import { downloadPriceListExcel } from '@/shared/lib/downloadPriceListExcel'
 import {
   DrawerCheckRow,
   DrawerPanel,
@@ -33,11 +50,13 @@ const PROFILE_SECTIONS = [
 ]
 
 const PRICE_LIST_ACTIONS = [
-  { id: 'download', label: 'Método de descarga' },
-  { id: 'brand', label: 'Marca a escoger' },
-  { id: 'category', label: 'Categoría a escoger' },
-  { id: 'model', label: 'Modelo a escoger' },
+  { id: 'excel', label: 'Excel' },
+  { id: 'pdf', label: 'PDF' },
 ]
+const PRICE_LIST_METHOD_LABELS = {
+  excel: 'Excel',
+  pdf: 'PDF',
+}
 
 function ProfilePanelRow({ label, value, highlight = false }) {
   return (
@@ -50,9 +69,40 @@ function ProfilePanelRow({ label, value, highlight = false }) {
   )
 }
 
-export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) {
+export function ProfileDrawerContent({ onOpenBulkUpload }) {
   const { profile, profileSettings } = useProfile()
+  const { tokenAccess } = useAuth()
+  const { showToast } = useToast()
   const [openSectionId, setOpenSectionId] = useState(null)
+  const [priceDownloadMethod, setPriceDownloadMethod] = useState('pdf')
+  const [priceDownloadMethodOpen, setPriceDownloadMethodOpen] = useState(false)
+  const [isDownloadingPriceList, setIsDownloadingPriceList] = useState(false)
+  const [priceListFilters, setPriceListFilters] = useState({
+    brands: [],
+    categories: [],
+    models: [],
+  })
+  const [priceQuickMode, setPriceQuickMode] = useState({
+    brands: 'all',
+    categories: 'all',
+    models: 'all',
+  })
+  const [openPriceFilterId, setOpenPriceFilterId] = useState(null)
+  const {
+    categorias,
+    marcas,
+    modelos,
+    status: filterStatus,
+    error: filterError,
+  } = useGeneralFilter({ enabled: openSectionId === 'price-list' })
+
+  const isPriceFilterLoading = filterStatus === 'loading'
+
+  const filterLookups = useMemo(() => ({
+    brands: buildFilterLabelLookup(marcas),
+    categories: buildFilterLabelLookup(categorias),
+    models: buildFilterLabelLookup(modelos),
+  }), [marcas, categorias, modelos])
 
   const toggleSection = (sectionId) => {
     if (sectionId === 'bulk-upload') {
@@ -63,25 +113,242 @@ export function ProfileDrawerContent({ onOpenBulkUpload, onOpenPriceListView }) 
     setOpenSectionId((current) => (current === sectionId ? null : sectionId))
   }
 
+  const togglePriceFilterSection = (sectionId) => {
+    setPriceDownloadMethodOpen(false)
+    setOpenPriceFilterId((current) => (current === sectionId ? null : sectionId))
+  }
+
+  const addPriceFilterValue = (key, value) => {
+    setPriceQuickMode((current) => ({ ...current, [key]: 'custom' }))
+    setPriceListFilters((current) => {
+      const list = current[key] || []
+      const id = String(value)
+      if (list.includes(id)) {
+        return current
+      }
+      return { ...current, [key]: [...list, id] }
+    })
+  }
+
+  const removePriceFilterValue = (key, value) => {
+    setPriceListFilters((current) => {
+      const nextList = (current[key] || []).filter((entry) => entry !== String(value))
+      if (nextList.length === 0) {
+        setPriceQuickMode((modes) => ({ ...modes, [key]: 'all' }))
+      }
+      return {
+        ...current,
+        [key]: nextList,
+      }
+    })
+  }
+
+  const confirmPriceListDownload = async () => {
+    if (isFilterSelectionBlocked(priceQuickMode)) {
+      showToast('No hay productos para descargar con los filtros actuales', 'error')
+      return
+    }
+
+    const token = tokenAccess
+    if (!token) {
+      showToast('Inicie sesión para descargar el listado', 'error')
+      return
+    }
+
+    const body = buildProductsListBody({
+      brands: priceListFilters.brands,
+      categories: priceListFilters.categories,
+      models: priceListFilters.models,
+      modes: priceQuickMode,
+    })
+
+    setIsDownloadingPriceList(true)
+
+    try {
+      const result = await postInventoryProductsList({ token, body })
+      const mappedProducts = mapApiProducts(result.productos)
+
+      if (mappedProducts.length === 0) {
+        showToast('No hay productos para descargar con los filtros actuales', 'error')
+        return
+      }
+
+      const exportFilters = {
+        brand: resolveSelectedLabels(priceListFilters.brands, filterLookups.brands).join(', '),
+        category: resolveSelectedLabels(priceListFilters.categories, filterLookups.categories).join(', '),
+        model: resolveSelectedLabels(priceListFilters.models, filterLookups.models).join(', '),
+      }
+
+      if (priceDownloadMethod === 'excel') {
+        await downloadPriceListExcel({
+          products: mappedProducts,
+          filename: 'listado-precios.xlsx',
+        })
+        showToast('Excel de listado descargado', 'success')
+        return
+      }
+
+      downloadPriceListPdf({
+        products: mappedProducts,
+        filters: exportFilters,
+        filename: 'listado-precios.pdf',
+      })
+      showToast('PDF de listado descargado', 'success')
+    } catch (error) {
+      showToast(error?.message || 'No se pudo obtener el listado de precios', 'error')
+    } finally {
+      setIsDownloadingPriceList(false)
+    }
+  }
+
   const renderSectionContent = (sectionId) => {
     switch (sectionId) {
       case 'price-list':
         return (
           <div className="profile-price-list__actions">
-            {PRICE_LIST_ACTIONS.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                className="content-list-data__row content-list-data__row--action"
-                onClick={() => onOpenPriceListView?.(action.id)}
-                {...namedControl(action.label)}
+            <div className="drawer-shell-section">
+              <DrawerCheckRow
+                active={priceDownloadMethodOpen}
+                onClick={() => {
+                  setOpenPriceFilterId(null)
+                  setPriceDownloadMethodOpen((current) => !current)
+                }}
+                label="Método de descarga"
               >
-                <span className="content-list-data__label">{action.label}</span>
-                <span className="content-list-data__value content-list-data__value--highlight" aria-hidden="true">
-                  ›
+                <span>Método de descarga</span>
+                <span className="content-list-data__value content-list-data__value--highlight">
+                  {PRICE_LIST_METHOD_LABELS[priceDownloadMethod]}
                 </span>
-              </button>
-            ))}
+                <span
+                  className={`filter-drawer-check__caret${priceDownloadMethodOpen ? ' filter-drawer-check__caret--open' : ''}`}
+                  aria-hidden="true"
+                />
+              </DrawerCheckRow>
+              {priceDownloadMethodOpen ? (
+                <DrawerSectionBody>
+                  <div className="drawer-shell-section-options drawer-shell-section-options--scroll" style={{ '--filter-option-rows': 4 }}>
+                    {PRICE_LIST_ACTIONS.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        className="content-list-data__row content-list-data__row--action"
+                        onClick={() => {
+                          setPriceDownloadMethod(action.id)
+                          setPriceDownloadMethodOpen(false)
+                        }}
+                        aria-pressed={priceDownloadMethod === action.id}
+                        {...namedControl(`Método ${action.label}`)}
+                      >
+                        <span className="content-list-data__label">{action.label}</span>
+                        <span
+                          className={`content-list-data__value${priceDownloadMethod === action.id ? ' content-list-data__value--highlight' : ''}`}
+                          aria-hidden="true"
+                        >
+                          {priceDownloadMethod === action.id ? '✓' : '›'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </DrawerSectionBody>
+              ) : null}
+            </div>
+
+            <MultiFilterField
+              id="price-brands"
+              label="Marca a escoger"
+              emptyLabel="Sin marcas disponibles"
+              options={marcas}
+              selected={priceListFilters.brands}
+              isOpen={openPriceFilterId === 'price-brands'}
+              onToggle={togglePriceFilterSection}
+              onAdd={(value) => addPriceFilterValue('brands', value)}
+              onRemove={(value) => removePriceFilterValue('brands', value)}
+              visibleIdleRows={FILTER_OPTIONS_VISIBLE_IDLE}
+              visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
+              isLoading={isPriceFilterLoading}
+              errorMessage={filterError}
+              quickMode={priceQuickMode.brands}
+              onSelectAll={() => {
+                setPriceQuickMode((current) => ({ ...current, brands: 'all' }))
+                setPriceListFilters((current) => ({ ...current, brands: [] }))
+              }}
+              onSetNone={() => {
+                setPriceQuickMode((current) => ({ ...current, brands: 'none' }))
+                setPriceListFilters((current) => ({ ...current, brands: [] }))
+              }}
+              onClearFilter={() => {
+                setPriceQuickMode((current) => ({ ...current, brands: 'all' }))
+                setPriceListFilters((current) => ({ ...current, brands: [] }))
+              }}
+            />
+
+            <MultiFilterField
+              id="price-categories"
+              label="Categoría a escoger"
+              emptyLabel="Sin categorías disponibles"
+              options={categorias}
+              selected={priceListFilters.categories}
+              isOpen={openPriceFilterId === 'price-categories'}
+              onToggle={togglePriceFilterSection}
+              onAdd={(value) => addPriceFilterValue('categories', value)}
+              onRemove={(value) => removePriceFilterValue('categories', value)}
+              visibleIdleRows={FILTER_OPTIONS_VISIBLE_IDLE}
+              visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
+              isLoading={isPriceFilterLoading}
+              errorMessage={filterError}
+              quickMode={priceQuickMode.categories}
+              onSelectAll={() => {
+                setPriceQuickMode((current) => ({ ...current, categories: 'all' }))
+                setPriceListFilters((current) => ({ ...current, categories: [] }))
+              }}
+              onSetNone={() => {
+                setPriceQuickMode((current) => ({ ...current, categories: 'none' }))
+                setPriceListFilters((current) => ({ ...current, categories: [] }))
+              }}
+              onClearFilter={() => {
+                setPriceQuickMode((current) => ({ ...current, categories: 'all' }))
+                setPriceListFilters((current) => ({ ...current, categories: [] }))
+              }}
+            />
+
+            <MultiFilterField
+              id="price-models"
+              label="Modelo a escoger"
+              emptyLabel="Sin modelos disponibles"
+              options={modelos}
+              selected={priceListFilters.models}
+              isOpen={openPriceFilterId === 'price-models'}
+              onToggle={togglePriceFilterSection}
+              onAdd={(value) => addPriceFilterValue('models', value)}
+              onRemove={(value) => removePriceFilterValue('models', value)}
+              visibleIdleRows={FILTER_OPTIONS_VISIBLE_IDLE}
+              visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
+              isLoading={isPriceFilterLoading}
+              errorMessage={filterError}
+              quickMode={priceQuickMode.models}
+              onSelectAll={() => {
+                setPriceQuickMode((current) => ({ ...current, models: 'all' }))
+                setPriceListFilters((current) => ({ ...current, models: [] }))
+              }}
+              onSetNone={() => {
+                setPriceQuickMode((current) => ({ ...current, models: 'none' }))
+                setPriceListFilters((current) => ({ ...current, models: [] }))
+              }}
+              onClearFilter={() => {
+                setPriceQuickMode((current) => ({ ...current, models: 'all' }))
+                setPriceListFilters((current) => ({ ...current, models: [] }))
+              }}
+            />
+
+            <button
+              type="button"
+              className="content-main-data-carrito__checkout profile-price-list__confirm"
+              onClick={confirmPriceListDownload}
+              disabled={isDownloadingPriceList}
+              {...namedControl('Confirmar listado de precios')}
+            >
+              {isDownloadingPriceList ? 'Descargando…' : 'Confirmar'}
+            </button>
           </div>
         )
       case 'debts':

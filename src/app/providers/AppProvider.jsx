@@ -42,6 +42,8 @@ export function AppProvider({ children }) {
   const profile = useProfileSlice({
     events,
     initialProfileSettings: initialUserData.profileSettings,
+    tokenAccess: auth.authSession?.tokenAccess,
+    authEmail: auth.authSession?.email,
   })
 
   const cart = useCartSlice({
@@ -59,6 +61,7 @@ export function AppProvider({ children }) {
     tokenAccess: auth.authSession?.tokenAccess,
     userId: auth.authSession?.userId,
     applyCartFromApi: cart.applyCartFromApi,
+    applyCartFromPayload: cart.applyCartFromPayload,
     warehouseIdRef: profile.warehouseIdRef,
     cartHydratingRef,
   })
@@ -78,13 +81,13 @@ export function AppProvider({ children }) {
     [APP_EVENTS.AUTH_RESTORED]: ({ session }) => {
       const data = loadInitialUserData(session)
       profile.setProfileSettings(data.profileSettings)
-      orders.setPendingOrders(data.pendingOrders)
-      orders.setHistoryOrders(data.historyOrders)
+      orders.setPendingOrders([])
+      orders.setHistoryOrders([])
     },
     [APP_EVENTS.AUTH_LOGIN]: ({ profile: nextProfile, workspace }) => {
       profile.setProfileSettings(nextProfile)
-      orders.setPendingOrders(workspace.pendingOrders ?? [])
-      orders.setHistoryOrders(workspace.historyOrders ?? [])
+      orders.setPendingOrders([])
+      orders.setHistoryOrders([])
       // Cart se hidrata solo desde GET /api/v1/inventory/carts.
       cart.setCartItems([])
       catalog.resetCatalogProducts()
@@ -109,9 +112,8 @@ export function AppProvider({ children }) {
       }
     },
     [APP_EVENTS.ORDER_CREATED]: ({ order }) => {
-      orders.setPendingOrders((current) => [order, ...current])
       orders.resetOrderDrawer()
-      ui.setActiveView('espera')
+      ui.setActiveView('historial')
       ui.setDrawerOpen(false)
     },
     [APP_EVENTS.ORDER_COMPLETED]: () => {
@@ -131,6 +133,9 @@ export function AppProvider({ children }) {
       }
       if (type === 'filter') {
         catalog.syncFilterDraftFromApplied()
+      }
+      if (type === 'profile') {
+        profile.loadProfileFromAboutApi()
       }
     },
     [APP_EVENTS.DRAWER_CLOSED]: () => {
@@ -169,14 +174,10 @@ export function AppProvider({ children }) {
 
     persistUserWorkspace(auth.currentUserId, {
       profileSettings: profile.profileSettings,
-      pendingOrders: orders.pendingOrders,
-      historyOrders: orders.historyOrders,
     })
   }, [
     auth.currentUserId,
     profile.profileSettings,
-    orders.pendingOrders,
-    orders.historyOrders,
   ])
 
   useEffect(() => {

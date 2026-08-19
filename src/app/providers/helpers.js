@@ -56,8 +56,8 @@ export function loadInitialUserData(session) {
 
   return {
     profileSettings,
-    pendingOrders: workspace.pendingOrders ?? [],
-    historyOrders: workspace.historyOrders ?? [],
+    pendingOrders: [],
+    historyOrders: [],
     cartItems: [],
   }
 }

@@ -1,6 +1,6 @@
 import { formatPrice } from '@/shared/lib/formatPrice'
 
-export function HistoryView({ historyOrders, filteredOrders }) {
+export function HistoryView({ historyOrders, filteredOrders, isLoading = false, errorMessage = '' }) {
   return (
     <section className="landing__panel">
       <div className="landing__panel-header">
@@ -22,7 +22,15 @@ export function HistoryView({ historyOrders, filteredOrders }) {
             </tr>
           </thead>
           <tbody>
-            {historyOrders.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan="7" className="landing__table-empty">Cargando historial...</td>
+              </tr>
+            ) : errorMessage ? (
+              <tr>
+                <td colSpan="7" className="landing__table-empty">{errorMessage}</td>
+              </tr>
+            ) : historyOrders.length === 0 ? (
               <tr>
                 <td colSpan="7" className="landing__table-empty">No hay órdenes registradas.</td>
               </tr>
@@ -32,27 +40,27 @@ export function HistoryView({ historyOrders, filteredOrders }) {
               </tr>
             ) : (
               filteredOrders.map((order) => (
-                <tr key={order.id}>
+                <tr key={order.idventa}>
                   <td className="landing__table-col landing__table-col--priority" data-label="#Pedido">
-                    {order.id}
+                    {order.idventa}
                   </td>
                   <td className="landing__table-col landing__table-col--priority" data-label="Fecha">
-                    {order.createdAt}
+                    {order.fecha}
                   </td>
                   <td className="landing__table-col landing__table-col--secondary" data-label="Fecha límite">
-                    {order.dateLimit}
+                    -
                   </td>
                   <td className="landing__table-col landing__table-col--secondary" data-label="Productos">
-                    {order.items.map((item) => `${item.description} x${item.quantity}`).join(', ')}
+                    {order.venta.map((item) => `IDPR ${item.idpr} x${item.cant}`).join(', ')}
                   </td>
                   <td className="landing__table-col landing__table-col--secondary" data-label="Medio pago">
-                    {order.paymentMethod}
+                    {order.metodo_pago}
                   </td>
                   <td className="landing__table-col landing__table-col--secondary" data-label="Valor">
                     {formatPrice(order.total)}
                   </td>
                   <td className="landing__table-col landing__table-col--priority" data-label="Estado">
-                    {order.status}
+                    {order.estado}
                   </td>
                 </tr>
               ))

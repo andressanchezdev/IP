@@ -47,3 +47,19 @@
   margin: 0;
   padding: 10px 4px;
 }
+
+.profile-price-list__download-method {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-price-list__download-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-price-list__confirm {
+  margin-top: 8px;
+}

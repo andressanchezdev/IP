@@ -9,8 +9,8 @@ import './Sidebar.css'
 
 const NAV_ITEMS = [
   { id: 'tienda', label: 'Tienda', icon: storeIcon },
-  { id: 'espera', label: 'Espera', icon: waitIcon },
-  { id: 'historial', label: 'Historial', icon: historyIcon },
+  { id: 'Historial', label: 'Historial', icon: waitIcon },
+  { id: 'Cartera', label: 'Cartera', icon: historyIcon },
 ]
 
 export function Sidebar({

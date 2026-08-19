@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PRODUCTS_PAGE_SIZE, getLatestInventoryProducts, searchInventoryProducts } from '@/features/catalog/api/generalApi'
+import {
+  PRODUCTS_PAGE_SIZE,
+  getLatestInventoryProducts,
+  postInventoryProductsFilter,
+  searchInventoryProducts,
+} from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
+import {
+  buildProductsFilterBody,
+  isFilterSelectionBlocked,
+} from '@/features/catalog/utils/catalogFilters'
 import { matchesOrderIdSearch } from '@/features/orders/utils/orderSearch'
 import { getApiAuthToken } from '@/shared/api'
 import { getBrandLogoUrl } from '@/shared/lib/brandLogos'
@@ -19,29 +28,19 @@ function normalizeProduct(product) {
 }
 
 /**
- * Filtros locales sobre resultados (catálogo o GET search).
- * Campos UI ← JSON API: brand←marca, category←categoria, model←modelo.
+ * Filtros locales auxiliares (solo promociones / stock).
  */
 function applyCatalogFilters(list, {
-  filters,
   filterPromociones,
   withStock,
 }) {
   return list.filter((product) => {
-    const matchesBrand = filters.brands.length === 0 || filters.brands.includes(product.brand)
-    const matchesCategory =
-      filters.categories.length === 0 || filters.categories.includes(product.category)
-    const matchesModel = filters.models.length === 0 || filters.models.includes(product.model)
-
     const matchesQuickOptions =
       !filterPromociones || (filterPromociones && product.price <= 17500)
 
     const matchesWithStock = !withStock || product.stock > 0
 
     return (
-      matchesBrand &&
-      matchesCategory &&
-      matchesModel &&
       matchesQuickOptions &&
       matchesWithStock
     )
@@ -65,6 +64,7 @@ export function useStorePageFilters({
   historyOrders,
   cartItems,
   filters,
+  filterModes,
   filterNuevos,
   filterPromociones,
   withStock,
@@ -85,6 +85,8 @@ export function useStorePageFilters({
   const [committedProductSearch, setCommittedProductSearch] = useState('')
   const [productSearchNonce, setProductSearchNonce] = useState(0)
   const [isLoadingLatest, setIsLoadingLatest] = useState(false)
+  const [isLoadingFilteredProducts, setIsLoadingFilteredProducts] = useState(false)
+  const [filteredProductsFromApi, setFilteredProductsFromApi] = useState(null)
 
   const headerSearch = {
     tienda: { placeholder: 'Buscar productos ', ariaLabel: 'Buscar productos' },
@@ -92,13 +94,20 @@ export function useStorePageFilters({
     historial: { placeholder: 'Buscar', ariaLabel: 'Buscar pedido por número' },
   }[activeView] ?? { placeholder: 'Buscar productos (Enter)', ariaLabel: 'Buscar productos' }
 
+  const hasIdFiltersActive = Boolean(
+    (filterModes?.brands === 'custom' && filters.brands.length > 0) ||
+      (filterModes?.categories === 'custom' && filters.categories.length > 0) ||
+      (filterModes?.models === 'custom' && filters.models.length > 0) ||
+      filterModes?.brands === 'none' ||
+      filterModes?.categories === 'none' ||
+      filterModes?.models === 'none',
+  )
+  /** POST /inventory/products/filter: IDs y/o checkbox "Con cantidad". */
+  const hasBackendFilterActive = Boolean(hasIdFiltersActive || withStock)
   const hasActiveFilters = Boolean(
-    filters.brands.length ||
-      filters.categories.length ||
-      filters.models.length ||
+    hasBackendFilterActive ||
       filterNuevos ||
-      filterPromociones ||
-      withStock,
+      filterPromociones,
   )
   const hasSearchValue = Boolean(searchValue.trim())
   const filterDrawerOpen = drawerOpen && drawerType === 'filter'
@@ -233,9 +242,78 @@ export function useStorePageFilters({
     }
   }, [isStoreView, filterNuevos, setLatestProducts])
 
+  useEffect(() => {
+    if (!isStoreView || !hasBackendFilterActive) {
+      setFilteredProductsFromApi(null)
+      setIsLoadingFilteredProducts(false)
+      return undefined
+    }
+
+    if (isFilterSelectionBlocked(filterModes)) {
+      setFilteredProductsFromApi([])
+      setIsLoadingFilteredProducts(false)
+      return undefined
+    }
+
+    const token = getApiAuthToken()
+    if (!token) {
+      setFilteredProductsFromApi([])
+      setIsLoadingFilteredProducts(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    let cancelled = false
+    setIsLoadingFilteredProducts(true)
+
+    const body = buildProductsFilterBody({
+      brands: filters.brands,
+      categories: filters.categories,
+      models: filters.models,
+      modes: filterModes,
+      withStock,
+    })
+
+    postInventoryProductsFilter({ token, body, signal: controller.signal })
+      .then((result) => {
+        if (cancelled) return
+        const mapped = mapApiProducts(result.productos).map(normalizeProduct)
+        setFilteredProductsFromApi(mapped)
+      })
+      .catch((error) => {
+        if (cancelled || isAbortError(error) || controller.signal.aborted) {
+          return
+        }
+        console.error('[filters] Falló POST /api/v1/inventory/products/filter', error?.status || '', error)
+        setFilteredProductsFromApi([])
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingFilteredProducts(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [
+    isStoreView,
+    hasBackendFilterActive,
+    filterModes,
+    filters.brands,
+    filters.categories,
+    filters.models,
+    withStock,
+  ])
+
   const filteredProducts = useMemo(() => {
     if (filterNuevos && isStoreView) {
       return latestProducts ?? []
+    }
+
+    if (hasBackendFilterActive) {
+      return filteredProductsFromApi ?? []
     }
 
     const source = (hasCommittedProductSearch && isStoreView)
@@ -247,7 +325,6 @@ export function useStorePageFilters({
     }
 
     const filtered = applyCatalogFilters(source, {
-      filters,
       filterPromociones,
       withStock,
     })
@@ -263,8 +340,9 @@ export function useStorePageFilters({
     isStoreView,
     searchProducts,
     products,
+    hasBackendFilterActive,
+    filteredProductsFromApi,
     filterDrawerOpen,
-    filters,
     filterNuevos,
     latestProducts,
     filterPromociones,
@@ -281,7 +359,7 @@ export function useStorePageFilters({
   }, [activeView, pendingOrders, debouncedSearchValue])
 
   const paymentMethods = useMemo(
-    () => [...new Set(historyOrders.map((order) => order.paymentMethod).filter(Boolean))],
+    () => [...new Set(historyOrders.map((order) => order.metodo_pago).filter(Boolean))],
     [historyOrders],
   )
 
@@ -291,7 +369,7 @@ export function useStorePageFilters({
     }
 
     return historyOrders.filter((order) => {
-      const matchesPayment = !historyPaymentFilter || order.paymentMethod === historyPaymentFilter
+      const matchesPayment = !historyPaymentFilter || order.metodo_pago === historyPaymentFilter
       return matchesOrderIdSearch(order, debouncedSearchValue) && matchesPayment
     })
   }, [activeView, historyOrders, debouncedSearchValue, historyPaymentFilter])
@@ -314,6 +392,6 @@ export function useStorePageFilters({
     cartProductIds,
     submitProductSearch,
     clearCommittedProductSearch,
-    isLoadingLatest,
+    isLoadingLatest: isLoadingLatest || isLoadingFilteredProducts,
   }
 }

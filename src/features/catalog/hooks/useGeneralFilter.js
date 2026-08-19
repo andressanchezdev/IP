@@ -19,17 +19,31 @@ function listsFromResult(result) {
 }
 
 /**
- * GET /api/v1/general/filter al abrir Filtrar.
- * JSON completo (categorías, marcas, modelos) en memoria (3 min).
- * Las barras buscan sobre esa copia, sin más GET.
+ * GET /api/v1/general/filter solo al abrir Filtrar (una vez en red).
+ * Reaperturas usan la copia en memoria (TTL 3 min) sin nuevo GET.
  */
-export function useGeneralFilter() {
+export function useGeneralFilter({ enabled = false } = {}) {
   const { tokenAccess } = useAuth()
   const { drawerOpen, drawerType } = useUi()
   const [state, setState] = useState(INITIAL_STATE)
   const requestIdRef = useRef(0)
 
   const isFilterDrawerOpen = drawerOpen && drawerType === 'filter'
+  const shouldFetch = isFilterDrawerOpen || enabled
+
+  const applyFromMemory = useCallback(() => {
+    const memory = readGeneralFilterMemory()
+    if (!memory) {
+      return false
+    }
+
+    setState({
+      ...listsFromResult(memory),
+      status: 'success',
+      error: '',
+    })
+    return true
+  }, [])
 
   const fetchFilterOptions = useCallback(async ({ signal } = {}) => {
     const requestId = requestIdRef.current + 1
@@ -41,6 +55,10 @@ export function useGeneralFilter() {
         status: 'error',
         error: 'Inicie sesión para cargar los filtros',
       })
+      return
+    }
+
+    if (applyFromMemory()) {
       return
     }
 
@@ -66,13 +84,7 @@ export function useGeneralFilter() {
         return
       }
 
-      const memory = readGeneralFilterMemory()
-      if (memory) {
-        setState({
-          ...listsFromResult(memory),
-          status: 'success',
-          error: '',
-        })
+      if (applyFromMemory()) {
         return
       }
 
@@ -82,10 +94,14 @@ export function useGeneralFilter() {
         error: error?.message || 'No se pudieron cargar los filtros',
       })
     }
-  }, [tokenAccess])
+  }, [applyFromMemory, tokenAccess])
 
   useEffect(() => {
-    if (!isFilterDrawerOpen) {
+    if (!shouldFetch) {
+      return undefined
+    }
+
+    if (applyFromMemory()) {
       return undefined
     }
 
@@ -95,7 +111,7 @@ export function useGeneralFilter() {
     return () => {
       controller.abort()
     }
-  }, [isFilterDrawerOpen, fetchFilterOptions])
+  }, [shouldFetch, fetchFilterOptions, applyFromMemory])
 
   return state
 }

@@ -10,21 +10,24 @@ import {
 import { pdfText, pdfTruncate } from '@/shared/lib/pdf/pdfText'
 
 const COLS = [
-  { key: 'reference', label: 'Codigo', width: 28, align: 'left' },
-  { key: 'description', label: 'Descripcion', width: 62, align: 'left' },
-  { key: 'brand', label: 'Marca', width: 28, align: 'left' },
-  { key: 'category', label: 'Categoria', width: 28, align: 'left' },
-  { key: 'model', label: 'Modelo', width: 22, align: 'left' },
-  { key: 'price', label: 'Precio', width: 24, align: 'right' },
+  { key: 'reference', label: 'Codigo', width: 42, align: 'left' },
+  { key: 'catalogDetail', label: 'Categoria / Descripcion / Modelo', width: 130, align: 'left' },
+  { key: 'brand', label: 'Marca', width: 54, align: 'left' },
+  { key: 'price', label: 'Precio', width: 34, align: 'right' },
 ]
 
 function normalizeProducts(products = []) {
   return products.map((product) => ({
     reference: pdfTruncate(product.reference || product.id || '—', 16),
-    description: pdfTruncate(product.description || '—', 40),
+    catalogDetail: pdfTruncate(
+      [
+        product.category || '—',
+        product.description || '—',
+        product.model || '—',
+      ].join(' / '),
+      74,
+    ),
     brand: pdfTruncate(product.brand || '—', 16),
-    category: pdfTruncate(product.category || '—', 16),
-    model: pdfTruncate(product.model || '—', 12),
     price: formatPrice(Number(product.price) || 0),
   }))
 }
@@ -113,16 +116,12 @@ function drawProductRow(doc, row, y, alt) {
  * @param {{ products?: Array, filters?: { brand?: string, category?: string, model?: string }, filename?: string }} [options]
  */
 export function downloadPriceListPdf(options = {}) {
+  // Los productos ya llegan filtrados (POST /inventory/products/list).
+  // `filters` es solo texto informativo del encabezado.
   const products = Array.isArray(options.products) ? options.products : []
   const filters = options.filters || {}
-  const filtered = products.filter((product) => {
-    if (filters.brand && product.brand !== filters.brand) return false
-    if (filters.category && product.category !== filters.category) return false
-    if (filters.model && product.model !== filters.model) return false
-    return true
-  })
 
-  const rows = normalizeProducts(filtered)
+  const rows = normalizeProducts(products)
   const doc = createPdfDocument({ orientation: 'landscape' })
 
   const startBody = () => {

@@ -82,3 +82,240 @@
   height: 18px;
   width: 18px;
 }
+
+/* ── Direcciones ── */
+
+.profile-addresses {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-addresses__empty {
+  color: var(--color-text-secondary, #888);
+  font-size: 13px;
+  margin: 0;
+}
+
+.profile-addresses__card {
+  align-items: flex-start;
+  background: var(--color-surface, #fafafa);
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.profile-addresses__info {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-addresses__info strong {
+  font-size: 14px;
+}
+
+.profile-addresses__info span {
+  color: var(--color-text-secondary, #666);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-addresses__notes {
+  font-style: italic;
+}
+
+.profile-addresses__remove {
+  align-items: center;
+  background: none;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #ccc);
+  color: #c62828;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.15s ease;
+  width: 28px;
+}
+
+.profile-addresses__remove:hover {
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.profile-addresses__add {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.profile-addresses__limit {
+  color: var(--color-text-secondary, #888);
+  font-size: 12px;
+  margin: 0;
+}
+
+/* ── Address Modal (reutiliza auth-modal, solo ajustes puntuales) ── */
+
+.address-modal--overlay {
+  --address-modal-width: min(760px, calc(100vw - 40px));
+  --address-modal-height:420px;
+  width: var(--address-modal-width);
+  height: var(--address-modal-height);
+  max-height: var(--address-modal-height);
+}
+
+.address-modal--form {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.address-modal--fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  align-items: start;
+  flex: 1;
+  gap: 10px 12px;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+
+.address-modal--field {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.address-modal--label {
+  color: var(--color-text-secondary, #666);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.address-modal--control {
+  position: relative;
+}
+
+.address-modal--icon {
+  height: 14px;
+  left: 10px;
+  opacity: 0.75;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+}
+
+.address-modal--input {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  padding: 9px 12px 9px 32px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.address-modal--field .auth-field__error {
+  line-height: 1.1;
+  margin: 0;
+}
+
+.address-modal--input::placeholder {
+  color: var(--color-text-secondary, #9a9a9a);
+}
+
+.address-modal--input:focus {
+  border-color: #ffc46f;
+  box-shadow: 0 0 0 3px rgba(255, 196, 111, 0.22);
+  outline: none;
+}
+
+.address-modal--input-error {
+  border-color: #d32f2f;
+}
+
+@media (max-width: 768px) {
+  .address-modal--overlay {
+    width: min(92vw, 760px);
+    height: min(384px, calc(100dvh - 28px));
+    max-height: min(384px, calc(100dvh - 28px));
+  }
+
+  .address-modal--fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Change password modal (reutiliza auth-modal) ── */
+
+.change-password-modal {
+  --auth-modal-height: 620px;
+  width: min(480px, calc(100vw - 32px));
+}
+
+.change-password-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+
+.change-password-modal__header {
+  flex-shrink: 0;
+}
+
+.change-password-modal__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.change-password-modal__rules {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: -4px 0 0;
+  padding: 0;
+}
+
+.change-password-modal__rule {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.change-password-modal__rule::before {
+  content: '○ ';
+}
+
+.change-password-modal__rule--ok {
+  color: #2e7d32;
+}
+
+.change-password-modal__rule--ok::before {
+  content: '● ';
+}
+
+.change-password-modal__footer {
+  flex-shrink: 0;
+  margin-top: auto;
+}

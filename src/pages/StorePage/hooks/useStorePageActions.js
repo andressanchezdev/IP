@@ -1,6 +1,11 @@
 import { useCallback, startTransition } from 'react'
 import { confirmAction } from '@/shared/lib/confirmAction'
 
+const VIEW_ALIAS = Object.freeze({
+  Historial: 'espera',
+  Cartera: 'historial',
+})
+
 /**
  * Handlers de la página de tienda (navegación, búsqueda, carrito, sesión).
  * Mantiene StorePage como componente de composición.
@@ -44,8 +49,9 @@ export function useStorePageActions({
   }, [addToCart, products, showToast])
 
   const handleNavigate = useCallback((view) => {
+    const resolvedView = VIEW_ALIAS[view] ?? view
     startTransition(() => {
-      navigateToView(view)
+      navigateToView(resolvedView)
     })
   }, [navigateToView])
 
@@ -125,7 +131,7 @@ export function useStorePageActions({
       return
     }
 
-    logout()
+    await logout()
     showToast('Sesión cerrada correctamente', 'success')
   }, [logout, showToast])
 

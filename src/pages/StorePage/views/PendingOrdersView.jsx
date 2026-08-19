@@ -1,12 +1,22 @@
 import { PendingOrderCard, useShowEsperaVisual } from '@/features/orders/components/PendingOrderCard/PendingOrderCard'
 import '@/features/orders/components/PendingOrderCard/PendingOrderCard.css'
 
-export function PendingOrdersView({ pendingOrders, filteredOrders, onOpenOrder }) {
+export function PendingOrdersView({
+  pendingOrders,
+  filteredOrders,
+  onOpenOrder,
+  isLoading = false,
+  errorMessage = '',
+}) {
   const showEsperaVisual = useShowEsperaVisual()
 
   return (
     <div className="content-main-espera">
-      {pendingOrders.length === 0 ? (
+      {isLoading ? (
+        <div className="landing__empty-state">Cargando pedidos...</div>
+      ) : errorMessage ? (
+        <div className="landing__empty-state">{errorMessage}</div>
+      ) : pendingOrders.length === 0 ? (
         <div className="landing__empty-state">Aún no hay pedidos en espera.</div>
       ) : filteredOrders.length === 0 ? (
         <div className="landing__empty-state">No se encontraron pedidos con ese número.</div>

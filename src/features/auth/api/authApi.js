@@ -1,7 +1,6 @@
 import { apiRequest } from '@/shared/api'
 import {
   mapLoginUserToClient,
-  mapLoginUserToProfileSettings,
 } from '@/features/auth/utils/mapLoginUserToProfile'
 
 function pickToken(payload, keys) {
@@ -76,14 +75,31 @@ export async function loginRequest({ email, password }) {
   }
 
   const client = mapLoginUserToClient(loginEmail, user)
-  const profileSettings = mapLoginUserToProfileSettings(loginEmail, user)
 
   return {
     tokenAccess,
     refreshToken: pickRefreshToken(payload),
     user,
     client,
-    profileSettings,
     raw: payload,
   }
+}
+
+/**
+ * POST /api/v1/auth/logout
+ * Body: { refresh_token } del login.
+ */
+export async function logoutRequest({ refreshToken, token } = {}) {
+  const refresh = String(refreshToken ?? '').trim()
+  if (!refresh) {
+    throw new Error('Falta refresh_token para cerrar sesión')
+  }
+
+  return apiRequest('/api/v1/auth/logout', {
+    method: 'POST',
+    body: {
+      refresh_token: refresh,
+    },
+    token: token ?? null,
+  })
 }

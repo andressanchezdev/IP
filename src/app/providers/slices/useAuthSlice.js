@@ -9,8 +9,9 @@ import {
   getOrCreateUserWorkspace,
   persistUserWorkspace,
 } from '@/features/auth/utils/userWorkspace'
-import { loginRequest } from '@/features/auth/api/authApi'
+import { loginRequest, logoutRequest } from '@/features/auth/api/authApi'
 import {
+  mapAboutUserToProfileSettings,
   mergeApiProfileWithWorkspace,
   toAuthUserSummary,
 } from '@/features/auth/utils/mapLoginUserToProfile'
@@ -81,7 +82,6 @@ export function useAuthSlice({ events, cartHydratingRef }) {
         tokenAccess,
         refreshToken,
         client,
-        profileSettings: apiProfile,
       } = await loginRequest({
         email: loginEmail,
         password,
@@ -89,9 +89,10 @@ export function useAuthSlice({ events, cartHydratingRef }) {
       setApiAuthToken(tokenAccess)
 
       const userId = client.userId
-      const workspace = getOrCreateUserWorkspace(userId, apiProfile)
+      const aboutSeedProfile = mapAboutUserToProfileSettings({}, client.email || loginEmail)
+      const workspace = getOrCreateUserWorkspace(userId, aboutSeedProfile)
       const nextProfile = mergeApiProfileWithWorkspace(
-        apiProfile,
+        aboutSeedProfile,
         workspace.profileSettings,
       )
 
@@ -106,8 +107,6 @@ export function useAuthSlice({ events, cartHydratingRef }) {
       )
       persistUserWorkspace(userId, {
         profileSettings: nextProfile,
-        pendingOrders: workspace.pendingOrders ?? [],
-        historyOrders: workspace.historyOrders ?? [],
       })
 
       events.emit(APP_EVENTS.AUTH_LOGIN, {
@@ -156,14 +155,28 @@ export function useAuthSlice({ events, cartHydratingRef }) {
     }
   }, [cartHydratingRef, events, pendingCheckout, pendingEsperaView])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const refreshToken = authSession?.refreshToken
+    const accessToken = authSession?.tokenAccess
+
+    if (refreshToken) {
+      try {
+        await logoutRequest({
+          refreshToken,
+          token: accessToken,
+        })
+      } catch {
+        // Siempre limpiamos la sesión local aunque el backend falle.
+      }
+    }
+
     // El workspace se persiste de forma continua; solo hace falta el flush.
     flushPersistedState()
     clearApiAuthToken()
     clearAuthSession()
     setAuthSession(null)
     events.emit(APP_EVENTS.AUTH_LOGGED_OUT)
-  }, [events])
+  }, [authSession?.refreshToken, authSession?.tokenAccess, events])
 
   return {
     authSession,

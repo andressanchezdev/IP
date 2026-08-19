@@ -187,7 +187,7 @@ export async function deleteCartItem({
  * Body: { "type": "all" }
  * El backend emite WS `stock eliminarTodo` para actualizar stock en catálogo.
  */
-export async function deleteMasiveCartItems({
+export async function deleteMassiveCartItems({
   token,
 } = {}) {
   const body = {

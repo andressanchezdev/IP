@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { Accordion } from '@/shared/ui/Accordion/Accordion'
 import { CheckoutDeliveryMap } from './CheckoutDeliveryMap'
 import { namedControl } from '@/shared/lib/namedControl'
 import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
 import '@/shared/ui/FieldHint/FieldHint.css'
+
+const PANEL_REGISTERED = 'registered'
+const PANEL_NEW = 'new'
+const PANEL_MAP = 'map'
 
 export function CheckoutDeliverySection({
   registeredAddresses,
@@ -16,6 +21,10 @@ export function CheckoutDeliverySection({
   onConfirmNew,
   onConfirmMap,
 }) {
+  const [openPanel, setOpenPanel] = useState(PANEL_REGISTERED)
+
+  const toggle = (panel) => setOpenPanel((current) => (current === panel ? null : panel))
+
   const registeredHint = registeredAddresses.length === 0
     ? 'No hay direcciones registradas. Agregue una nueva o use el mapa.'
     : !selectedAddressId
@@ -31,15 +40,19 @@ export function CheckoutDeliverySection({
   return (
     <Accordion title="Entrega" defaultOpen>
       <div className="checkout-finalize__box">
-        <Accordion title="1. Direcciones registradas" defaultOpen>
+        <Accordion
+          title="1. Direcciones registradas"
+          isOpen={openPanel === PANEL_REGISTERED}
+          onToggle={() => toggle(PANEL_REGISTERED)}
+        >
           <div className="checkout-finalize__options">
-            {registeredAddresses.map((entry) => (
-              <label key={entry.id} className="checkout-finalize__option">
+            {registeredAddresses.map((entry, index) => (
+              <label key={entry.id ?? entry.label ?? index} className="checkout-finalize__option">
                 <input
                   type="radio"
                   name="registered-address"
-                  checked={selectedAddressId === entry.id}
-                  onChange={() => onSelectAddress(entry.id)}
+                  checked={selectedAddressId === (entry.id ?? entry.label)}
+                  onChange={() => onSelectAddress(entry.id ?? entry.label)}
                   {...namedControl(`Dirección ${entry.label}`)}
                 />
                 <span>
@@ -61,7 +74,11 @@ export function CheckoutDeliverySection({
           </div>
         </Accordion>
 
-        <Accordion title="2. Agregar una nueva dirección de entrega">
+        <Accordion
+          title="2. Agregar una nueva dirección de entrega"
+          isOpen={openPanel === PANEL_NEW}
+          onToggle={() => toggle(PANEL_NEW)}
+        >
           <label className="order-payments-panel__field">
             <span>Nueva dirección</span>
             <input
@@ -85,10 +102,11 @@ export function CheckoutDeliverySection({
           </button>
         </Accordion>
 
-        <Accordion title="3. Elegir dirección de entrega en el mapa">
-          <p className="order-payments-panel__intro">
-            Seleccione la ubicación de entrega en el mapa. Se usará la posición confirmada para el despacho.
-          </p>
+        <Accordion
+          title="3. Elegir dirección de entrega en el mapa"
+          isOpen={openPanel === PANEL_MAP}
+          onToggle={() => toggle(PANEL_MAP)}
+        >
           <CheckoutDeliveryMap onLocationChange={onMapLocationChange} />
           {mapLocation?.address ? (
             <p className="order-payments-panel__quota">Seleccionada: {mapLocation.address}</p>

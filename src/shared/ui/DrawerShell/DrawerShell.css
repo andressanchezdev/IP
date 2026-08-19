@@ -15,7 +15,7 @@
   flex-direction: column;
   flex-shrink: 0;
   gap: 14px;
-  padding: 14px 14px 16px;
+  padding: 5px 8px 6px;
 }
 
 .filter-drawer-panel--quick {
@@ -189,6 +189,36 @@
 .drawer-shell-section-search {
   margin-bottom: 4px;
   width: 100%;
+}
+
+.drawer-shell-section-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -2px;
+}
+
+.drawer-shell-section-quick-action {
+  background: var(--color-gris-claro);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--drawer-color, var(--color-text-primary));
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+  padding: 5px 10px;
+}
+
+.drawer-shell-section-quick-action:hover:not(:disabled) {
+  background: var(--color-bg-surface);
+}
+
+.drawer-shell-section-quick-action:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.75;
 }
 
 .drawer-shell-section-options {

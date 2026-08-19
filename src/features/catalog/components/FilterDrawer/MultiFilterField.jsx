@@ -6,9 +6,22 @@ import {
   DrawerSectionBody,
 } from '@/shared/ui/DrawerShell/DrawerShell'
 
+function normalizeOptions(options = []) {
+  return options.map((option) => {
+    if (option && typeof option === 'object' && 'id' in option) {
+      return {
+        id: String(option.id),
+        label: String(option.label ?? ''),
+      }
+    }
+    const label = String(option ?? '')
+    return { id: label, label }
+  }).filter((entry) => entry.label)
+}
+
 /**
- * Acordeón de filtro multi-valor (marca / categoría / modelo)
- * con barra de búsqueda sobre las opciones de ese campo.
+ * Acordeón de filtro multi-valor (marca / categoría / modelo).
+ * options: [{ id, label }] — selección por id, visualización por label.
  */
 export function MultiFilterField({
   id,
@@ -24,27 +37,56 @@ export function MultiFilterField({
   visibleSearchRows = 0,
   isLoading = false,
   errorMessage = '',
+  onSelectAll,
+  onSetNone,
+  onClearFilter,
+  quickMode = 'all',
 }) {
   const [query, setQuery] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
+
+  const labelById = useMemo(() => {
+    const map = new Map()
+    normalizedOptions.forEach((entry) => map.set(entry.id, entry.label))
+    return map
+  }, [normalizedOptions])
 
   useEffect(() => {
     if (!isOpen) {
       setQuery('')
+      setSearchTerm('')
     }
   }, [isOpen])
 
-  const hasQuery = Boolean(query.trim())
+  const hasQuery = Boolean(searchTerm.trim())
   const visibleRows = hasQuery ? visibleSearchRows : visibleIdleRows
+  const selectedIds = useMemo(
+    () => (selected || []).map((entry) => String(entry)),
+    [selected],
+  )
 
   const filteredOptions = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase('es')
+    const q = searchTerm.trim().toLocaleLowerCase('es')
     if (!q) {
-      return options
+      return normalizedOptions
     }
-    return options.filter((option) =>
-      String(option).toLocaleLowerCase('es').includes(q),
+    return normalizedOptions.filter((option) =>
+      option.label.toLocaleLowerCase('es').includes(q),
     )
-  }, [options, query])
+  }, [normalizedOptions, searchTerm])
+
+  const displayOptions = useMemo(() => ([
+    { key: '__all__', label: 'Todas', type: 'quick-all' },
+    { key: '__none__', label: 'Ninguna', type: 'quick-none' },
+    ...filteredOptions.map((option) => ({
+      key: option.id,
+      id: option.id,
+      label: option.label,
+      type: 'option',
+    })),
+  ]), [filteredOptions])
 
   return (
     <div className="drawer-shell-section">
@@ -56,16 +98,16 @@ export function MultiFilterField({
         />
       </DrawerCheckRow>
 
-      {selected.length > 0 ? (
+      {selectedIds.length > 0 ? (
         <div className="filter-drawer-selected" aria-label={`${label} seleccionadas`}>
-          {selected.map((item) => (
-            <span key={item} className="filter-drawer-chip">
-              <span className="filter-drawer-chip__label">{item}</span>
+          {selectedIds.map((itemId) => (
+            <span key={itemId} className="filter-drawer-chip">
+              <span className="filter-drawer-chip__label">{labelById.get(itemId) || itemId}</span>
               <button
                 type="button"
                 className="filter-drawer-chip__remove"
-                onClick={() => onRemove(item)}
-                {...namedControl(`Quitar ${item}`)}
+                onClick={() => onRemove(itemId)}
+                {...namedControl(`Quitar ${labelById.get(itemId) || itemId}`)}
               >
                 ×
               </button>
@@ -84,7 +126,12 @@ export function MultiFilterField({
             <SearchBar
               value={query}
               onChange={setQuery}
-              onClear={() => setQuery('')}
+              onSubmit={(value) => setSearchTerm(String(value ?? '').trim())}
+              onClear={() => {
+                setQuery('')
+                setSearchTerm('')
+                onClearFilter?.()
+              }}
               placeholder={`Buscar ${label.toLowerCase()}`}
               ariaLabel={`Buscar ${label.toLowerCase()}`}
             />
@@ -98,10 +145,10 @@ export function MultiFilterField({
             <div className="content-list-data__row">
               <span className="content-list-data__label">{errorMessage}</span>
             </div>
-          ) : filteredOptions.length === 0 ? (
+          ) : displayOptions.length === 2 ? (
             <div className="content-list-data__row">
               <span className="content-list-data__label">
-                {options.length === 0 ? emptyLabel : 'Sin coincidencias'}
+                {normalizedOptions.length === 0 ? emptyLabel : 'Sin coincidencias'}
               </span>
             </div>
           ) : (
@@ -109,18 +156,61 @@ export function MultiFilterField({
               className={`drawer-shell-section-options${visibleRows > 0 ? ' drawer-shell-section-options--scroll' : ''}`}
               style={visibleRows > 0 ? { '--filter-option-rows': visibleRows } : undefined}
             >
-              {filteredOptions.map((option) => {
-                const isSelected = selected.includes(option)
+              {displayOptions.map((entry) => {
+                if (entry.type === 'quick-all') {
+                  const isQuickActive = quickMode === 'all'
+                  return (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      className="content-list-data__row content-list-data__row--action"
+                      onClick={() => onSelectAll?.()}
+                      {...namedControl(`Seleccionar todas ${label}`)}
+                    >
+                      <span className="content-list-data__label">{entry.label}</span>
+                      <span
+                        className={`content-list-data__value${isQuickActive ? ' content-list-data__value--highlight' : ''}`}
+                        aria-hidden="true"
+                      >
+                        {isQuickActive ? '✓' : '›'}
+                      </span>
+                    </button>
+                  )
+                }
+
+                if (entry.type === 'quick-none') {
+                  const isQuickActive = quickMode === 'none'
+                  return (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      className="content-list-data__row content-list-data__row--action"
+                      onClick={() => onSetNone?.()}
+                      {...namedControl(`Sin ${label}`)}
+                    >
+                      <span className="content-list-data__label">{entry.label}</span>
+                      <span
+                        className={`content-list-data__value${isQuickActive ? ' content-list-data__value--highlight' : ''}`}
+                        aria-hidden="true"
+                      >
+                        {isQuickActive ? '✓' : '›'}
+                      </span>
+                    </button>
+                  )
+                }
+
+                const optionId = entry.id
+                const isSelected = selectedIds.includes(optionId)
                 return (
                   <button
-                    key={option}
+                    key={entry.key}
                     type="button"
                     className="content-list-data__row content-list-data__row--action"
-                    onClick={() => (isSelected ? onRemove(option) : onAdd(option))}
+                    onClick={() => (isSelected ? onRemove(optionId) : onAdd(optionId))}
                     aria-pressed={isSelected}
-                    {...namedControl(isSelected ? `Quitar ${option}` : `Seleccionar ${option}`)}
+                    {...namedControl(isSelected ? `Quitar ${entry.label}` : `Seleccionar ${entry.label}`)}
                   >
-                    <span className="content-list-data__label">{option}</span>
+                    <span className="content-list-data__label">{entry.label}</span>
                     <span
                       className={`content-list-data__value${isSelected ? ' content-list-data__value--highlight' : ''}`}
                       aria-hidden="true"

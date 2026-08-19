@@ -51,7 +51,7 @@ export function CompanyDataForm({ draft, onDraftChange, onSave }) {
   )
 }
 
-export function AccessForm({ draft, onDraftChange, onSave }) {
+export function AccessForm({ draft, onDraftChange, onUpdatePassword }) {
   return (
     <div className="profile-settings-form">
       <SettingsField
@@ -65,16 +65,17 @@ export function AccessForm({ draft, onDraftChange, onSave }) {
         id="access-password"
         label="Contraseña"
         type="password"
-        value={draft.password}
-        onChange={(value) => onDraftChange((current) => ({ ...current, password: value }))}
+        value="*********"
+        onChange={() => {}}
+        disabled
       />
       <button
         type="button"
         className="content-main-data-carrito__checkout profile-settings-inline-action"
-        onClick={onSave}
-        {...namedControl('Guardar acceso')}
+        onClick={onUpdatePassword}
+        {...namedControl('Actualizar contraseña')}
       >
-        Guardar acceso
+        Actualizar contraseña
       </button>
     </div>
   )

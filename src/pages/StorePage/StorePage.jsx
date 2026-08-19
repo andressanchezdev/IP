@@ -14,8 +14,15 @@ import { PendingOrdersView } from './views/PendingOrdersView'
 import './StorePage.css'
 
 export function StorePage() {
+  const sidebarActiveItemByView = {
+    tienda: 'tienda',
+    espera: 'Historial',
+    historial: 'Cartera',
+  }
+
   const {
     isAuthenticated,
+    tokenAccess,
     authModalOpen,
     openAuthModal,
     closeAuthModal,
@@ -25,12 +32,20 @@ export function StorePage() {
     pendingEsperaView,
   } = useAuth()
   const { cartItems, addToCart } = useCart()
-  const { pendingOrders, historyOrders, openOrderDrawer } = useOrders()
+  const {
+    pendingOrders,
+    historyOrders,
+    openOrderDrawer,
+    isLoadingHistory,
+    historyLoadError,
+    loadHistoryFromApi,
+  } = useOrders()
   const {
     products,
     searchProducts,
     latestProducts,
     filters,
+    filterModes,
     clearFilters,
     filterNuevos,
     setFilterNuevos,
@@ -79,6 +94,7 @@ export function StorePage() {
     historyOrders,
     cartItems,
     filters,
+    filterModes,
     filterNuevos,
     filterPromociones,
     withStock,
@@ -156,6 +172,21 @@ export function StorePage() {
     setHistoryPaymentFilter('')
   }, [activeView, setSearchValue, clearCommittedProductSearch])
 
+  useEffect(() => {
+    if (activeView !== 'espera') {
+      return undefined
+    }
+    if (!isAuthenticated || !tokenAccess) {
+      return undefined
+    }
+    const controller = new AbortController()
+    loadHistoryFromApi({
+      token: tokenAccess,
+      signal: controller.signal,
+    })
+    return () => controller.abort()
+  }, [activeView, isAuthenticated, tokenAccess, loadHistoryFromApi])
+
   const renderContent = () => {
     if (activeView === 'espera') {
       return (
@@ -163,6 +194,8 @@ export function StorePage() {
           pendingOrders={pendingOrders}
           filteredOrders={filteredPendingOrders}
           onOpenOrder={handleOpenOrder}
+          isLoading={isLoadingHistory}
+          errorMessage={historyLoadError}
         />
       )
     }
@@ -172,6 +205,8 @@ export function StorePage() {
         <HistoryView
           historyOrders={historyOrders}
           filteredOrders={filteredHistoryOrders}
+          isLoading={isLoadingHistory}
+          errorMessage={historyLoadError}
         />
       )
     }
@@ -193,7 +228,7 @@ export function StorePage() {
   return (
     <div className={`landing ${drawerOpen ? 'landing--drawer-open' : ''}`}>
       <Sidebar
-        activeItem={activeView}
+        activeItem={sidebarActiveItemByView[activeView] ?? 'tienda'}
         isAuthenticated={isAuthenticated}
         onNavigate={handleNavigate}
         onProfileClick={handleProfileClick}

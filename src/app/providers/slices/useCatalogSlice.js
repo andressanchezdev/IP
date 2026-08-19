@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getGeneral, PRODUCTS_PAGE_SIZE } from '@/features/catalog/api/generalApi'
+import { getGeneral, getGeneralInitial, PRODUCTS_PAGE_SIZE } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
 import { mergeUniqueProducts } from '@/features/catalog/mappers/mergeUniqueProducts'
 import { useStockWebSocket } from '@/features/catalog/ws/useStockWebSocket'
@@ -12,6 +12,7 @@ export function useCatalogSlice({
   tokenAccess,
   userId,
   applyCartFromApi,
+  applyCartFromPayload,
   warehouseIdRef,
   cartHydratingRef,
 }) {
@@ -69,7 +70,6 @@ export function useCatalogSlice({
     token,
     lastId = null,
     replace = false,
-    includeCart = false,
   }) => {
     const result = await getGeneral({
       token,
@@ -79,7 +79,6 @@ export function useCatalogSlice({
 
     const mappedProducts = mapApiProducts(result.productos).map(normalizeProduct)
 
-    // If search took priority while scroll was in flight, discard catalog page apply.
     if (!replace && isCatalogSearchActive()) {
       return {
         mappedProducts,
@@ -95,10 +94,6 @@ export function useCatalogSlice({
       setProducts(mappedProducts)
       const cursor = rememberLastProductId(mappedProducts)
       setHasMoreProducts(result.hasMore)
-
-      if (includeCart) {
-        await applyCartFromApi({ token })
-      }
 
       return {
         mappedProducts,
@@ -120,7 +115,7 @@ export function useCatalogSlice({
       hasMore,
       lastId: cursor,
     }
-  }, [applyCartFromApi])
+  }, [])
 
   const loadMoreProducts = useCallback(async () => {
     const token = tokenAccess
@@ -191,16 +186,19 @@ export function useCatalogSlice({
       setIsLoadingProducts(true)
 
       try {
-        await fetchProductsPage({
-          token: tokenAccess,
-          lastId: null,
-          replace: true,
-          includeCart: true,
-        })
+        const result = await getGeneralInitial({ token: tokenAccess })
+        const mappedProducts = mapApiProducts(result.productos).map(normalizeProduct)
+
+        if (!cancelled) {
+          setProducts(mappedProducts)
+          rememberLastProductId(mappedProducts)
+          setHasMoreProducts(result.hasMore)
+          applyCartFromPayload(result.carritos)
+        }
       } catch (error) {
         if (!cancelled) {
           setHasMoreProducts(false)
-          console.error('[hydrate] No se pudo cargar inventory/products + carts', error)
+          console.error('[hydrate] No se pudo cargar /api/v1/general', error)
         }
       } finally {
         productsLoadingRef.current = false
@@ -216,7 +214,7 @@ export function useCatalogSlice({
     return () => {
       cancelled = true
     }
-  }, [tokenAccess, userId, fetchProductsPage, cartHydratingRef])
+  }, [tokenAccess, userId, applyCartFromPayload, cartHydratingRef])
 
   const applyCatalogFiltersAndClose = useCallback(() => {
     commitFilterDraft()
@@ -237,9 +235,12 @@ export function useCatalogSlice({
 
   const value = useMemo(() => {
     const isCatalogFilterActive = Boolean(
-      filtersApi.filters.brands.length
-      || filtersApi.filters.categories.length
-      || filtersApi.filters.models.length
+      (filtersApi.filterModes?.brands === 'custom' && filtersApi.filters.brands.length > 0)
+      || (filtersApi.filterModes?.categories === 'custom' && filtersApi.filters.categories.length > 0)
+      || (filtersApi.filterModes?.models === 'custom' && filtersApi.filters.models.length > 0)
+      || filtersApi.filterModes?.brands === 'none'
+      || filtersApi.filterModes?.categories === 'none'
+      || filtersApi.filterModes?.models === 'none'
       || filtersApi.filterNuevos
       || filtersApi.filterPromociones
       || filtersApi.withStock,

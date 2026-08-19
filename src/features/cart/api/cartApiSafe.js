@@ -1,4 +1,4 @@
-import { deleteCartItem, deleteMasiveCartItems, postCartItem } from './cartApi'
+import { deleteCartItem, deleteMassiveCartItems, postCartItem } from './cartApi'
 
 /**
  * Wrappers que nunca lanzan: devuelven { success, error?, needsAuth? }
@@ -55,7 +55,7 @@ export async function clearCartMassiveSafe({ token } = {}) {
   }
 
   try {
-    const result = await deleteMasiveCartItems({ token })
+    const result = await deleteMassiveCartItems({ token })
     return { success: true, ...result }
   } catch (error) {
     console.error('[cart] No se pudo limpiar DELETE /api/v1/inventory/carts/massive', error)

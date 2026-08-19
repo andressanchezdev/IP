@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useCatalog } from '@/app/providers'
-import { uniqueSorted } from '@/shared/lib/uniqueSorted'
 import {
   FILTER_OPTIONS_VISIBLE_IDLE,
   FILTER_OPTIONS_VISIBLE_SEARCH,
@@ -15,22 +14,16 @@ import {
 import { MultiFilterField } from './MultiFilterField'
 import { namedControl } from '@/shared/lib/namedControl'
 
-function labelsFrom(items) {
-  return uniqueSorted(items.map((entry) => entry.label))
-}
-
 /**
  * Marca, categoría y modelo: GET /api/v1/general/filter (token de login).
- * Edita solo el draft; el filtro combinado se aplica con "Aplicar filtro".
+ * Selección por id; el filtro se aplica con "Aplicar filtro".
  */
 export function FilterDrawerContent() {
   const {
     draftFilters,
     setDraftFilters,
-    draftFilterNuevos,
-    setDraftFilterNuevos,
-    draftFilterPromociones,
-    setDraftFilterPromociones,
+    draftFilterModes,
+    setDraftFilterModes,
     draftWithStock,
     setDraftWithStock,
     applyCatalogFiltersAndClose,
@@ -45,17 +38,18 @@ export function FilterDrawerContent() {
     error: filterError,
   } = useGeneralFilter()
 
-  const filterBrands = useMemo(() => labelsFrom(marcas), [marcas])
-  const filterCategories = useMemo(() => labelsFrom(categorias), [categorias])
-  const filterModels = useMemo(() => labelsFrom(modelos), [modelos])
+  const filterBrands = useMemo(() => marcas, [marcas])
+  const filterCategories = useMemo(() => categorias, [categorias])
+  const filterModels = useMemo(() => modelos, [modelos])
   const isFilterLoading = filterStatus === 'loading'
 
   const activeFilterCount =
-    draftFilters.brands.length +
-    draftFilters.categories.length +
-    draftFilters.models.length +
-    (draftFilterNuevos ? 1 : 0) +
-    (draftFilterPromociones ? 1 : 0) +
+    (draftFilterModes.brands === 'custom' ? draftFilters.brands.length : 0) +
+    (draftFilterModes.categories === 'custom' ? draftFilters.categories.length : 0) +
+    (draftFilterModes.models === 'custom' ? draftFilters.models.length : 0) +
+    (draftFilterModes.brands === 'none' ? 1 : 0) +
+    (draftFilterModes.categories === 'none' ? 1 : 0) +
+    (draftFilterModes.models === 'none' ? 1 : 0) +
     (draftWithStock ? 1 : 0)
 
   const toggleSection = (sectionId) => {
@@ -63,6 +57,7 @@ export function FilterDrawerContent() {
   }
 
   const addFilterValue = (key, value) => {
+    setDraftFilterModes((current) => ({ ...current, [key]: 'custom' }))
     setDraftFilters((current) => {
       const list = current[key] || []
       if (list.includes(value)) {
@@ -73,10 +68,16 @@ export function FilterDrawerContent() {
   }
 
   const removeFilterValue = (key, value) => {
-    setDraftFilters((current) => ({
-      ...current,
-      [key]: (current[key] || []).filter((entry) => entry !== value),
-    }))
+    setDraftFilters((current) => {
+      const nextList = (current[key] || []).filter((entry) => entry !== value)
+      if (nextList.length === 0) {
+        setDraftFilterModes((modes) => ({ ...modes, [key]: 'all' }))
+      }
+      return {
+        ...current,
+        [key]: nextList,
+      }
+    })
   }
 
   return (
@@ -106,6 +107,19 @@ export function FilterDrawerContent() {
             visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
             isLoading={isFilterLoading}
             errorMessage={filterError}
+            quickMode={draftFilterModes.brands}
+            onSelectAll={() => {
+              setDraftFilterModes((current) => ({ ...current, brands: 'all' }))
+              setDraftFilters((current) => ({ ...current, brands: [] }))
+            }}
+            onSetNone={() => {
+              setDraftFilterModes((current) => ({ ...current, brands: 'none' }))
+              setDraftFilters((current) => ({ ...current, brands: [] }))
+            }}
+            onClearFilter={() => {
+              setDraftFilterModes((current) => ({ ...current, brands: 'all' }))
+              setDraftFilters((current) => ({ ...current, brands: [] }))
+            }}
           />
 
           <MultiFilterField
@@ -122,6 +136,19 @@ export function FilterDrawerContent() {
             visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
             isLoading={isFilterLoading}
             errorMessage={filterError}
+            quickMode={draftFilterModes.categories}
+            onSelectAll={() => {
+              setDraftFilterModes((current) => ({ ...current, categories: 'all' }))
+              setDraftFilters((current) => ({ ...current, categories: [] }))
+            }}
+            onSetNone={() => {
+              setDraftFilterModes((current) => ({ ...current, categories: 'none' }))
+              setDraftFilters((current) => ({ ...current, categories: [] }))
+            }}
+            onClearFilter={() => {
+              setDraftFilterModes((current) => ({ ...current, categories: 'all' }))
+              setDraftFilters((current) => ({ ...current, categories: [] }))
+            }}
           />
 
           <MultiFilterField
@@ -138,30 +165,25 @@ export function FilterDrawerContent() {
             visibleSearchRows={FILTER_OPTIONS_VISIBLE_SEARCH}
             isLoading={isFilterLoading}
             errorMessage={filterError}
+            quickMode={draftFilterModes.models}
+            onSelectAll={() => {
+              setDraftFilterModes((current) => ({ ...current, models: 'all' }))
+              setDraftFilters((current) => ({ ...current, models: [] }))
+            }}
+            onSetNone={() => {
+              setDraftFilterModes((current) => ({ ...current, models: 'none' }))
+              setDraftFilters((current) => ({ ...current, models: [] }))
+            }}
+            onClearFilter={() => {
+              setDraftFilterModes((current) => ({ ...current, models: 'all' }))
+              setDraftFilters((current) => ({ ...current, models: [] }))
+            }}
           />
         </DrawerSectionList>
       </DrawerPanel>
 
       <DrawerPanel title="Opciones rápidas" variant="quick">
         <DrawerSectionList>
-          <label className="filter-drawer-check">
-            <span>Promociones</span>
-            <input
-              type="checkbox"
-              checked={draftFilterPromociones}
-              onChange={(event) => setDraftFilterPromociones(event.target.checked)}
-              {...namedControl('Promociones')}
-            />
-          </label>
-          <label className="filter-drawer-check">
-            <span>Nuevos</span>
-            <input
-              type="checkbox"
-              checked={draftFilterNuevos}
-              onChange={(event) => setDraftFilterNuevos(event.target.checked)}
-              {...namedControl('Nuevos')}
-            />
-          </label>
           <label className="filter-drawer-check">
             <span>Con cantidad</span>
             <input

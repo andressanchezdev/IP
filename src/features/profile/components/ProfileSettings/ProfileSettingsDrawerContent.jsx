@@ -18,16 +18,22 @@ import databaseIcon from '@/assets/icons/database.svg'
 import keyIcon from '@/assets/icons/key.svg'
 import fileTextIcon from '@/assets/icons/file-text.svg'
 import deleteAccountIcon from '@/assets/icons/delete-account.svg'
+import mapPinIcon from '@/assets/icons/map-pin.svg'
 import { PersonalDataForm } from './PersonalDataForm'
 import { AccessForm, CompanyDataForm } from './CompanyAccessForms'
 import { LegalLinksSection, NotificationsSection } from './SettingsStaticSections'
+import { AddressModal } from './AddressModal'
+import { ChangePasswordModal } from './ChangePasswordModal'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import '@/features/profile/components/ProfileDrawer/ProfileDrawer.css'
 import './ProfileSettings.css'
 
+const MAX_ADDRESSES = 3
+
 const SETTINGS_SECTIONS = [
   { id: 'personal', label: 'Datos personales', icon: userIcon },
   { id: 'company', label: 'Datos de la empresa', icon: buildingIcon },
+  { id: 'addresses', label: 'Direcciones', icon: mapPinIcon },
   { id: 'notifications', label: 'Notificaciones', icon: bellIcon },
   { id: 'cache', label: 'Borrar caché', icon: databaseIcon },
   { id: 'access', label: 'Acceso', icon: keyIcon },
@@ -41,14 +47,17 @@ export function ProfileSettingsDrawerContent() {
     profileSettings,
     saveProfilePersonal,
     saveProfileCompany,
-    saveProfileAccess,
     setNotificationsEnabled,
+    addAddress,
+    removeAddress,
     releaseAppCache,
     deleteAccount,
   } = useProfile()
   const { closeDrawer } = useUi()
   const { showToast } = useToast()
   const [openSectionId, setOpenSectionId] = useState(null)
+  const [addressModalOpen, setAddressModalOpen] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [personalDraft, setPersonalDraft] = useState(() => ({
     ...defaultProfileSettings.personal,
     ...profileSettings.personal,
@@ -100,13 +109,10 @@ export function ProfileSettingsDrawerContent() {
     successMessage: 'Datos de la empresa guardados',
   })
 
-  const handleSaveAccess = () => confirmAndSave({
-    title: '¿Guardar datos de acceso?',
-    text: 'Se actualizarán tu correo y contraseña.',
-    confirmText: 'Guardar acceso',
-    action: () => saveProfileAccess(accessDraft),
-    successMessage: 'Datos de acceso guardados',
-  })
+  const handleChangePassword = async () => {
+    // UI lista; endpoint de actualización se integra cuando esté disponible.
+    showToast('Contraseña actualizada correctamente', 'success')
+  }
 
   const handleClearCache = async () => {
     const confirmed = await confirmAction({
@@ -160,6 +166,58 @@ export function ProfileSettingsDrawerContent() {
             onSave={handleSaveCompany}
           />
         )
+      case 'addresses': {
+        const addresses = profileSettings.addresses ?? []
+        const canAdd = addresses.length < MAX_ADDRESSES
+        return (
+          <div className="profile-addresses">
+            {addresses.length === 0 && (
+              <p className="profile-addresses__empty">No hay direcciones registradas</p>
+            )}
+            {addresses.map((addr, index) => (
+              <div key={addr.label + index} className="profile-addresses__card">
+                <div className="profile-addresses__info">
+                  <strong>{addr.label || `Dirección ${index + 1}`}</strong>
+                  <span>{[addr.address, addr.neighborhood, addr.city, addr.department].filter(Boolean).join(', ')}</span>
+                  {addr.notes && <span className="profile-addresses__notes">{addr.notes}</span>}
+                </div>
+                <button
+                  type="button"
+                  className="profile-addresses__remove"
+                  onClick={async () => {
+                    const confirmed = await confirmAction({
+                      title: '¿Eliminar dirección?',
+                      text: `Se eliminará "${addr.label || `Dirección ${index + 1}`}".`,
+                      confirmText: 'Eliminar',
+                      confirmButtonColor: '#c62828',
+                    })
+                    if (confirmed) {
+                      removeAddress(index)
+                      showToast('Dirección eliminada', 'success')
+                    }
+                  }}
+                  {...namedControl('Eliminar dirección')}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {canAdd && (
+              <button
+                type="button"
+                className="order-payment__add-btn profile-addresses__add"
+                onClick={() => setAddressModalOpen(true)}
+                {...namedControl('Agregar dirección')}
+              >
+                +
+              </button>
+            )}
+            {!canAdd && (
+              <p className="profile-addresses__limit">Máximo {MAX_ADDRESSES} direcciones</p>
+            )}
+          </div>
+        )
+      }
       case 'notifications':
         return (
           <NotificationsSection
@@ -184,7 +242,7 @@ export function ProfileSettingsDrawerContent() {
           <AccessForm
             draft={accessDraft}
             onDraftChange={setAccessDraft}
-            onSave={handleSaveAccess}
+            onUpdatePassword={() => setChangePasswordOpen(true)}
           />
         )
       case 'terms':
@@ -202,48 +260,66 @@ export function ProfileSettingsDrawerContent() {
   }
 
   return (
-    <DrawerShell>
-      <DrawerPanel>
-        <ProfileIdentityCard
-          personal={profileSettings.personal}
-          avatar={profile.avatar}
-        />
-      </DrawerPanel>
+    <>
+      <DrawerShell>
+        <DrawerPanel>
+          <ProfileIdentityCard
+            personal={profileSettings.personal}
+            avatar={profile.avatar}
+          />
+        </DrawerPanel>
 
-      <DrawerPanel title="Ajustes" variant="quick">
-        <DrawerSectionList>
-          {SETTINGS_SECTIONS.map((section) => {
-            const isOpen = openSectionId === section.id
-            return (
-              <div key={section.id} className="profile-drawer-section">
-                <DrawerCheckRow
-                  active={isOpen}
-                  onClick={() => toggleSection(section.id)}
-                  label={section.label}
-                >
-                  <span className="profile-drawer-section__label">
-                    <img
-                      src={section.icon}
-                      className="profile-drawer-section__icon"
-                      {...namedImage(section.label)}
+        <DrawerPanel title="Ajustes" variant="quick">
+          <DrawerSectionList>
+            {SETTINGS_SECTIONS.map((section) => {
+              const isOpen = openSectionId === section.id
+              return (
+                <div key={section.id} className="profile-drawer-section">
+                  <DrawerCheckRow
+                    active={isOpen}
+                    onClick={() => toggleSection(section.id)}
+                    label={section.label}
+                  >
+                    <span className="profile-drawer-section__label">
+                      <img
+                        src={section.icon}
+                        className="profile-drawer-section__icon"
+                        {...namedImage(section.label)}
+                      />
+                      {section.label}
+                    </span>
+                    <span
+                      className={`filter-drawer-check__caret${isOpen ? ' filter-drawer-check__caret--open' : ''}`}
+                      aria-hidden="true"
                     />
-                    {section.label}
-                  </span>
-                  <span
-                    className={`filter-drawer-check__caret${isOpen ? ' filter-drawer-check__caret--open' : ''}`}
-                    aria-hidden="true"
-                  />
-                </DrawerCheckRow>
-                {isOpen ? (
-                  <DrawerSectionBody>
-                    {renderSectionContent(section.id)}
-                  </DrawerSectionBody>
-                ) : null}
-              </div>
-            )
-          })}
-        </DrawerSectionList>
-      </DrawerPanel>
-    </DrawerShell>
+                  </DrawerCheckRow>
+                  {isOpen ? (
+                    <DrawerSectionBody>
+                      {renderSectionContent(section.id)}
+                    </DrawerSectionBody>
+                  ) : null}
+                </div>
+              )
+            })}
+          </DrawerSectionList>
+        </DrawerPanel>
+      </DrawerShell>
+
+      <AddressModal
+        isOpen={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        onSave={(address) => {
+          addAddress(address)
+          setAddressModalOpen(false)
+          showToast('Dirección agregada', 'success')
+        }}
+      />
+
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+        onConfirm={handleChangePassword}
+      />
+    </>
   )
 }

@@ -1,5 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import { enrichOrder } from '@/features/orders/utils/enrichOrder'
+import { getManagementSales } from '@/features/orders/api/salesApi'
+import {
+  mapSalesToPendingOrders,
+} from '@/features/orders/mappers/mapSalesHistory'
 import { APP_EVENTS } from '../appEvents'
 
 export function useOrdersSlice({
@@ -9,6 +13,8 @@ export function useOrdersSlice({
 }) {
   const [pendingOrders, setPendingOrders] = useState(() => initialPendingOrders)
   const [historyOrders, setHistoryOrders] = useState(() => initialHistoryOrders)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [historyLoadError, setHistoryLoadError] = useState('')
   const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [orderSubView, setOrderSubView] = useState(null)
 
@@ -179,9 +185,41 @@ export function useOrdersSlice({
     return { success: true, isFullyPaid, appliedAmount: applyAmount }
   }, [events, pendingOrders, resetOrderDrawer])
 
+  const loadHistoryFromApi = useCallback(async ({ token, signal } = {}) => {
+    if (!token) {
+      setHistoryOrders([])
+      setHistoryLoadError('Sesión requerida')
+      return { success: false, error: 'Sesión requerida', needsAuth: true }
+    }
+
+    setIsLoadingHistory(true)
+    setHistoryLoadError('')
+    setPendingOrders([])
+    setHistoryOrders([])
+    try {
+      const response = await getManagementSales({ token, signal })
+      const mappedPending = mapSalesToPendingOrders(response.data)
+      setPendingOrders(mappedPending)
+      return {
+        success: true,
+        pendingOrders: mappedPending,
+        historyOrders: [],
+        meta: response.meta,
+      }
+    } catch (error) {
+      const message = error?.message || 'No se pudo cargar el historial'
+      setHistoryLoadError(message)
+      return { success: false, error: message }
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }, [])
+
   const value = useMemo(() => ({
     pendingOrders,
     historyOrders,
+    isLoadingHistory,
+    historyLoadError,
     selectedOrderId,
     selectedOrder,
     orderSubView,
@@ -189,15 +227,19 @@ export function useOrdersSlice({
     openOrderDrawer,
     formalizeOrderPayment,
     verifyTransferProof,
+    loadHistoryFromApi,
   }), [
     pendingOrders,
     historyOrders,
+    isLoadingHistory,
+    historyLoadError,
     selectedOrderId,
     selectedOrder,
     orderSubView,
     openOrderDrawer,
     formalizeOrderPayment,
     verifyTransferProof,
+    loadHistoryFromApi,
   ])
 
   return {
@@ -205,6 +247,9 @@ export function useOrdersSlice({
     setPendingOrders,
     historyOrders,
     setHistoryOrders,
+    isLoadingHistory,
+    historyLoadError,
+    loadHistoryFromApi,
     resetOrderDrawer,
     value,
   }

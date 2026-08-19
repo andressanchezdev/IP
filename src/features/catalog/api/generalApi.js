@@ -57,6 +57,53 @@ function getRawProductId(product) {
   return toLastIdQuery(value)
 }
 
+function extractCartItems(payload) {
+  const data = payload?.data ?? payload
+
+  if (Array.isArray(data?.carrito)) {
+    return data.carrito
+  }
+
+  if (Array.isArray(data?.carritos)) {
+    return data.carritos
+  }
+
+  if (Array.isArray(data?.carts)) {
+    return data.carts
+  }
+
+  return []
+}
+
+/**
+ * GET /api/v1/general
+ * Carga inicial tras login: primeros 25 productos + carrito en una sola petición.
+ */
+export async function getGeneralInitial({ token } = {}) {
+  const payload = await apiRequest('/api/v1/general', {
+    method: 'GET',
+    token,
+  })
+
+  const productos = extractProducts(payload)
+  const carritos = extractCartItems(payload)
+  const lastProduct = productos.length > 0 ? productos[productos.length - 1] : null
+  const resolvedLastId = getRawProductId(lastProduct)
+  const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+  const hasMore = typeof meta.has_more === 'boolean'
+    ? meta.has_more
+    : productos.length >= PRODUCTS_PAGE_SIZE
+
+  return {
+    productos,
+    carritos,
+    lastId: resolvedLastId,
+    hasMore,
+    meta,
+    raw: payload,
+  }
+}
+
 /**
  * GET /api/v1/inventory/products
  * Paginación por scroll: `last_id` + `limit`.
@@ -275,6 +322,8 @@ const EMPTY_FILTER_MEMORY = {
 }
 
 let generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
+/** Una sola petición en vuelo (evita doble GET por Strict Mode). */
+let generalFilterInFlight = null
 
 function writeGeneralFilterMemory(raw, lists) {
   generalFilterMemory = {
@@ -288,6 +337,15 @@ function writeGeneralFilterMemory(raw, lists) {
 
 function clearGeneralFilterMemory() {
   generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
+}
+
+function resultFromMemory(memory) {
+  return {
+    categorias: memory.categorias,
+    marcas: memory.marcas,
+    modelos: memory.modelos,
+    raw: memory.raw,
+  }
 }
 
 /** Copia en memoria del JSON de filter, o null si expiró / no hay. */
@@ -304,38 +362,145 @@ export function readGeneralFilterMemory(now = Date.now()) {
   return generalFilterMemory
 }
 
+async function awaitUnlessAborted(promise, signal) {
+  if (!signal) {
+    return promise
+  }
+
+  if (signal.aborted) {
+    throw new DOMException('Aborted', 'AbortError')
+  }
+
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+
+    signal.addEventListener('abort', onAbort, { once: true })
+
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) {
+          reject(new DOMException('Aborted', 'AbortError'))
+          return
+        }
+        resolve(value)
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(error)
+      },
+    )
+  })
+}
+
 /**
  * GET /api/v1/general/filter
- * Guarda el JSON completo (categorías, marcas, modelos) en memoria (máx. 3 min).
+ * Una sola vez en red si hay caché válida (3 min) o petición ya en vuelo.
  * Bearer = token de login.
  */
 export async function getGeneralFilter({
   token,
   signal,
+  force = false,
 } = {}) {
-  try {
-    const payload = await apiRequest('/api/v1/general/filter', {
-      method: 'GET',
-      token,
-      signal,
-    })
-
-    const lists = mapGeneralFilterPayload(payload)
-    writeGeneralFilterMemory(payload, lists)
-
-    return {
-      ...lists,
-      raw: payload,
+  if (!force) {
+    const memory = readGeneralFilterMemory()
+    if (memory) {
+      return resultFromMemory(memory)
     }
-  } catch (error) {
-    if (error?.name === 'ApiError' && error.status === 404) {
-      writeGeneralFilterMemory(error.payload ?? { data: EMPTY_FILTER_LISTS }, EMPTY_FILTER_LISTS)
+  }
+
+  if (generalFilterInFlight) {
+    return awaitUnlessAborted(generalFilterInFlight, signal)
+  }
+
+  generalFilterInFlight = (async () => {
+    try {
+      const payload = await apiRequest('/api/v1/general/filter', {
+        method: 'GET',
+        token,
+        // Sin signal: no cancelar la petición compartida al desmontar Strict Mode.
+      })
+
+      const lists = mapGeneralFilterPayload(payload)
+      writeGeneralFilterMemory(payload, lists)
+
       return {
-        ...EMPTY_FILTER_LISTS,
-        raw: error.payload ?? null,
-        emptyBy404: true,
+        ...lists,
+        raw: payload,
       }
+    } catch (error) {
+      if (error?.name === 'ApiError' && error.status === 404) {
+        writeGeneralFilterMemory(error.payload ?? { data: EMPTY_FILTER_LISTS }, EMPTY_FILTER_LISTS)
+        return {
+          ...EMPTY_FILTER_LISTS,
+          raw: error.payload ?? null,
+          emptyBy404: true,
+        }
+      }
+      throw error
+    } finally {
+      generalFilterInFlight = null
     }
-    throw error
+  })()
+
+  return awaitUnlessAborted(generalFilterInFlight, signal)
+}
+
+/**
+ * POST /api/v1/inventory/products/list
+ * Listado de precios descargable (PDF / Excel).
+ * Body: { marcas: [{ id_marca }], categorias: [{ id_categoria }], modelos: [{ id_modelo }] }
+ * Arrays vacíos = sin restricción en ese campo (todas).
+ */
+export async function postInventoryProductsList({
+  token,
+  body,
+  signal,
+} = {}) {
+  const payload = await apiRequest('/api/v1/inventory/products/list', {
+    method: 'POST',
+    token,
+    body: body ?? { marcas: [], categorias: [], modelos: [] },
+    signal,
+  })
+
+  const productos = extractProducts(payload)
+
+  return {
+    productos,
+    raw: payload,
+  }
+}
+
+/**
+ * POST /api/v1/inventory/products/filter
+ * Filtro del drawer Filtrar → productos del landing.
+ * Body: { marcas, categorias, modelos, cantidad }
+ */
+export async function postInventoryProductsFilter({
+  token,
+  body,
+  signal,
+} = {}) {
+  const payload = await apiRequest('/api/v1/inventory/products/filter', {
+    method: 'POST',
+    token,
+    body: body ?? {
+      marcas: [],
+      categorias: [],
+      modelos: [],
+      cantidad: false,
+    },
+    signal,
+  })
+
+  const productos = extractProducts(payload)
+
+  return {
+    productos,
+    raw: payload,
   }
 }

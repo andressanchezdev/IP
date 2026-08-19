@@ -31,7 +31,12 @@ export function useCartSlice({
 
   const applyCartFromApi = useCallback(async ({ token }) => {
     const { carritos } = await getCart({ token })
-    // Carrito = solo respuesta API. El stock de venta se lee del catálogo (API inicial + WS).
+    const apiCart = mapApiCartItems(carritos).map(normalizeCartItem)
+    setCartItems(apiCart)
+    return apiCart
+  }, [])
+
+  const applyCartFromPayload = useCallback((carritos = []) => {
     const apiCart = mapApiCartItems(carritos).map(normalizeCartItem)
     setCartItems(apiCart)
     return apiCart
@@ -233,6 +238,7 @@ export function useCartSlice({
     setCartItems,
     commitCart,
     applyCartFromApi,
+    applyCartFromPayload,
     refreshCartFromApi,
     addToCart,
     removeFromCart,

@@ -34,19 +34,6 @@ export function parseUsuarioDetails(usuario) {
   }
 }
 
-function buildAddressLine(personal) {
-  return [
-    personal.address,
-    personal.neighborhood,
-    personal.city,
-    personal.department,
-    personal.country,
-  ]
-    .map(text)
-    .filter(Boolean)
-    .join(', ')
-}
-
 /**
  * Normaliza data.user del login a un objeto de cliente estable para la UI.
  */
@@ -94,57 +81,6 @@ export function mapLoginUserToClient(loginEmail, user) {
     city: text(details.ciudad) || text(details.city),
     department: text(details.departamento) || text(details.department),
     country: text(details.pais) || text(details.country),
-  }
-}
-
-/**
- * Cliente normalizado → profileSettings de la app.
- */
-export function mapLoginUserToProfileSettings(loginEmail, user) {
-  const client = mapLoginUserToClient(loginEmail, user)
-
-  const personal = {
-    ...defaultProfileSettings.personal,
-    fullName: client.fullName,
-    documentId: client.documentId,
-    phone: client.phone,
-    mobile: client.mobile,
-    email: client.email,
-    userId: client.userId,
-    role: client.role,
-    warehouseId: client.warehouseId,
-    birthDate: client.birthDate,
-    gender: client.gender,
-    additional: client.additional,
-    address: client.address,
-    neighborhood: client.neighborhood,
-    city: client.city,
-    department: client.department,
-    country: client.country,
-  }
-
-  const addressLine = buildAddressLine(personal)
-
-  return {
-    ...defaultProfileSettings,
-    personal,
-    company: {
-      ...defaultProfileSettings.company,
-      email: client.email,
-      phone: client.mobile || client.phone,
-      address: addressLine,
-    },
-    access: {
-      email: client.email,
-      password: '',
-    },
-    addresses: addressLine
-      ? [{
-          id: 'principal',
-          label: 'Dirección principal',
-          address: addressLine,
-        }]
-      : [],
   }
 }
 
@@ -200,5 +136,70 @@ export function toAuthUserSummary(profileSettings) {
     mobile: personal.mobile || personal.phone,
     role: personal.role,
     warehouseId: personal.warehouseId,
+  }
+}
+
+/**
+ * Respuesta de GET /api/v1/managment/users/about -> cliente UI.
+ */
+export function mapAboutUserToClient(aboutData, fallbackEmail = '') {
+  const user = aboutData && typeof aboutData === 'object' ? aboutData : {}
+  const usuario = user?.usuario && typeof user.usuario === 'object' ? user.usuario : {}
+  const empresa = user?.empresa && typeof user.empresa === 'object' ? user.empresa : {}
+
+  const email = text(user?.email) || text(fallbackEmail)
+  const userId = text(user?.id_usuario) || email
+
+  return {
+    userId,
+    email,
+    fullName: text(usuario?.nombre) || email,
+    documentId: text(usuario?.cedula),
+    phone: '',
+    mobile: '',
+    role: String(user?.estado ?? ''),
+    warehouseId: '',
+    birthDate: '',
+    gender: '',
+    additional: '',
+    address: '',
+    neighborhood: '',
+    city: '',
+    department: '',
+    country: '',
+    companyName: text(empresa?.razon),
+    companyNit: text(empresa?.nit),
+  }
+}
+
+/**
+ * Cliente de /managment/users/about -> profileSettings.
+ */
+export function mapAboutUserToProfileSettings(aboutData, fallbackEmail = '') {
+  const client = mapAboutUserToClient(aboutData, fallbackEmail)
+
+  const personal = {
+    ...defaultProfileSettings.personal,
+    fullName: client.fullName,
+    documentId: client.documentId,
+    email: client.email,
+    userId: client.userId,
+    role: client.role,
+  }
+
+  return {
+    ...defaultProfileSettings,
+    personal,
+    company: {
+      ...defaultProfileSettings.company,
+      name: client.companyName,
+      nit: client.companyNit,
+      email: client.email,
+    },
+    access: {
+      email: client.email,
+      password: '',
+    },
+    addresses: [],
   }
 }

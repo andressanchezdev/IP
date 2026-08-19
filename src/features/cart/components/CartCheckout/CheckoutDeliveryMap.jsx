@@ -3,6 +3,22 @@ import { loadLeaflet } from '@/shared/maps/loadLeaflet'
 import { namedControl } from '@/shared/lib/namedControl'
 
 const BOGOTA = { lat: 4.711, lng: -74.0721 }
+const GEOLOCATION_TIMEOUT = 10_000
+const GEOLOCATION_ZOOM = 16
+
+function getUserPosition() {
+  if (!navigator.geolocation) {
+    return Promise.resolve(null)
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: GEOLOCATION_TIMEOUT, maximumAge: 60_000 },
+    )
+  })
+}
 
 async function reverseGeocode(lat, lng) {
   try {
@@ -90,7 +106,17 @@ export function CheckoutDeliveryMap({ onLocationChange }) {
           applyPosition(event.latlng.lat, event.latlng.lng)
         })
 
-        setMapState({ status: 'ready', message: 'Toque el mapa para marcar la entrega' })
+        setMapState({ status: 'ready', message: 'Obteniendo tu ubicación…' })
+
+        getUserPosition().then((userPos) => {
+          if (cancelled) return
+          if (userPos) {
+            map.setView([userPos.lat, userPos.lng], GEOLOCATION_ZOOM)
+            applyPosition(userPos.lat, userPos.lng)
+          } else {
+            setMapState({ status: 'ready', message: 'Toque el mapa para marcar la entrega' })
+          }
+        })
       })
       .catch((error) => {
         if (!cancelled) {
