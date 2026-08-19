@@ -152,6 +152,14 @@ export function ChangePasswordModal({ isOpen, onClose, onConfirm }) {
             error={getError('newPassword')}
             onChange={(value) => setField('newPassword', value)}
           />
+          <AuthField
+            id="change-password-confirm"
+            label="Confirmar contraseña"
+            type="password"
+            value={form.confirmPassword}
+            error={getError('confirmPassword')}
+            onChange={(value) => setField('confirmPassword', value)}
+          />
 
           <ul className="change-password-modal__rules" aria-label="Requisitos de contraseña">
             {ruleStatus.map((rule) => (
@@ -163,15 +171,6 @@ export function ChangePasswordModal({ isOpen, onClose, onConfirm }) {
               </li>
             ))}
           </ul>
-
-          <AuthField
-            id="change-password-confirm"
-            label="Confirmar contraseña"
-            type="password"
-            value={form.confirmPassword}
-            error={getError('confirmPassword')}
-            onChange={(value) => setField('confirmPassword', value)}
-          />
         </div>
 
         <footer className="auth-form__actions auth-form__actions--row change-password-modal__footer">

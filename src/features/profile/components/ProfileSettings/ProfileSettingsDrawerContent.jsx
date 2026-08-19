@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useProfile, useUi } from '@/app/providers'
+import { useAuth, useProfile, useUi } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
+import { changeUserPassword } from '@/features/profile/api/profileApi'
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import { ProfileIdentityCard } from '@/features/profile/components/ProfileIdentityCard/ProfileIdentityCard'
 import { confirmAction } from '@/shared/lib/confirmAction'
@@ -53,6 +54,7 @@ export function ProfileSettingsDrawerContent() {
     releaseAppCache,
     deleteAccount,
   } = useProfile()
+  const { tokenAccess, logout } = useAuth()
   const { closeDrawer } = useUi()
   const { showToast } = useToast()
   const [openSectionId, setOpenSectionId] = useState(null)
@@ -109,9 +111,21 @@ export function ProfileSettingsDrawerContent() {
     successMessage: 'Datos de la empresa guardados',
   })
 
-  const handleChangePassword = async () => {
-    // UI lista; endpoint de actualización se integra cuando esté disponible.
-    showToast('Contraseña actualizada correctamente', 'success')
+  const handleChangePassword = async ({ currentPassword, newPassword }) => {
+    if (!tokenAccess) {
+      throw new Error('Sesión requerida para actualizar la contraseña')
+    }
+
+    await changeUserPassword({
+      token: tokenAccess,
+      oldPassword: currentPassword,
+      newPassword,
+    })
+
+    setChangePasswordOpen(false)
+    closeDrawer()
+    showToast('Contraseña actualizada. Inicia sesión de nuevo.', 'success')
+    await logout()
   }
 
   const handleClearCache = async () => {
