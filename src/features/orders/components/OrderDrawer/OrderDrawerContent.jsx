@@ -7,7 +7,6 @@ import {
   OrderDetailsContent,
   OrderPackagingContent,
   OrderPaymentContent,
-  OrderSalesPointContent,
 } from './OrderSections'
 import './OrderDrawer.css'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
@@ -17,15 +16,13 @@ const ACCORDION_SECTIONS = [
   { id: 'payment', label: 'Información de pago' },
   { id: 'packaging', label: 'Embalaje' },
   { id: 'delivery', label: 'Dirección de entrega' },
-  { id: 'sales-point', label: 'Punto de venta' },
 ]
 
 export function OrderDrawerContent({
   openSections,
   onToggleSection,
   onCloseSection,
-  packagingProductsOpen,
-  onTogglePackagingProducts,
+  onViewProducts,
 }) {
   const { selectedOrder, setOrderSubView, verifyTransferProof } = useOrders()
   const { showToast } = useToast()
@@ -64,7 +61,7 @@ export function OrderDrawerContent({
     showToast(
       result.isFullyPaid
         ? 'Comprobante real: pedido pagado al 100%'
-        : 'Comprobante real: abono parcial aplicado',
+        : 'Comprobante real: pago parcial aplicado',
       'success',
     )
   }
@@ -85,14 +82,11 @@ export function OrderDrawerContent({
         return (
           <OrderPackagingContent
             order={selectedOrder}
-            productsOpen={packagingProductsOpen}
-            onToggleProducts={onTogglePackagingProducts}
+            onViewProducts={onViewProducts}
           />
         )
       case 'delivery':
         return <OrderDeliveryContent order={selectedOrder} />
-      case 'sales-point':
-        return <OrderSalesPointContent order={selectedOrder} />
       default:
         return null
     }

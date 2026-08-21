@@ -14,7 +14,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--spacing-sm);
+  padding: 10px;
 }
 
 .landing__empty-state {
@@ -57,24 +57,24 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .landing__panel-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .landing__panel-header h2 {
   font-size: clamp(18px, 4.5cqw, 25px);
-  margin: 5px;
+  margin: 1px;
 }
 
 .landing__panel-header p {
   color: var(--color-text-secondary);
   font-size: clamp(12px, 3cqw, 14px);
-  margin: 0;
+  margin: 2px;
+  transform: translateX(5px);
 }
 
 .landing__table {
@@ -92,13 +92,85 @@
 .landing__table td {
   border-bottom: 1px solid var(--color-border);
   font-size: clamp(10px, 2.4cqw, 12px);
-  padding: 10px 12px;
+  padding: 10px 25px;
   text-align: left;
+}
+
+.landing__table--historial th,
+.landing__table--historial td {
+  font-size: clamp(13px, 3.12cqw, 15.6px);
 }
 
 .landing__table-empty {
   color: var(--color-text-secondary);
   text-align: center;
+}
+
+.historial-date-limit--missing {
+  color: #c62828;
+  font-weight: 500;
+}
+
+.historial-estado-badge {
+  border-radius: 5px;
+  display: inline-block;
+  font-size: 14.3px;
+  font-weight: 600;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 4px 10px;
+  text-transform: none;
+  white-space: normal;
+}
+
+.historial-estado-badge--facturacion-disponible {
+  background: #c6f3d5;
+  color: #105735;
+}
+
+.historial-estado-badge--facturacion-ocupada {
+  background: #c0e0ff;
+  color: #00438b;
+}
+
+.historial-estado-badge--facturacion-pausa {
+  background: #f7f7f7;
+  color: #1a1a1a;
+}
+
+.historial-estado-badge--picking {
+  background: #e6c2e9;
+  color: #592562;
+}
+
+.historial-estado-badge--packing {
+  background: #ffe0b8;
+  color: #8a3d00;
+}
+
+.historial-estado-badge--verificacion {
+  background: #fff3c4;
+  color: #6b5200;
+}
+
+.historial-estado-badge--despacho {
+  background: #d7e8ff;
+  color: #1a4a8a;
+}
+
+.historial-estado-badge--enviado {
+  background: #d9f5e8;
+  color: #0f5132;
+}
+
+.historial-estado-badge--default {
+  background: #eceff1;
+  color: #37474f;
+}
+
+.landing__table-outer {
+  padding: 20px;
 }
 
 .landing__table-wrap {
@@ -185,6 +257,11 @@
     padding: 8px 10px;
   }
 
+  .landing__table--historial th,
+  .landing__table--historial td {
+    font-size: clamp(13px, 3.38cqw, 14.3px);
+  }
+
   .landing__table-wrap {
     -webkit-overflow-scrolling: touch;
     margin: 0;
@@ -245,7 +322,7 @@
     align-items: flex-start;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     display: grid;
-    font-size: clamp(10px, 3cqw, 11px);
+    font-size: clamp(13px, 3.9cqw, 14.3px);
     gap: 6px 12px;
     grid-template-columns: minmax(100px, 38%) minmax(0, 1fr);
     line-height: 1.4;
@@ -263,10 +340,14 @@
   .landing__table--historial td::before {
     color: var(--color-text-secondary);
     content: attr(data-label);
-    font-size: clamp(9px, 2.8cqw, 11px);
+    font-size: clamp(11.7px, 3.64cqw, 14.3px);
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+  }
+
+  .landing__table--historial .historial-estado-badge {
+    font-size: 14.3px;
   }
 
   .landing__table--historial .landing__table-empty {

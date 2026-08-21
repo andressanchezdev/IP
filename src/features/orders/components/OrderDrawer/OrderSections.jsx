@@ -1,6 +1,6 @@
 import { formatOrderDateTime, formatRelativeTime, formatRealAmount } from '@/features/orders/utils/orderFormat'
-import { formatPrice } from '@/shared/lib/formatPrice'
-import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
+import { getCurrentFlowLabel } from '@/features/orders/constants/orderSteps'
+import { PAYMENT_LIMIT_MISSING_MESSAGE } from '@/features/orders/utils/resolvePaymentDeadline'
 import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
 import eyeIcon from '@/assets/icons/eye.svg'
 import { OrderPaymentAbonos } from './OrderPaymentAbonos'
@@ -8,7 +8,7 @@ import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export { OrderDeliveryContent } from './OrderDeliveryContent'
 
-function PanelRow({ label, value, highlight = false, subdued = false }) {
+function PanelRow({ label, value, hint = '', highlight = false, subdued = false }) {
   return (
     <div className="content-list-data__row">
       <span className="content-list-data__label">{label}</span>
@@ -17,12 +17,14 @@ function PanelRow({ label, value, highlight = false, subdued = false }) {
       >
         {value}
       </span>
+      {hint ? <span className="content-list-data__hint">{hint}</span> : null}
     </div>
   )
 }
 
 export function OrderDetailsContent({ order, onDownloadPdf }) {
-  const isCompleted = order.processStatus === 'completado'
+  const statusLabel = getCurrentFlowLabel(order.status ?? order.estado)
+  const isCompleted = String(order.estado || '').toLowerCase().includes('envi')
 
   return (
     <>
@@ -47,7 +49,7 @@ export function OrderDetailsContent({ order, onDownloadPdf }) {
       <div className="content-list-data__row">
         <span className="content-list-data__label">Estado</span>
         <span className={`content-list-data__status ${isCompleted ? 'content-list-data__status--done' : ''}`}>
-          {order.processStatus}
+          {statusLabel}
         </span>
       </div>
     </>
@@ -59,6 +61,8 @@ export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
   const chosenType = String(payment.type ?? '').toLowerCase() || 'efectivo'
   const paidAmount = Number(payment.paidAmount ?? 0)
   const remainingAmount = Math.max(0, Number(payment.amount ?? order.total ?? 0) - paidAmount)
+  const isCredito = chosenType === 'credito'
+  const paidLabel = isCredito ? 'Abonado' : 'Pagado'
 
   return (
     <>
@@ -73,9 +77,16 @@ export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
           </span>
         </div>
       </div>
-      <PanelRow label="Fecha límite de pago" value={formatOrderDateTime(payment.deadline)} subdued />
+      <PanelRow
+        label="Fecha límite de pago"
+        value={
+          order.dateLimitLabel
+          || (payment.deadline ? formatOrderDateTime(payment.deadline) : PAYMENT_LIMIT_MISSING_MESSAGE)
+        }
+        subdued
+      />
       <PanelRow label="Monto total" value={formatRealAmount(payment.amount)} highlight />
-      <PanelRow label="Abonado" value={formatRealAmount(paidAmount)} />
+      <PanelRow label={paidLabel} value={formatRealAmount(paidAmount)} />
       <PanelRow label="Pendiente" value={formatRealAmount(remainingAmount)} highlight />
       <OrderPaymentAbonos
         order={order}
@@ -86,9 +97,15 @@ export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
   )
 }
 
-export function OrderPackagingContent({ order, productsOpen, onToggleProducts }) {
-  const { packaging } = order
-  const productCount = order.items?.length ?? 0
+export function OrderPackagingContent({ order, onViewProducts }) {
+  const items = Array.isArray(order.items) && order.items.length > 0
+    ? order.items
+    : (Array.isArray(order.venta) ? order.venta : [])
+  const productCount = items.length
+  const totalUnits = items.reduce((sum, item) => {
+    const qty = Number(item?.quantity ?? item?.cant ?? 0)
+    return sum + (Number.isFinite(qty) ? qty : 0)
+  }, 0)
 
   return (
     <>
@@ -100,82 +117,21 @@ export function OrderPackagingContent({ order, productsOpen, onToggleProducts })
           </span>
           <button
             type="button"
-            className={`order-packaging__view-btn ${productsOpen ? 'order-packaging__view-btn--active' : ''}`}
-            onClick={onToggleProducts}
-            aria-pressed={productsOpen}
-            {...namedControl(productsOpen ? 'Ocultar productos' : 'Ver productos')}
+            className="order-packaging__view-btn"
+            onClick={() => onViewProducts?.(order)}
+            {...namedControl('Ver productos')}
           >
-            <img src={eyeIcon} className="order-packaging__view-icon" {...namedImage(productsOpen ? 'Ocultar productos' : 'Ver productos')} />
+            <img src={eyeIcon} className="order-packaging__view-icon" {...namedImage('Ver productos')} />
           </button>
         </div>
+        <span className="content-list-data__hint">Líneas distintas en el pedido</span>
       </div>
-      {productsOpen && (
-        <div className="order-accordion__nested-list">
-          <ul className="carrito-list">
-            {order.items.map((item) => {
-              const categoryText = String(item.category || '').trim()
-              const descriptionText = String(item.description || '').trim()
-              const brandText = String(item.brand || '').trim()
-              const modelText = String(item.model || '').trim()
-              const imageSrc = item.imageUrl || item.brandLogo || item.brandLogoUrl
-
-              return (
-                <li key={item.id} className="carrito-card">
-                  <div className="carrito-card__image-slot">
-                    {imageSrc ? (
-                      <img src={imageSrc} className="carrito-card__image" loading="lazy" {...namedImage(descriptionText || categoryText || item.reference || 'Producto')} />
-                    ) : null}
-                  </div>
-                  <div className="carrito-card__content">
-                    <div className="carrito-card__top">
-                      <div className="carrito-card__title-row">
-                        <span className="carrito-card__category">
-                          {categoryText ? categoryText.toUpperCase() : '—'}
-                        </span>
-                        <span className="carrito-card__title-sep" aria-hidden="true">-</span>
-                        <strong className="carrito-card__description">
-                          {descriptionText ? descriptionText.toUpperCase() : ''}
-                        </strong>
-                      </div>
-                      <BrandLogo brand={item.brand} logoUrl={item.brandLogo || item.brandLogoUrl} className="carrito-card__brand" />
-                    </div>
-                    <span className="carrito-card__meta">
-                      {`${brandText.toUpperCase() || '—'} - ${modelText.toUpperCase() || '—'}`}
-                    </span>
-                    <span className="carrito-card__reference">
-                      {String(item.reference || item.id || '').toUpperCase()}
-                    </span>
-                    <div className="carrito-card__footer">
-                      <span className="carrito-card__qty-readonly">Cant: {item.quantity}</span>
-                      <div className="carrito-card__prices">
-                        <span className="carrito-card__price">{formatPrice(item.price)}</span>
-                        <span className="carrito-card__price-sep" aria-hidden="true">|</span>
-                        <span className="carrito-card__total">{formatPrice(item.price * item.quantity)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
-      <PanelRow label="Cantidades" value={`${packaging.packedQuantity}|${packaging.totalQuantity}`} highlight />
-      <PanelRow label="Número de cajas" value={packaging.boxes} subdued />
-      <PanelRow label="Número de bolsas" value={packaging.bags} subdued />
-    </>
-  )
-}
-
-export function OrderSalesPointContent({ order }) {
-  return (
-    <>
-      {order.salesPoints.map((point) => (
-        <div key={point.id} className="order-sales-point__item">
-          <div className="order-sales-point__name">{point.name}</div>
-          <div className="order-sales-point__id">ID: {point.id}</div>
-        </div>
-      ))}
+      <PanelRow
+        label="Cantidades"
+        value={`${productCount}/${totalUnits}`}
+        hint="Productos / unidades totales"
+        highlight
+      />
     </>
   )
 }

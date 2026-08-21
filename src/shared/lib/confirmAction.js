@@ -1,4 +1,4 @@
-import Swal from 'sweetalert2'
+import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
 
 export async function confirmAction({
   title,
@@ -8,6 +8,7 @@ export async function confirmAction({
   icon = 'question',
   confirmButtonColor,
 } = {}) {
+  const Swal = await loadSweetAlert()
   const result = await Swal.fire({
     title,
     text,
@@ -19,4 +20,19 @@ export async function confirmAction({
   })
 
   return result.isConfirmed
+}
+
+export async function notifyAction({
+  title,
+  text,
+  confirmText = 'Entendido',
+  icon = 'info',
+} = {}) {
+  const Swal = await loadSweetAlert()
+  await Swal.fire({
+    title,
+    text,
+    icon,
+    confirmButtonText: confirmText,
+  })
 }

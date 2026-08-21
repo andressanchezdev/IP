@@ -6,8 +6,8 @@ import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
 import '@/shared/ui/FieldHint/FieldHint.css'
 
 const PAYMENT_TYPES = [
+  { id: 'efectivo', label: 'Efectivo' },
   { id: 'transferencia', label: 'Transferencia' },
-  { id: 'contraentrega', label: 'Contra entrega' },
   { id: 'credito', label: 'Crédito' },
 ]
 
@@ -43,10 +43,8 @@ export function CheckoutPaymentSection({
   paymentMethod,
   transferProofName,
   onTransferProofChange,
-  contraentregaMethod,
-  onContraentregaMethodChange,
   onConfirmTransfer,
-  onConfirmContraentrega,
+  onConfirmEfectivo,
   onConfirmCredit,
   creditLimitDays,
   onCreditLimitDaysChange,
@@ -57,9 +55,6 @@ export function CheckoutPaymentSection({
   const transferHint = transferProofName
     ? ''
     : 'El comprobante de transferencia es obligatorio'
-  const contraentregaHint = contraentregaMethod
-    ? ''
-    : 'Elija transferencia o efectivo para el pago en entrega'
   const creditDaysHint = creditLimitDays === '' || creditLimitDays < CREDIT_DAYS_MIN || creditLimitDays > CREDIT_DAYS_MAX
     ? `Ingrese un plazo de ${CREDIT_DAYS_MIN} a ${CREDIT_DAYS_MAX} días`
     : ''
@@ -84,6 +79,21 @@ export function CheckoutPaymentSection({
           ))}
         </div>
         <FieldHint message={methodHint} />
+
+        {paymentPanel === 'efectivo' && (
+          <div className="checkout-finalize__payment-panel">
+            <SummaryRow label="Valor a pagar en efectivo" value={formatPrice(totalToPay)} highlight />
+            <FieldHint message="El pago se registrará en efectivo al confirmar el pedido" />
+            <button
+              type="button"
+              className="content-main-data-carrito__checkout"
+              onClick={onConfirmEfectivo}
+              {...namedControl('Seleccionar efectivo')}
+            >
+              Seleccionar
+            </button>
+          </div>
+        )}
 
         {paymentPanel === 'transferencia' && (
           <div className="checkout-finalize__payment-panel">
@@ -114,41 +124,6 @@ export function CheckoutPaymentSection({
               onClick={onConfirmTransfer}
               disabled={!transferProofName}
               {...namedControl('Seleccionar transferencia')}
-            >
-              Seleccionar
-            </button>
-          </div>
-        )}
-
-        {paymentPanel === 'contraentrega' && (
-          <div className="checkout-finalize__payment-panel">
-            <SummaryRow label="Valor del pedido" value={formatPrice(totalToPay)} highlight />
-            <span className="checkout-finalize__box-title">Método de pago en entrega</span>
-            <label className="filter-drawer-check">
-              <input
-                type="checkbox"
-                checked={contraentregaMethod === 'transferencia'}
-                onChange={() => onContraentregaMethodChange('transferencia')}
-                {...namedControl('Pago en entrega por transferencia')}
-              />
-              <span>Transferencia</span>
-            </label>
-            <label className="filter-drawer-check">
-              <input
-                type="checkbox"
-                checked={contraentregaMethod === 'efectivo'}
-                onChange={() => onContraentregaMethodChange('efectivo')}
-                {...namedControl('Pago en entrega en efectivo')}
-              />
-              <span>Efectivo</span>
-            </label>
-            <FieldHint message={contraentregaHint} />
-            <button
-              type="button"
-              className="content-main-data-carrito__checkout"
-              onClick={onConfirmContraentrega}
-              disabled={!contraentregaMethod}
-              {...namedControl('Seleccionar contra entrega')}
             >
               Seleccionar
             </button>

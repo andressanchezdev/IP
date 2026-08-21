@@ -9,6 +9,7 @@ import { CartCheckoutDrawerContent } from '@/features/cart/components/CartChecko
 import { CartMenuDrawerContent } from '@/features/cart/components/CartMenu/CartMenuDrawerContent'
 import { OrderDrawerContent } from '@/features/orders/components/OrderDrawer/OrderDrawerContent'
 import { OrderPaymentsDrawerContent } from '@/features/orders/components/OrderPayments/OrderPaymentsDrawerContent'
+import { OrderProductsModal } from '@/features/orders/components/OrderProductsModal/OrderProductsModal'
 import { FilterDrawerContent } from '@/features/catalog/components/FilterDrawer/FilterDrawerContent'
 import { ProfileDrawerSubViews } from './ProfileDrawerSubViews'
 import { getCloseAriaLabel, getDrawerTitle } from './appDrawerMeta'
@@ -32,11 +33,10 @@ export function AppDrawer() {
   const [cartMenuOpen, setCartMenuOpen] = useState(false)
   const [profileSubView, setProfileSubView] = useState(null)
   const [orderOpenSections, setOrderOpenSections] = useState([])
-  const [orderPackagingProductsOpen, setOrderPackagingProductsOpen] = useState(false)
+  const [productsModalOrder, setProductsModalOrder] = useState(null)
 
   useEffect(() => {
     setOrderOpenSections([])
-    setOrderPackagingProductsOpen(false)
   }, [selectedOrderId])
 
   useEffect(() => {
@@ -79,7 +79,6 @@ export function AppDrawer() {
     }
     if (drawerType === 'order' && !orderSubView && orderOpenSections.length > 0) {
       setOrderOpenSections([])
-      setOrderPackagingProductsOpen(false)
       return
     }
     if (drawerType === 'order' && orderSubView) {
@@ -128,8 +127,7 @@ export function AppDrawer() {
           onCloseSection={(sectionId) => {
             setOrderOpenSections((current) => current.filter((id) => id !== sectionId))
           }}
-          packagingProductsOpen={orderPackagingProductsOpen}
-          onTogglePackagingProducts={() => setOrderPackagingProductsOpen((open) => !open)}
+          onViewProducts={(order) => setProductsModalOrder(order)}
         />
       )
     }
@@ -213,6 +211,12 @@ export function AppDrawer() {
       >
         {renderContent()}
       </Drawer>
+
+      <OrderProductsModal
+        isOpen={Boolean(productsModalOrder)}
+        order={productsModalOrder}
+        onClose={() => setProductsModalOrder(null)}
+      />
     </>
   )
 }

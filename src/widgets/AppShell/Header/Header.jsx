@@ -30,6 +30,9 @@ export function Header({
   paymentMethods = [],
   paymentFilter = '',
   onPaymentFilterChange,
+  statusOptions = [],
+  statusFilter = '',
+  onStatusFilterChange,
 }) {
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
   const searchShellRef = useRef(null)
@@ -120,25 +123,42 @@ export function Header({
             )}
 
             {showHistoryFilters && (
-              <label
-                className={`header__payment-filter ${mobileToolsOpen ? 'header__payment-filter--open' : ''}`}
+              <div
+                className={`header__history-filters ${mobileToolsOpen ? 'header__history-filters--open' : ''}`}
               >
-                <span className="header__payment-filter-label">Medio de pago</span>
-                <select
-                  className="header__payment-filter-select"
-                  value={paymentFilter}
-                  onChange={(event) => onPaymentFilterChange?.(event.target.value)}
-                  onFocus={openMobileTools}
-                  {...namedControl('Filtrar por medio de pago')}
-                >
-                  <option value="">Todos</option>
-                  {paymentMethods.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="header__payment-filter">
+                  <select
+                    className="header__payment-filter-select"
+                    value={paymentFilter}
+                    onChange={(event) => onPaymentFilterChange?.(event.target.value)}
+                    onFocus={openMobileTools}
+                    {...namedControl('Filtrar por medio de pago')}
+                  >
+                    <option value="">Medio de pago</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method} value={method}>
+                        {method}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="header__payment-filter">
+                  <select
+                    className="header__payment-filter-select"
+                    value={statusFilter}
+                    onChange={(event) => onStatusFilterChange?.(event.target.value)}
+                    onFocus={openMobileTools}
+                    {...namedControl('Filtrar por estado')}
+                  >
+                    <option value="">Estado</option>
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             )}
           </div>
         </div>

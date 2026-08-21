@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo } from 'react'
-import Swal from 'sweetalert2'
+import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
 import '@/shared/ui/Toast/Toast.css'
 
 const ToastContext = createContext(null)
@@ -26,13 +26,15 @@ function getToastOptions() {
 
 export function ToastProvider({ children }) {
   const showToast = useCallback((title = 'Hecho', icon = 'success') => {
-    Swal.mixin({
-      ...getToastOptions(),
-      didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer
-        toast.onmouseleave = Swal.resumeTimer
-      },
-    }).fire({ icon, title })
+    loadSweetAlert().then((Swal) => {
+      Swal.mixin({
+        ...getToastOptions(),
+        didOpen: (toast) => {
+          toast.onmouseenter = Swal.stopTimer
+          toast.onmouseleave = Swal.resumeTimer
+        },
+      }).fire({ icon, title })
+    })
   }, [])
 
   const value = useMemo(() => ({ showToast }), [showToast])

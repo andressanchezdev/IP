@@ -1,15 +1,19 @@
 import { useCallback, useMemo, useState } from 'react'
 import { enrichOrder } from '@/features/orders/utils/enrichOrder'
+import { getCurrentFlowLabel } from '@/features/orders/constants/orderSteps'
 import { getManagementSales } from '@/features/orders/api/salesApi'
 import {
+  mapSalesToCreditHistoryOrders,
   mapSalesToPendingOrders,
 } from '@/features/orders/mappers/mapSalesHistory'
+import { useOrderFlowWebSocket } from '@/features/orders/ws/useOrderFlowWebSocket'
 import { APP_EVENTS } from '../appEvents'
 
 export function useOrdersSlice({
   events,
   initialPendingOrders,
   initialHistoryOrders,
+  tokenAccess = null,
 }) {
   const [pendingOrders, setPendingOrders] = useState(() => initialPendingOrders)
   const [historyOrders, setHistoryOrders] = useState(() => initialHistoryOrders)
@@ -17,6 +21,11 @@ export function useOrdersSlice({
   const [historyLoadError, setHistoryLoadError] = useState('')
   const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [orderSubView, setOrderSubView] = useState(null)
+
+  useOrderFlowWebSocket({
+    enabled: Boolean(tokenAccess),
+    setPendingOrders,
+  })
 
   const resetOrderDrawer = useCallback(() => {
     setSelectedOrderId(null)
@@ -75,7 +84,7 @@ export function useOrdersSlice({
     const updatedOrder = {
       ...order,
       paymentMethod: methodLabels[type] ?? order.paymentMethod,
-      processStatus: isFullyPaid ? 'completado' : (order.processStatus ?? 'en proceso...'),
+      processStatus: isFullyPaid ? 'completado' : getCurrentFlowLabel(order.status ?? order.estado),
       payment: {
         ...payment,
         type,
@@ -156,7 +165,7 @@ export function useOrdersSlice({
 
     const updatedOrder = {
       ...order,
-      processStatus: isFullyPaid ? 'completado' : (order.processStatus ?? 'en proceso...'),
+      processStatus: isFullyPaid ? 'completado' : getCurrentFlowLabel(order.status ?? order.estado),
       payment: {
         ...payment,
         paidAmount: nextPaidAmount,
@@ -188,6 +197,7 @@ export function useOrdersSlice({
   const loadHistoryFromApi = useCallback(async ({ token, signal } = {}) => {
     if (!token) {
       setHistoryOrders([])
+      setPendingOrders([])
       setHistoryLoadError('Sesión requerida')
       return { success: false, error: 'Sesión requerida', needsAuth: true }
     }
@@ -199,11 +209,13 @@ export function useOrdersSlice({
     try {
       const response = await getManagementSales({ token, signal })
       const mappedPending = mapSalesToPendingOrders(response.data)
+      const mappedCreditHistory = mapSalesToCreditHistoryOrders(response.data)
       setPendingOrders(mappedPending)
+      setHistoryOrders(mappedCreditHistory)
       return {
         success: true,
         pendingOrders: mappedPending,
-        historyOrders: [],
+        historyOrders: mappedCreditHistory,
         meta: response.meta,
       }
     } catch (error) {

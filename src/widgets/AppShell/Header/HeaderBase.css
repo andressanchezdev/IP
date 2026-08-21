@@ -114,6 +114,15 @@
   min-width: 0;
 }
 
+.header__history-filters {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: clamp(6px, 1vw, 10px);
+  min-width: 0;
+}
+
 .header__payment-filter-label {
   color: var(--color-text-secondary);
   font-size: clamp(10px, 1vw, 12px);
@@ -122,7 +131,7 @@
 }
 
 .header__payment-filter-select {
-  background: #ffb74d;
+  background: var(--color-gris-claro);
   border-radius: 8px;
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);

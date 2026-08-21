@@ -1,9 +1,10 @@
-import { ORDER_STEPS } from '@/features/orders/constants/orderSteps'
+import { ORDER_STEP_DEFS } from '@/features/orders/constants/orderSteps'
 import { enrichOrder } from './enrichOrder'
 import {
   paymentTypeLabel,
   resolveCheckoutPaymentType,
 } from './resolveCheckoutPaymentType'
+import { resolvePaymentDeadline } from './resolvePaymentDeadline'
 import { summarizeCartItems } from '@/shared/lib/money'
 
 function snapshotCartItems(cartItems = []) {
@@ -40,6 +41,14 @@ export function buildCheckoutOrder({
 
   const resolvedType = resolveCheckoutPaymentType(paymentType, paymentDetails)
   const methodLabel = paymentTypeLabel(resolvedType)
+  const initialStatus = ORDER_STEP_DEFS[0].currentLabel
+  const paymentLimitDays = Number(paymentDetails?.paymentLimitDays)
+  const deadlineInfo = resolvePaymentDeadline({
+    createdAt: now,
+    paymentLimitDays: Number.isFinite(paymentLimitDays) && paymentLimitDays > 0
+      ? paymentLimitDays
+      : null,
+  })
   const checkoutDetails = {
     ...paymentDetails,
     checkoutPaymentType: paymentType,
@@ -48,6 +57,7 @@ export function buildCheckoutOrder({
     iva,
     shippingCost: 0,
     proofVerified: Boolean(paymentDetails?.proofVerified),
+    paymentLimitDays: deadlineInfo.days,
   }
 
   const client = {
@@ -68,21 +78,22 @@ export function buildCheckoutOrder({
     userId,
     invoiceNumber: `FAC-${Date.now()}`,
     createdAt: now.toISOString(),
-    dateLimit: new Date(Date.now() + 86400000).toISOString(),
+    dateLimit: deadlineInfo.deadlineIso,
+    dateLimitLabel: deadlineInfo.dateLimitLabel,
+    paymentLimitDays: deadlineInfo.days,
     orderType: 'general',
-    processStatus: 'en proceso...',
+    estado: 'verificacion',
     items,
     client,
     paymentMethod: methodLabel,
     total,
     subtotal,
     iva,
-    status: ORDER_STEPS[0],
-    steps: ORDER_STEPS,
+    status: initialStatus,
     payment: {
       method: methodLabel,
       type: resolvedType,
-      deadline: new Date(Date.now() + 7 * 86400000).toISOString(),
+      deadline: deadlineInfo.deadlineIso,
       amount: total,
       paidAmount: 0,
       payments: [],
@@ -93,10 +104,8 @@ export function buildCheckoutOrder({
       lastPaymentAt: null,
     },
     packaging: {
-      packedQuantity: 0,
+      productCount: items.length,
       totalQuantity,
-      boxes: Math.max(1, Math.ceil(totalQuantity / 20)),
-      bags: Math.max(1, Math.ceil(totalQuantity / 10)),
     },
     delivery: {
       date: new Date(Date.now() + 3 * 86400000).toISOString(),
@@ -106,10 +115,5 @@ export function buildCheckoutOrder({
       receivedBy: client.fullName || 'Cliente autorizado',
       mapLocation: clientData?.mapLocation ?? null,
     },
-    salesPoints: [
-      { id: '001', name: 'tienda1online' },
-      { id: '002', name: 'tienda2online' },
-    ],
-    selectedSalesPointId: '001',
   })
 }

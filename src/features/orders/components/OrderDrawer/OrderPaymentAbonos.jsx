@@ -2,10 +2,10 @@ import { formatRealAmount } from '@/features/orders/utils/orderFormat'
 import { paymentTypeLabel } from '@/features/orders/utils/resolveCheckoutPaymentType'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
-function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
+function CashPayments({ payments, remainingAmount, onOpenPayments }) {
   return (
     <div className="content-list-data__row">
-      <span className="content-list-data__label">Abonos</span>
+      <span className="content-list-data__label">Pagos en efectivo</span>
       <div className="order-payment__pagos">
         <button
           type="button"
@@ -18,13 +18,13 @@ function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
               <span
                 key={`${entry.createdAt}-${index}`}
                 className="order-payment__pill order-payment__pill--paid"
-                {...namedControl(`Abono ${index + 1}: ${formatRealAmount(entry.amount)}`)}
+                {...namedControl(`Pago ${index + 1}: ${formatRealAmount(entry.amount)}`)}
               >
                 {index + 1}
               </span>
             ))
           ) : (
-            <span className="order-payment__empty">Sin abonos</span>
+            <span className="order-payment__empty">Sin pagos registrados</span>
           )}
         </button>
         {remainingAmount > 0 && (
@@ -32,7 +32,7 @@ function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
             type="button"
             className="order-payment__add-btn"
             onClick={onOpenPayments}
-            {...namedControl('Agregar pago al pedido')}
+            {...namedControl('Registrar pago en efectivo')}
           >
             +
           </button>
@@ -42,7 +42,7 @@ function CashAbonos({ payments, remainingAmount, onOpenPayments }) {
   )
 }
 
-function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPayments }) {
+function TransferProofSection({ payment, remainingAmount, onVerifyProof, onOpenPayments }) {
   const details = payment?.checkoutDetails ?? payment?.details ?? {}
   const proofUrl = details.proofDataUrl || ''
   const proofName = details.proofName || 'Comprobante'
@@ -52,7 +52,7 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
 
   return (
     <div className="content-list-data__row content-list-data__row--block">
-      <span className="content-list-data__label">Comprobante</span>
+      <span className="content-list-data__label">Comprobante de transferencia</span>
       <div className="order-payment__proof">
         {proofUrl ? (
           proofUrl.startsWith('data:image/') ? (
@@ -98,7 +98,7 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
         <span className="order-payment__proof-meta">
           Valor: {formatRealAmount(proofAmount)}
           {verified
-            ? (coversFull ? ' · 100% cubierto' : ' · Abono parcial aplicado')
+            ? (coversFull ? ' · 100% cubierto' : ' · Pago parcial aplicado')
             : ' · Pendiente de validar'}
         </span>
 
@@ -107,7 +107,7 @@ function TransferProofAbonos({ payment, remainingAmount, onVerifyProof, onOpenPa
             type="button"
             className="order-payment__add-btn"
             onClick={onOpenPayments}
-            {...namedControl('Registrar abono manual')}
+            {...namedControl('Registrar pago manual')}
           >
             +
           </button>
@@ -128,7 +128,7 @@ function CreditSaldoPendiente({ payment, orderTotal, remainingAmount, onOpenPaym
 
   return (
     <div className="content-list-data__row content-list-data__row--block">
-      <span className="content-list-data__label">Saldo pendiente</span>
+      <span className="content-list-data__label">Saldo / abonos</span>
       <div className="order-payment__credit">
         <strong className={toneClass}>{formatRealAmount(remainingAmount)}</strong>
         <span className="order-payment__proof-meta">
@@ -136,7 +136,7 @@ function CreditSaldoPendiente({ payment, orderTotal, remainingAmount, onOpenPaym
           {availableCredit > 0 ? ` · Cupo: ${formatRealAmount(availableCredit)}` : ''}
         </span>
         <span className="order-payment__proof-meta">
-          Medio: {paymentTypeLabel(payment?.type)} · Límite: {details.paymentLimitDays ?? ((details.paymentLimitMonths ?? 2) * 30)} días
+          Medio: {paymentTypeLabel(payment?.type)} · Límite: {details.paymentLimitDays ?? ((details.paymentLimitMonths ?? 2) * 15)} días
         </span>
         {remainingAmount > 0 && (
           <button
@@ -153,7 +153,7 @@ function CreditSaldoPendiente({ payment, orderTotal, remainingAmount, onOpenPaym
   )
 }
 
-/** Campo Abonos / Comprobante / Saldo pendiente según medio del pedido. */
+/** Efectivo → pagos; Transferencia → comprobante; Crédito → abonos. */
 export function OrderPaymentAbonos({
   order,
   onOpenPayments,
@@ -167,7 +167,7 @@ export function OrderPaymentAbonos({
 
   if (type === 'transferencia') {
     return (
-      <TransferProofAbonos
+      <TransferProofSection
         payment={payment}
         remainingAmount={remainingAmount}
         onVerifyProof={onVerifyProof}
@@ -188,7 +188,7 @@ export function OrderPaymentAbonos({
   }
 
   return (
-    <CashAbonos
+    <CashPayments
       payments={payments}
       remainingAmount={remainingAmount}
       onOpenPayments={onOpenPayments}

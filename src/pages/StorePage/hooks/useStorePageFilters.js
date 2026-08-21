@@ -70,6 +70,7 @@ export function useStorePageFilters({
   withStock,
   searchValue,
   historyPaymentFilter,
+  historyStatusFilter,
   drawerOpen,
   drawerType,
   setSearchProducts,
@@ -363,6 +364,11 @@ export function useStorePageFilters({
     [historyOrders],
   )
 
+  const statusOptions = useMemo(
+    () => [...new Set(historyOrders.map((order) => order.estado).filter(Boolean))],
+    [historyOrders],
+  )
+
   const filteredHistoryOrders = useMemo(() => {
     if (activeView !== 'historial') {
       return historyOrders
@@ -370,9 +376,10 @@ export function useStorePageFilters({
 
     return historyOrders.filter((order) => {
       const matchesPayment = !historyPaymentFilter || order.metodo_pago === historyPaymentFilter
-      return matchesOrderIdSearch(order, debouncedSearchValue) && matchesPayment
+      const matchesStatus = !historyStatusFilter || order.estado === historyStatusFilter
+      return matchesOrderIdSearch(order, debouncedSearchValue) && matchesPayment && matchesStatus
     })
-  }, [activeView, historyOrders, debouncedSearchValue, historyPaymentFilter])
+  }, [activeView, historyOrders, debouncedSearchValue, historyPaymentFilter, historyStatusFilter])
 
   const cartProductIds = useMemo(
     () => new Set(cartItems.map((item) => item.id)),
@@ -389,6 +396,7 @@ export function useStorePageFilters({
     filteredPendingOrders,
     filteredHistoryOrders,
     paymentMethods,
+    statusOptions,
     cartProductIds,
     submitProductSearch,
     clearCommittedProductSearch,

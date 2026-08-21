@@ -81,6 +81,15 @@
   font-weight: 400;
 }
 
+.content-list-data__hint {
+  color: var(--color-gris-casi-invisible);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
 .order-accordion {
   overflow-y: auto;
   padding: 0;

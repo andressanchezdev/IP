@@ -156,7 +156,7 @@ function drawTotals(doc, y, { itemCount, units, total, subtotal, iva }) {
  * @param {number} total
  * @param {{ filename?: string, subtitle?: string, metaLines?: string[], includeCartId?: boolean }} [options]
  */
-export function downloadOrderPdf(title, items = [], total = 0, options = {}) {
+export async function downloadOrderPdf(title, items = [], total = 0, options = {}) {
   const includeCartId = Boolean(options.includeCartId)
   const columns = getColumns(includeCartId)
   const rows = normalizeItems(items, { includeCartId })
@@ -164,7 +164,7 @@ export function downloadOrderPdf(title, items = [], total = 0, options = {}) {
   const computedTotal = Number(total) || breakdown.total
   const units = rows.reduce((sum, row) => sum + row.quantity, 0)
 
-  const doc = createPdfDocument()
+  const doc = await createPdfDocument()
   const startTable = () => drawTableHeader(doc, drawPdfBrandHeader(doc, {
     title,
     subtitle: options.subtitle,

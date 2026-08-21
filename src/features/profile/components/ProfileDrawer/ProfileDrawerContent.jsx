@@ -182,15 +182,19 @@ export function ProfileDrawerContent({ onOpenBulkUpload }) {
       if (priceDownloadMethod === 'excel') {
         await downloadPriceListExcel({
           products: mappedProducts,
+          filters: exportFilters,
           filename: 'listado-precios.xlsx',
         })
         showToast('Excel de listado descargado', 'success')
         return
       }
 
-      downloadPriceListPdf({
+      await downloadPriceListPdf({
         products: mappedProducts,
         filters: exportFilters,
+        brandOptions: marcas,
+        selectedBrandIds: priceListFilters.brands,
+        brandMode: priceQuickMode.brands,
         filename: 'listado-precios.pdf',
       })
       showToast('PDF de listado descargado', 'success')

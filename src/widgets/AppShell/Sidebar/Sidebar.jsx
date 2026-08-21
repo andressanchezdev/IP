@@ -41,19 +41,22 @@ export function Sidebar({
       </button>
 
       <nav className="sidebar__nav" {...namedControl('Menú de vistas')}>
-        {NAV_ITEMS.map(({ id, label, icon }) => (
-          <button
-            key={id}
-            type="button"
-            className={`sidebar__item ${activeItem === id ? 'sidebar__item--active' : ''}`}
-            onClick={() => onNavigate?.(id)}
-            aria-current={activeItem === id ? 'page' : undefined}
-            {...namedControl(label)}
-          >
-            <img src={icon} className="sidebar__icon" {...namedImage(label)} />
-            <span className="sidebar__label">{label}</span>
-          </button>
-        ))}
+        {NAV_ITEMS.map(({ id, label, icon }) => {
+          const isActive = activeItem === id
+          return (
+            <button
+              key={id}
+              type="button"
+              className={`sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
+              onClick={() => onNavigate?.(id)}
+              aria-current={isActive ? 'page' : undefined}
+              {...namedControl(label)}
+            >
+              <img src={icon} className="sidebar__icon" alt="" {...namedImage(label)} />
+              <span className="sidebar__label">{label}</span>
+            </button>
+          )
+        })}
       </nav>
 
       <div className="sidebar__footer">
@@ -66,6 +69,7 @@ export function Sidebar({
           <img
             src={isAuthenticated ? logoutIcon : loginIcon}
             className="sidebar__icon"
+            alt=""
             {...namedImage(isAuthenticated ? 'Cerrar sesión' : 'Iniciar sesión')}
           />
           <span className="sidebar__label">{isAuthenticated ? 'Salir' : 'Iniciar sesión'}</span>

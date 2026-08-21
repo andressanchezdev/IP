@@ -118,6 +118,20 @@
   }
 
   .header__payment-filter {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 0;
+    padding: 0;
+    position: static;
+    width: auto;
+  }
+
+  .header__history-filters {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
     border-radius: 10px;
@@ -125,7 +139,7 @@
     display: none;
     flex: none;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     left: 0;
     margin-top: 6px;
     padding: 10px;
@@ -136,7 +150,7 @@
     z-index: 20;
   }
 
-  .header__payment-filter--open {
+  .header__history-filters--open {
     display: flex;
   }
 

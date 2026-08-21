@@ -21,6 +21,34 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, 'src'),
       },
     },
+    build: {
+      // El aviso de 500 kB es preventivo; priorizamos split real de vendors pesados.
+      chunkSizeWarningLimit: 700,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'react-vendor',
+                test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              },
+              {
+                name: 'sweetalert',
+                test: /node_modules[\\/]sweetalert2[\\/]/,
+              },
+              {
+                name: 'jspdf',
+                test: /node_modules[\\/](jspdf|html2canvas|dompurify)[\\/]/,
+              },
+              {
+                name: 'xlsx',
+                test: /node_modules[\\/]xlsx[\\/]/,
+              },
+            ],
+          },
+        },
+      },
+    },
     server: {
       port,
       strictPort: true,
@@ -29,11 +57,24 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_PROXY_TARGET,
           changeOrigin: true,
         },
+        // Logos GCS → mismo origen (jsPDF/canvas necesita esto; <img> no).
+        '/gcs-assets': {
+          target: 'https://storage.googleapis.com',
+          changeOrigin: true,
+          rewrite: (requestPath) => requestPath.replace(/^\/gcs-assets/, ''),
+        },
       },
     },
     preview: {
       port,
       strictPort: true,
+      proxy: {
+        '/gcs-assets': {
+          target: 'https://storage.googleapis.com',
+          changeOrigin: true,
+          rewrite: (requestPath) => requestPath.replace(/^\/gcs-assets/, ''),
+        },
+      },
     },
   }
 })

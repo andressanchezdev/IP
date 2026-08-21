@@ -4,7 +4,11 @@ import copyIcon from '@/assets/icons/copy.svg'
 import shippingIcon from '@/assets/icons/shipping.svg'
 import { useToast } from '@/app/providers/ToastProvider'
 import { copyTextToClipboard } from '@/shared/lib/copyTextToClipboard'
-import { ORDER_STEPS } from '@/features/orders/constants/orderSteps'
+import {
+  getFlowStepLabel,
+  getOrderStepIndex,
+  ORDER_STEP_DEFS,
+} from '@/features/orders/constants/orderSteps'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './PendingOrderCard.css'
 
@@ -50,7 +54,9 @@ export const PendingOrderCard = memo(function PendingOrderCard({
   showVisual = true,
 }) {
   const { showToast } = useToast()
-  const currentStepIndex = ORDER_STEPS.indexOf(order.status)
+  // API: data[].estado es string (ej. "verificacion"), no array.
+  const currentStepIndex = getOrderStepIndex(order.status ?? order.estado)
+  const currentStepLabel = getFlowStepLabel(currentStepIndex, currentStepIndex)
 
   const handleCopyId = async (event) => {
     event.stopPropagation()
@@ -59,7 +65,7 @@ export const PendingOrderCard = memo(function PendingOrderCard({
   }
 
   return (
-    <article className="espera-card">
+    <article className="espera-card" data-order-estado={order.estado || ''} data-order-status={currentStepLabel}>
       <div className="espera-card__header">
         <div className="espera-card__header-info">
           <div className="espera-card__id-row">
@@ -92,17 +98,24 @@ export const PendingOrderCard = memo(function PendingOrderCard({
         <div className="espera-card__flow-col">
           <span className="espera-card__col-label">Estado del pedido</span>
           <ul className="espera-card__flow">
-            {ORDER_STEPS.map((step, index) => {
-              const isDone = currentStepIndex >= 0 && index < currentStepIndex
-              const isCurrent = order.status === step
+            {ORDER_STEP_DEFS.map((stepDef, index) => {
+              const isDone = index < currentStepIndex
+              const isCurrent = index === currentStepIndex
+              const label = getFlowStepLabel(index, currentStepIndex)
 
               return (
                 <li
-                  key={step}
-                  className={`espera-card__flow-step ${isDone ? 'espera-card__flow-step--done' : ''} ${isCurrent ? 'espera-card__flow-step--current' : ''} ${!isDone && !isCurrent ? 'espera-card__flow-step--pending' : ''}`}
+                  key={stepDef.key}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={[
+                    'espera-card__flow-step',
+                    isDone ? 'espera-card__flow-step--done' : '',
+                    isCurrent ? 'espera-card__flow-step--current' : '',
+                    !isDone && !isCurrent ? 'espera-card__flow-step--pending' : '',
+                  ].filter(Boolean).join(' ')}
                 >
                   <span className="espera-card__flow-dot" aria-hidden="true" />
-                  <span className="espera-card__flow-label">{step}</span>
+                  <span className="espera-card__flow-label">{label}</span>
                 </li>
               )
             })}

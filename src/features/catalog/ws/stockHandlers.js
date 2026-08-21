@@ -80,7 +80,7 @@ export function applyStockFromWsMessage(message, {
   if (isOrderFlowWsTipo(tipo)) {
     return {
       tipo,
-      action: 'flujo pedido (sin stock)',
+      action: 'flujo pedido (delegado a orders)',
       orderId: message.cuerpo != null
         ? String(message.cuerpo)
         : (message.idVenta != null ? String(message.idVenta) : null),

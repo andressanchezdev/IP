@@ -4,7 +4,7 @@ import { useToast } from '@/app/providers/ToastProvider'
 import { changeUserPassword } from '@/features/profile/api/profileApi'
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import { ProfileIdentityCard } from '@/features/profile/components/ProfileIdentityCard/ProfileIdentityCard'
-import { confirmAction } from '@/shared/lib/confirmAction'
+import { confirmAction, notifyAction } from '@/shared/lib/confirmAction'
 import {
   DrawerCheckRow,
   DrawerPanel,
@@ -54,7 +54,7 @@ export function ProfileSettingsDrawerContent() {
     releaseAppCache,
     deleteAccount,
   } = useProfile()
-  const { tokenAccess, logout } = useAuth()
+  const { tokenAccess, logout, openAuthModal } = useAuth()
   const { closeDrawer } = useUi()
   const { showToast } = useToast()
   const [openSectionId, setOpenSectionId] = useState(null)
@@ -124,8 +124,16 @@ export function ProfileSettingsDrawerContent() {
 
     setChangePasswordOpen(false)
     closeDrawer()
-    showToast('Contraseña actualizada. Inicia sesión de nuevo.', 'success')
+
+    await notifyAction({
+      title: 'Contraseña actualizada',
+      text: 'Por seguridad, debes volver a iniciar sesión con tu nueva contraseña.',
+      confirmText: 'Iniciar sesión',
+      icon: 'success',
+    })
+
     await logout()
+    openAuthModal()
   }
 
   const handleClearCache = async () => {

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
-import Swal from 'sweetalert2'
 import { useAuth, useCart } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { getApiAuthToken } from '@/shared/api'
+import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
 import {
   MIN_PRODUCT_CODES,
   parseAndValidateProductExcelFile,
@@ -224,6 +224,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
   }
 
   const handleCancelOrder = async () => {
+    const Swal = await loadSweetAlert()
     const confirmation = await Swal.fire({
       title: '¿Cancelar el pedido?',
       text: 'Se descartará el procesamiento actual.',

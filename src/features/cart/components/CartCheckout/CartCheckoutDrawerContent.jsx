@@ -28,7 +28,6 @@ export function CartCheckoutDrawerContent() {
   const [paymentDetails, setPaymentDetails] = useState({})
   const [transferProofName, setTransferProofName] = useState('')
   const [transferProofDataUrl, setTransferProofDataUrl] = useState('')
-  const [contraentregaMethod, setContraentregaMethod] = useState('')
   const [creditLimitDays, setCreditLimitDays] = useState(1)
   const [paymentPanel, setPaymentPanel] = useState(null)
   const [editingDelivery, setEditingDelivery] = useState(false)
@@ -130,20 +129,16 @@ export function CartCheckoutDrawerContent() {
     showToast('Transferencia confirmada', 'success')
   }
 
-  const handleConfirmContraentrega = () => {
-    if (!contraentregaMethod) {
-      showToast('Elija transferencia o efectivo', 'error')
-      return
-    }
-    setPaymentMethod('contraentrega')
+  const handleConfirmEfectivo = () => {
+    setPaymentMethod('efectivo')
     setPaymentConfirmed(true)
     setPaymentDetails({
-      method: contraentregaMethod,
       amount: totalToPay,
+      amountReceived: totalToPay,
     })
     setPaymentPanel(null)
     setEditingPayment(false)
-    showToast('Contra entrega confirmada', 'success')
+    showToast('Pago en efectivo seleccionado', 'success')
   }
 
   const handleConfirmCredit = () => {
@@ -242,10 +237,8 @@ export function CartCheckoutDrawerContent() {
             paymentMethod={paymentMethod}
             transferProofName={transferProofName}
             onTransferProofChange={handleTransferProofChange}
-            contraentregaMethod={contraentregaMethod}
-            onContraentregaMethodChange={setContraentregaMethod}
             onConfirmTransfer={handleConfirmTransfer}
-            onConfirmContraentrega={handleConfirmContraentrega}
+            onConfirmEfectivo={handleConfirmEfectivo}
             onConfirmCredit={handleConfirmCredit}
             creditLimitDays={creditLimitDays}
             onCreditLimitDaysChange={setCreditLimitDays}

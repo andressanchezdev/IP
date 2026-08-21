@@ -53,8 +53,8 @@ export function CheckoutOrderSummary({
               </button>
             </div>
             <strong>
+              {paymentMethod === 'efectivo' && 'Efectivo'}
               {paymentMethod === 'transferencia' && 'Transferencia'}
-              {paymentMethod === 'contraentrega' && `Contra entrega (${paymentDetails.method})`}
               {paymentMethod === 'credito' && 'Crédito'}
             </strong>
           </div>

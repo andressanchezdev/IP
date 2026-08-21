@@ -251,6 +251,8 @@ function generalFilterList(payload, key) {
   return []
 }
 
+import { resolveAssetUrl } from '@/features/catalog/mappers/resolveAssetUrl'
+
 function mapFilterOption(entry, { idKeys, labelKeys }) {
   if (!entry || typeof entry !== 'object') {
     return null
@@ -275,11 +277,12 @@ function mapFilterOption(entry, { idKeys, labelKeys }) {
     }
   }
 
-  const image = String(entry.imagen ?? '').trim()
+  // Campo API `imagen` → URL absoluta (misma regla que productos).
+  const image = resolveAssetUrl(entry.imagen ?? entry.image ?? '')
 
   return {
     id: String(id),
-    label,
+    label: label.toLocaleUpperCase('es'),
     ...(image ? { image } : {}),
   }
 }

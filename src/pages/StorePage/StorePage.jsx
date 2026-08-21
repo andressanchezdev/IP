@@ -70,6 +70,7 @@ export function StorePage() {
   } = useUi()
   const { showToast } = useToast()
   const [historyPaymentFilter, setHistoryPaymentFilter] = useState('')
+  const [historyStatusFilter, setHistoryStatusFilter] = useState('')
 
   const {
     isStoreView,
@@ -81,6 +82,7 @@ export function StorePage() {
     filteredPendingOrders,
     filteredHistoryOrders,
     paymentMethods,
+    statusOptions,
     cartProductIds,
     submitProductSearch,
     clearCommittedProductSearch,
@@ -100,6 +102,7 @@ export function StorePage() {
     withStock,
     searchValue,
     historyPaymentFilter,
+    historyStatusFilter,
     drawerOpen,
     drawerType,
     setSearchProducts,
@@ -170,10 +173,11 @@ export function StorePage() {
     setSearchValue('')
     clearCommittedProductSearch()
     setHistoryPaymentFilter('')
+    setHistoryStatusFilter('')
   }, [activeView, setSearchValue, clearCommittedProductSearch])
 
   useEffect(() => {
-    if (activeView !== 'espera') {
+    if (activeView !== 'espera' && activeView !== 'historial') {
       return undefined
     }
     if (!isAuthenticated || !tokenAccess) {
@@ -271,6 +275,9 @@ export function StorePage() {
           paymentMethods={paymentMethods}
           paymentFilter={historyPaymentFilter}
           onPaymentFilterChange={setHistoryPaymentFilter}
+          statusOptions={statusOptions}
+          statusFilter={historyStatusFilter}
+          onStatusFilterChange={setHistoryStatusFilter}
         />
 
         <main className="landing__content">

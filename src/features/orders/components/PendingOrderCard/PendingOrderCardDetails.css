@@ -8,18 +8,13 @@
   position: relative;
 }
 
-.espera-card__flow-step--current .espera-card__flow-dot {
-  background: #ffb74d;
-  box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.22);
+.espera-card__flow-step--pending .espera-card__flow-dot {
+  background: var(--color-gris-casi-invisible);
 }
 
-.espera-card__flow-step--current .espera-card__flow-label {
-  color: #ffb74d;
-  font-weight: 700;
-}
-
-.espera-card__flow-step--current:not(:last-child)::after {
-  background: linear-gradient(to bottom, #ffb74d 0%, var(--color-gris-casi-invisible) 100%);
+.espera-card__flow-step--pending .espera-card__flow-label {
+  color: var(--color-gris-casi-invisible);
+  font-weight: 400;
 }
 
 .espera-card__flow-step--done .espera-card__flow-dot {
@@ -28,15 +23,25 @@
 
 .espera-card__flow-step--done .espera-card__flow-label {
   color: #2e7d32;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .espera-card__flow-step--done:not(:last-child)::after {
   background: #66bb6a;
 }
 
-.espera-card__flow-step--pending .espera-card__flow-label {
-  color: var(--color-gris-casi-invisible);
+.espera-card__flow-step--current .espera-card__flow-dot {
+  background: #FFB74D;
+  box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.28);
+}
+
+.espera-card__flow-step--current .espera-card__flow-label {
+  color: #FFB74D;
+  font-weight: 700;
+}
+
+.espera-card__flow-step--current:not(:last-child)::after {
+  background: linear-gradient(to bottom, #FFB74D 0%, var(--color-gris-casi-invisible) 100%);
 }
 
 .espera-card__flow-step:not(:last-child)::after {

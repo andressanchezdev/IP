@@ -1,17 +1,18 @@
+import {
+  getCurrentFlowLabel,
+  getOrderStepIndex,
+  isCreditoMetodoPago,
+  mapEstadoFacturaLabel,
+  resolveOrderStepFromEstado,
+} from '@/features/orders/constants/orderSteps'
+import {
+  resolvePaymentDeadline,
+  resolvePaymentLimitDays,
+} from '@/features/orders/utils/resolvePaymentDeadline'
+
 function toSafeNumber(value, fallback = 0) {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : fallback
-}
-
-function mapEstadoToStepLabel(estado = '') {
-  const normalized = String(estado).toLowerCase()
-  if (normalized.includes('verif')) return 'Verificación exitosa'
-  if (normalized.includes('pick')) return 'Picking exitoso'
-  if (normalized.includes('pack')) return 'Packing exitoso'
-  if (normalized.includes('fact')) return 'Facturación exitosa'
-  if (normalized.includes('desp')) return 'Despacho'
-  if (normalized.includes('envi')) return 'Enviado'
-  return 'Verificación exitosa'
 }
 
 function toHistoryItems(venta = []) {
@@ -30,10 +31,11 @@ function toHistoryItems(venta = []) {
       cant,
       rel,
       costo,
-      id: `${idpr ?? 'pr'}-${index}`,
+      id: String(idpr ?? `pr-${index}`),
       quantity: cant,
       price: costo,
       description: `Producto #${idpr ?? index + 1}`,
+      reference: idpr != null ? String(idpr) : '',
     }
   })
 }
@@ -47,16 +49,33 @@ export function mapSaleToHistoryOrder(entry) {
   const total = toSafeNumber(entry?.total, 0)
   const pagos = Array.isArray(entry?.pagos) ? entry.pagos : []
   const estado_factura = entry?.estado_factura ?? null
+  const status = resolveOrderStepFromEstado(estado)
+  const stepIndex = getOrderStepIndex(estado)
+  const paymentLimitDays = resolvePaymentLimitDays(entry)
+  const deadline = resolvePaymentDeadline({
+    createdAt: fecha,
+    paymentLimitDays,
+  })
 
   return {
     idventa,
+    id: String(idventa || ''),
     estado,
     estado_factura,
+    estadoFacturaLabel: mapEstadoFacturaLabel(estado_factura),
     fecha,
+    createdAt: fecha,
     metodo_pago,
     total,
     pagos,
     venta,
+    items: venta,
+    status,
+    stepIndex,
+    statusLabel: getCurrentFlowLabel(estado),
+    paymentLimitDays: deadline.days,
+    dateLimit: deadline.deadlineIso,
+    dateLimitLabel: deadline.dateLimitLabel,
   }
 }
 
@@ -67,24 +86,40 @@ export function mapSalesToHistoryOrders(data = []) {
   return data.map(mapSaleToHistoryOrder)
 }
 
+/** Pedidos de Cartera: solo crédito. */
+export function mapSalesToCreditHistoryOrders(data = []) {
+  return mapSalesToHistoryOrders(data).filter((order) => isCreditoMetodoPago(order.metodo_pago))
+}
+
 export function mapSaleToPendingOrder(entry) {
   const history = mapSaleToHistoryOrder(entry)
-  const id = String(history.idventa || '')
-  const items = history.venta.map((item, index) => ({
-    id: `${history.idventa}-${item.idpr ?? index}`,
-    description: `Producto #${item.idpr ?? index + 1}`,
-    quantity: item.cant,
-    price: item.costo,
-  }))
+  const paymentType = String(history.metodo_pago || 'efectivo').toLowerCase()
+  const resolvedType = paymentType.includes('credito')
+    ? 'credito'
+    : paymentType.includes('transfer')
+      ? 'transferencia'
+      : paymentType.includes('efectivo')
+        ? 'efectivo'
+        : paymentType
 
   return {
     ...history,
-    id,
-    createdAt: history.fecha,
-    status: mapEstadoToStepLabel(history.estado),
     paymentMethod: history.metodo_pago,
-    items,
-    dateLimit: '-',
+    payment: {
+      type: resolvedType,
+      method: history.metodo_pago,
+      amount: history.total,
+      paidAmount: 0,
+      payments: [],
+      deadline: history.dateLimit,
+      details: {
+        paymentLimitDays: history.paymentLimitDays,
+      },
+      checkoutDetails: {
+        paymentLimitDays: history.paymentLimitDays,
+      },
+    },
+    dateLimit: history.dateLimitLabel,
   }
 }
 
