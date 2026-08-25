@@ -1,4 +1,5 @@
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
+import { formatAddressDisplay, mapAboutAddresses } from './mapAboutAddresses'
 
 function text(value) {
   if (value == null) {
@@ -112,9 +113,8 @@ export function mergeApiProfileWithWorkspace(apiProfile, workspaceProfile) {
       email: apiProfile.access?.email || previous.access?.email || '',
       password: previous.access?.password || '',
     },
-    addresses: Array.isArray(apiProfile.addresses) && apiProfile.addresses.length > 0
-      ? apiProfile.addresses
-      : (Array.isArray(previous.addresses) ? previous.addresses : []),
+    // Direcciones siempre desde /users/about (no mezclar mocks ni lista local vieja).
+    addresses: Array.isArray(apiProfile.addresses) ? apiProfile.addresses : [],
     notificationsEnabled: previous.notificationsEnabled ?? apiProfile.notificationsEnabled,
   }
 }
@@ -144,31 +144,41 @@ export function toAuthUserSummary(profileSettings) {
  */
 export function mapAboutUserToClient(aboutData, fallbackEmail = '') {
   const user = aboutData && typeof aboutData === 'object' ? aboutData : {}
-  const usuario = user?.usuario && typeof user.usuario === 'object' ? user.usuario : {}
+  const usuario = parseUsuarioDetails(user?.usuario)
   const empresa = user?.empresa && typeof user.empresa === 'object' ? user.empresa : {}
 
   const email = text(user?.email) || text(fallbackEmail)
-  const userId = text(user?.id_usuario) || email
+  const userId = text(user?.id_usuario ?? user?.id) || email
+  const phone = text(usuario.telefono) || text(usuario.tel) || text(usuario.phone)
+  const mobile = text(usuario.celular) || text(usuario.mobile) || phone
+  const addresses = mapAboutAddresses(user, usuario)
+  const primaryAddress = addresses[0]
+  const address = text(typeof usuario.direccion === 'string' ? usuario.direccion : '')
+    || text(typeof user?.direccion === 'string' ? user.direccion : '')
+    || formatAddressDisplay(primaryAddress)
 
   return {
     userId,
     email,
-    fullName: text(usuario?.nombre) || email,
-    documentId: text(usuario?.cedula),
-    phone: '',
-    mobile: '',
-    role: String(user?.estado ?? ''),
-    warehouseId: '',
-    birthDate: '',
-    gender: '',
-    additional: '',
-    address: '',
-    neighborhood: '',
-    city: '',
-    department: '',
-    country: '',
-    companyName: text(empresa?.razon),
+    fullName: text(usuario.nombre) || text(user?.nombre) || email,
+    documentId: text(usuario.cedula) || text(usuario.documento) || text(user?.cedula),
+    phone: phone || mobile,
+    mobile: mobile || phone,
+    role: text(user?.estado) || text(user?.perfil) || text(user?.role),
+    warehouseId: text(user?.id_bodega ?? user?.warehouseId),
+    birthDate: text(usuario.fecha),
+    gender: text(usuario.genero),
+    additional: text(usuario.adicional) || text(primaryAddress?.notes),
+    address,
+    neighborhood: text(usuario.barrio) || text(primaryAddress?.neighborhood),
+    city: text(usuario.ciudad) || text(primaryAddress?.city),
+    department: text(usuario.departamento) || text(primaryAddress?.department),
+    country: text(usuario.pais) || text(primaryAddress?.country),
+    companyName: text(empresa?.razon) || text(empresa?.nombre),
     companyNit: text(empresa?.nit),
+    companyPhone: text(empresa?.celular) || text(empresa?.telefono) || text(empresa?.phone),
+    companyAddress: text(empresa?.direccion) || text(empresa?.address),
+    addresses,
   }
 }
 
@@ -185,6 +195,17 @@ export function mapAboutUserToProfileSettings(aboutData, fallbackEmail = '') {
     email: client.email,
     userId: client.userId,
     role: client.role,
+    warehouseId: client.warehouseId,
+    phone: client.phone,
+    mobile: client.mobile,
+    birthDate: client.birthDate,
+    gender: client.gender,
+    additional: client.additional,
+    address: client.address,
+    neighborhood: client.neighborhood,
+    city: client.city,
+    department: client.department,
+    country: client.country,
   }
 
   return {
@@ -195,11 +216,13 @@ export function mapAboutUserToProfileSettings(aboutData, fallbackEmail = '') {
       name: client.companyName,
       nit: client.companyNit,
       email: client.email,
+      phone: client.companyPhone,
+      address: client.companyAddress,
     },
     access: {
       email: client.email,
       password: '',
     },
-    addresses: [],
+    addresses: client.addresses,
   }
 }

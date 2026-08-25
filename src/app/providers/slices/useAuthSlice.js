@@ -113,6 +113,7 @@ export function useAuthSlice({ events, cartHydratingRef }) {
         userId,
         profile: nextProfile,
         workspace,
+        tokenAccess,
       })
 
       const session = {

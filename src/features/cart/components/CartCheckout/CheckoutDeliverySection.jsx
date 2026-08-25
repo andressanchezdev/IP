@@ -3,6 +3,8 @@ import { Accordion } from '@/shared/ui/Accordion/Accordion'
 import { CheckoutDeliveryMap } from './CheckoutDeliveryMap'
 import { namedControl } from '@/shared/lib/namedControl'
 import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
+import { formatAddressDisplay } from '@/features/auth/utils/mapAboutAddresses'
+import { INPUT_CHAR_MAX, validateAddressLine } from '@/shared/lib/fieldValidation'
 import '@/shared/ui/FieldHint/FieldHint.css'
 
 const PANEL_REGISTERED = 'registered'
@@ -20,19 +22,26 @@ export function CheckoutDeliverySection({
   onConfirmRegistered,
   onConfirmNew,
   onConfirmMap,
+  onDeliveryOptionOpen,
 }) {
   const [openPanel, setOpenPanel] = useState(PANEL_REGISTERED)
 
-  const toggle = (panel) => setOpenPanel((current) => (current === panel ? null : panel))
+  const toggle = (panel) => {
+    setOpenPanel((current) => {
+      const next = current === panel ? null : panel
+      if (next) {
+        onDeliveryOptionOpen?.()
+      }
+      return next
+    })
+  }
 
   const registeredHint = registeredAddresses.length === 0
     ? 'No hay direcciones registradas. Agregue una nueva o use el mapa.'
     : !selectedAddressId
       ? 'Seleccione una dirección registrada'
       : ''
-  const newAddressHint = newAddress.trim()
-    ? ''
-    : 'La nueva dirección es obligatoria (calle, número, ciudad)'
+  const newAddressHint = validateAddressLine(newAddress, { label: 'La nueva dirección' })
   const mapHint = mapLocation?.address
     ? ''
     : 'Seleccione un punto en el mapa para confirmar la entrega'
@@ -57,7 +66,7 @@ export function CheckoutDeliverySection({
                 />
                 <span>
                   <strong>{entry.label}</strong>
-                  <small>{entry.address}</small>
+                  <small>{entry.displayLine || formatAddressDisplay(entry) || entry.address}</small>
                 </span>
               </label>
             ))}
@@ -86,6 +95,7 @@ export function CheckoutDeliverySection({
               value={newAddress}
               onChange={(event) => onNewAddressChange(event.target.value)}
               placeholder="Calle, número, ciudad"
+              maxLength={INPUT_CHAR_MAX}
               className={newAddressHint ? 'order-payments-panel__input--error' : ''}
               aria-invalid={Boolean(newAddressHint)}
               {...namedControl('Nueva dirección')}

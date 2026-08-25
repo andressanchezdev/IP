@@ -76,6 +76,7 @@ export function buildCheckoutOrder({
   return enrichOrder({
     id: `PED-${Date.now()}`,
     userId,
+    source: 'checkout',
     invoiceNumber: `FAC-${Date.now()}`,
     createdAt: now.toISOString(),
     dateLimit: deadlineInfo.deadlineIso,
@@ -108,11 +109,7 @@ export function buildCheckoutOrder({
       totalQuantity,
     },
     delivery: {
-      date: new Date(Date.now() + 3 * 86400000).toISOString(),
       address: client.address,
-      notes: client.notes || 'Entregar en horario de oficina',
-      deliveredBy: 'Transportes Premium',
-      receivedBy: client.fullName || 'Cliente autorizado',
       mapLocation: clientData?.mapLocation ?? null,
     },
   })

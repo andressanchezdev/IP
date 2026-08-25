@@ -10,13 +10,16 @@ import { CheckoutPaymentSection } from './CheckoutPaymentSection'
 import { CheckoutOrderSummary } from './CheckoutOrderSummary'
 import { summarizeCartItems } from '@/shared/lib/money'
 import { namedControl } from '@/shared/lib/namedControl'
+import { validateAddressLine } from '@/shared/lib/fieldValidation'
+import { formatAddressDisplay } from '@/features/auth/utils/mapAboutAddresses'
+import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
 
 const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
 
 export function CartCheckoutDrawerContent() {
   const { cartItems, createOrderFromCheckout } = useCart()
-  const { profile, profileSettings } = useProfile()
+  const { profile, profileSettings, loadProfileFromAboutApi, isLoadingAbout } = useProfile()
   const { showToast } = useToast()
 
   const [selectedAddressId, setSelectedAddressId] = useState('')
@@ -32,19 +35,36 @@ export function CartCheckoutDrawerContent() {
   const [paymentPanel, setPaymentPanel] = useState(null)
   const [editingDelivery, setEditingDelivery] = useState(false)
   const [editingPayment, setEditingPayment] = useState(false)
+  const [orderSummaryOpen, setOrderSummaryOpen] = useState(true)
+  const [paymentAccordionOpen, setPaymentAccordionOpen] = useState(true)
 
   const personal = profileSettings?.personal ?? {}
 
   const registeredAddresses = useMemo(() => {
-    const fromProfile = profile?.addresses ?? []
+    const fromProfile = (profile?.addresses ?? profileSettings?.addresses ?? [])
+      .filter((entry) => entry && String(entry.address ?? '').trim())
+      .map((entry, index) => ({
+        ...entry,
+        id: entry.id ?? `addr-${index + 1}`,
+        label: entry.label || `Dirección ${index + 1}`,
+        address: String(entry.address).trim(),
+        displayLine: formatAddressDisplay(entry) || String(entry.address).trim(),
+      }))
     return fromProfile.slice(0, MAX_ADDRESSES)
-  }, [profile])
+  }, [profile, profileSettings])
 
   useEffect(() => {
     if (registeredAddresses.length > 0 && !selectedAddressId) {
       setSelectedAddressId(registeredAddresses[0].id)
     }
   }, [registeredAddresses, selectedAddressId])
+
+  useEffect(() => {
+    const hasAddresses = (profileSettings?.addresses ?? []).length > 0
+    if (!hasAddresses && !isLoadingAbout) {
+      loadProfileFromAboutApi()
+    }
+  }, [profileSettings?.addresses, isLoadingAbout, loadProfileFromAboutApi])
 
   const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
   const subtotal = cartTotals.subtotal
@@ -57,20 +77,27 @@ export function CartCheckoutDrawerContent() {
   const showPaymentSection = !paymentConfirmed || editingPayment
   const canConfirmOrder = hasDelivery && paymentConfirmed
 
+  const handleDeliveryOptionOpen = () => {
+    setOrderSummaryOpen(false)
+    setPaymentAccordionOpen(false)
+    setPaymentPanel(null)
+  }
+
   const confirmRegisteredAddress = () => {
     const selected = registeredAddresses.find((entry) => entry.id === selectedAddressId)
     if (!selected) {
       showToast('Seleccione una dirección registrada', 'error')
       return
     }
-    setDeliveryAddress(selected.address)
+    setDeliveryAddress(selected.displayLine || selected.address)
     setEditingDelivery(false)
     showToast('Dirección de entrega establecida', 'success')
   }
 
   const confirmNewAddress = () => {
-    if (!newAddress.trim()) {
-      showToast('Ingrese la nueva dirección', 'error')
+    const addressError = validateAddressLine(newAddress, { label: 'La nueva dirección' })
+    if (addressError) {
+      showToast(addressError, 'error')
       return
     }
     if (registeredAddresses.length >= MAX_ADDRESSES) {
@@ -117,8 +144,8 @@ export function CartCheckoutDrawerContent() {
     setPaymentMethod('transferencia')
     setPaymentConfirmed(true)
     setPaymentDetails({
-      account: '01400000369',
-      bank: 'Bancolombia',
+      account: TRANSFER_ACCOUNT.account,
+      bank: TRANSFER_ACCOUNT.bank,
       amount: totalToPay,
       proofName: transferProofName,
       proofDataUrl: transferProofDataUrl,
@@ -194,13 +221,15 @@ export function CartCheckoutDrawerContent() {
       paymentType: paymentMethod,
       paymentDetails,
     })
-    showToast('Pedido creado. Puede seguirlo en la vista de espera.', 'success')
+    showToast('Pedido creado. Puede seguirlo en Historial.', 'success')
   }
 
   return (
     <div className="content-main-carrito">
       <div className="content-main-aux-carrito order-payments-panel checkout-panel checkout-finalize">
         <CheckoutOrderSummary
+          isOpen={orderSummaryOpen}
+          onToggle={setOrderSummaryOpen}
           subtotal={subtotal}
           iva={iva}
           totalToPay={totalToPay}
@@ -225,11 +254,14 @@ export function CartCheckoutDrawerContent() {
             onConfirmRegistered={confirmRegisteredAddress}
             onConfirmNew={confirmNewAddress}
             onConfirmMap={confirmMapAddress}
+            onDeliveryOptionOpen={handleDeliveryOptionOpen}
           />
         )}
 
         {showPaymentSection && (
           <CheckoutPaymentSection
+            isOpen={paymentAccordionOpen}
+            onToggle={setPaymentAccordionOpen}
             totalToPay={totalToPay}
             creditAvailable={CREDIT_AVAILABLE}
             paymentPanel={paymentPanel}

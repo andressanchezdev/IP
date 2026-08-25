@@ -3,7 +3,7 @@ import eyeIcon from '@/assets/icons/eye.svg'
 import eyeOffIcon from '@/assets/icons/eye-off.svg'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
-export function AuthField({ id, label, type = 'text', value, error, onChange }) {
+export function AuthField({ id, label, type = 'text', value, error, onChange, maxLength }) {
   const [showPassword, setShowPassword] = useState(false)
   const isPassword = type === 'password'
   const inputType = isPassword && showPassword ? 'text' : type
@@ -17,6 +17,7 @@ export function AuthField({ id, label, type = 'text', value, error, onChange }) 
           type={inputType}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          maxLength={maxLength}
           className={`auth-field__input ${isPassword ? 'auth-field__input--password' : ''} ${error ? 'auth-field__input--error' : ''}`}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}

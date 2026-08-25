@@ -1,7 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { namedControl } from '@/shared/lib/namedControl'
 
-export function DrawerAccordionSection({ id, title, isOpen, onToggle, onClose, children }) {
+export function DrawerAccordionSection({
+  id,
+  title,
+  isOpen,
+  onToggle,
+  onClose,
+  children,
+  className = '',
+}) {
   const sectionRef = useRef(null)
 
   useEffect(() => {
@@ -28,7 +36,7 @@ export function DrawerAccordionSection({ id, title, isOpen, onToggle, onClose, c
   return (
     <div
       ref={sectionRef}
-      className={`order-accordion__section ${isOpen ? 'order-accordion__section--open' : ''}`}
+      className={`order-accordion__section ${isOpen ? 'order-accordion__section--open' : ''} ${className}`.trim()}
     >
       <button
         type="button"

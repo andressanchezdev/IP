@@ -5,6 +5,8 @@ import { SummaryRow } from './SummaryRow'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
 export function CheckoutOrderSummary({
+  isOpen,
+  onToggle,
   subtotal,
   iva,
   totalToPay,
@@ -17,7 +19,12 @@ export function CheckoutOrderSummary({
   onEditPayment,
 }) {
   return (
-    <Accordion title="Información del pedido" defaultOpen>
+    <Accordion
+      title="Información del pedido"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      defaultOpen
+    >
       <div className="checkout-finalize__box">
         <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
         <SummaryRow label="Costo de envío" value="Gratis" />

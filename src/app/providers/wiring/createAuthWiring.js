@@ -19,15 +19,21 @@ export function createAuthWiring({
       profile.setProfileSettings(data.profileSettings)
       orders.setPendingOrders([])
       orders.setHistoryOrders([])
+      if (session?.tokenAccess) {
+        profile.loadProfileFromAboutApi({ token: session.tokenAccess })
+      }
     },
 
-    [APP_EVENTS.AUTH_LOGIN]: ({ profile: nextProfile }) => {
+    [APP_EVENTS.AUTH_LOGIN]: ({ profile: nextProfile, tokenAccess }) => {
       profile.setProfileSettings(nextProfile)
       orders.setPendingOrders([])
       orders.setHistoryOrders([])
       // Cart se hidrata solo desde GET /api/v1/inventory/carts.
       cart.setCartItems([])
       catalog.resetCatalogProducts()
+      if (tokenAccess) {
+        profile.loadProfileFromAboutApi({ token: tokenAccess })
+      }
     },
 
     [APP_EVENTS.AUTH_LOGGED_OUT]: () => {

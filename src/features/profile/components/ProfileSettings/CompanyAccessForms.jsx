@@ -1,7 +1,31 @@
 import { SettingsField } from './SettingsField'
 import { namedControl } from '@/shared/lib/namedControl'
+import {
+  INPUT_CHAR_MAX,
+  validateEmail,
+  validatePersonName,
+} from '@/shared/lib/fieldValidation'
 
-export function CompanyDataForm({ draft, onDraftChange, onSave }) {
+export function validateCompanyDraft(draft) {
+  const errors = {}
+
+  const nameError = validatePersonName(draft.name, { label: 'El nombre de la empresa' })
+  if (nameError) errors.name = nameError
+
+  const emailError = validateEmail(draft.email)
+  if (emailError) errors.email = emailError
+
+  return { isValid: Object.keys(errors).length === 0, errors }
+}
+
+export function validateAccessDraft(draft) {
+  const errors = {}
+  const emailError = validateEmail(draft.email)
+  if (emailError) errors.email = emailError
+  return { isValid: Object.keys(errors).length === 0, errors }
+}
+
+export function CompanyDataForm({ draft, onDraftChange, onSave, errors = {} }) {
   return (
     <div className="profile-settings-form">
       <SettingsField
@@ -9,6 +33,8 @@ export function CompanyDataForm({ draft, onDraftChange, onSave }) {
         label="Nombre de la empresa"
         value={draft.name}
         onChange={(value) => onDraftChange((current) => ({ ...current, name: value }))}
+        maxLength={INPUT_CHAR_MAX}
+        error={errors.name || ''}
       />
       <SettingsField
         id="company-nit"
@@ -31,6 +57,8 @@ export function CompanyDataForm({ draft, onDraftChange, onSave }) {
         type="email"
         value={draft.email}
         onChange={(value) => onDraftChange((current) => ({ ...current, email: value }))}
+        maxLength={INPUT_CHAR_MAX}
+        error={errors.email || ''}
       />
       <SettingsField
         id="company-address"
@@ -51,7 +79,10 @@ export function CompanyDataForm({ draft, onDraftChange, onSave }) {
   )
 }
 
-export function AccessForm({ draft, onDraftChange, onUpdatePassword }) {
+export function AccessForm({ draft, onDraftChange, onUpdatePassword, errors = {} }) {
+  const emailError = errors.email
+    || (String(draft.email ?? '').trim() ? validateEmail(draft.email) : '')
+
   return (
     <div className="profile-settings-form">
       <SettingsField
@@ -60,6 +91,8 @@ export function AccessForm({ draft, onDraftChange, onUpdatePassword }) {
         type="email"
         value={draft.email}
         onChange={(value) => onDraftChange((current) => ({ ...current, email: value }))}
+        maxLength={INPUT_CHAR_MAX}
+        error={emailError}
       />
       <SettingsField
         id="access-password"

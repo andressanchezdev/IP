@@ -3,13 +3,9 @@ import { formatPrice } from '@/shared/lib/formatPrice'
 import { SummaryRow } from './SummaryRow'
 import { namedControl } from '@/shared/lib/namedControl'
 import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
+import { CHECKOUT_PAYMENT_TYPES } from '@/features/orders/constants/paymentConfig'
+import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
 import '@/shared/ui/FieldHint/FieldHint.css'
-
-const PAYMENT_TYPES = [
-  { id: 'efectivo', label: 'Efectivo' },
-  { id: 'transferencia', label: 'Transferencia' },
-  { id: 'credito', label: 'Crédito' },
-]
 
 const CREDIT_DAYS_MIN = 1
 const CREDIT_DAYS_MAX = 30
@@ -36,6 +32,8 @@ function creditAmountClass(amount) {
 }
 
 export function CheckoutPaymentSection({
+  isOpen,
+  onToggle,
   totalToPay,
   creditAvailable,
   paymentPanel,
@@ -63,20 +61,30 @@ export function CheckoutPaymentSection({
     : creditDaysHint
 
   return (
-    <Accordion title="Método de pago" defaultOpen>
+    <Accordion
+      title="Método de pago"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      defaultOpen
+    >
       <div className="checkout-finalize__box">
         <div className="order-payment__types order-payments-panel__types">
-          {PAYMENT_TYPES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              className={`order-payment__type order-payment__type--selectable ${paymentPanel === id || paymentMethod === id ? 'order-payment__type--active' : ''}`}
-              onClick={() => onSelectPanel(id)}
-              {...namedControl(label)}
-            >
-              {label}
-            </button>
-          ))}
+          {CHECKOUT_PAYMENT_TYPES.map(({ id, label }) => {
+            const isSelected = paymentPanel === id || paymentMethod === id
+            return (
+              <button
+                key={id}
+                type="button"
+                title={isSelected ? label : undefined}
+                aria-pressed={isSelected}
+                className={`order-payment__type order-payment__type--selectable ${isSelected ? 'order-payment__type--active' : ''}`}
+                onClick={() => onSelectPanel(id)}
+                {...namedControl(label)}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
         <FieldHint message={methodHint} />
 
@@ -97,9 +105,9 @@ export function CheckoutPaymentSection({
 
         {paymentPanel === 'transferencia' && (
           <div className="checkout-finalize__payment-panel">
-            <SummaryRow label="Cuenta ahorros" value="01400000369" />
+            <SummaryRow label={TRANSFER_ACCOUNT.accountLabel} value={TRANSFER_ACCOUNT.account} />
             <SummaryRow label="Valor total a transferir" value={formatPrice(totalToPay)} highlight />
-            <SummaryRow label="Entidad bancaria" value="Bancolombia" />
+            <SummaryRow label={TRANSFER_ACCOUNT.bankLabel} value={TRANSFER_ACCOUNT.bank} />
             <label className="order-payments-panel__field">
               <span>Comprobante de transferencia</span>
               <input

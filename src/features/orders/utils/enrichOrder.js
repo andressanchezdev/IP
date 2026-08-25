@@ -66,11 +66,10 @@ export function enrichOrder(order) {
       totalQuantity: order.packaging?.totalQuantity ?? totalQuantity,
     },
     delivery: {
-      date: order.delivery?.date ?? new Date(Date.now() + 3 * 86400000).toISOString(),
-      address: order.delivery?.address ?? 'Calle 45 #12-34, Bogotá',
-      notes: order.delivery?.notes ?? 'Entregar en horario de oficina',
-      deliveredBy: order.delivery?.deliveredBy ?? 'Transportes Premium',
-      receivedBy: order.delivery?.receivedBy ?? 'Cliente autorizado',
+      address: order.delivery?.address
+        || order.client?.address
+        || '',
+      mapLocation: order.delivery?.mapLocation ?? null,
     },
     isCompleted,
   }

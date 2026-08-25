@@ -1,4 +1,9 @@
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import {
+  INPUT_CHAR_MAX,
+  validateEmail,
+} from '@/shared/lib/fieldValidation'
+
+export { INPUT_CHAR_MAX }
 
 export const PASSWORD_RULES = [
   {
@@ -36,20 +41,30 @@ export function getPasswordRuleStatus(password) {
   }))
 }
 
+function validatePasswordMaxLength(password) {
+  if (String(password ?? '').length > INPUT_CHAR_MAX) {
+    return `Máximo ${INPUT_CHAR_MAX} caracteres`
+  }
+  return ''
+}
+
 export function validateLogin({ email, password }) {
   const errors = {}
-  const trimmedEmail = String(email ?? '').trim()
-
-  if (!trimmedEmail) {
-    errors.email = 'El correo es obligatorio'
-  } else if (!EMAIL_REGEX.test(trimmedEmail)) {
-    errors.email = 'Correo electrónico inválido'
+  const emailError = validateEmail(email)
+  if (emailError) {
+    errors.email = emailError
   }
 
-  if (!password) {
+  // Login: solo presencia + tope de longitud. La autenticación la define el backend.
+  // (min 8 / complejidad aplican a cambio/creación de contraseña, no al ingreso.)
+  const pwd = String(password ?? '')
+  if (!pwd) {
     errors.password = 'La contraseña es obligatoria'
-  } else if (password.length < 6) {
-    errors.password = 'Mínimo 6 caracteres'
+  } else {
+    const maxError = validatePasswordMaxLength(pwd)
+    if (maxError) {
+      errors.password = maxError
+    }
   }
 
   return { isValid: Object.keys(errors).length === 0, errors }
@@ -63,16 +78,26 @@ export function validateChangePassword({ currentPassword, newPassword, confirmPa
 
   if (!current) {
     errors.currentPassword = 'La contraseña actual es obligatoria'
+  } else {
+    const maxError = validatePasswordMaxLength(current)
+    if (maxError) {
+      errors.currentPassword = maxError
+    }
   }
 
   if (!next) {
     errors.newPassword = 'La nueva contraseña es obligatoria'
   } else {
-    const failedRule = PASSWORD_RULES.find((rule) => !rule.test(next))
-    if (failedRule) {
-      errors.newPassword = failedRule.label
-    } else if (current && next === current) {
-      errors.newPassword = 'Debe ser distinta a la contraseña actual'
+    const maxError = validatePasswordMaxLength(next)
+    if (maxError) {
+      errors.newPassword = maxError
+    } else {
+      const failedRule = PASSWORD_RULES.find((rule) => !rule.test(next))
+      if (failedRule) {
+        errors.newPassword = failedRule.label
+      } else if (current && next === current) {
+        errors.newPassword = 'Debe ser distinta a la contraseña actual'
+      }
     }
   }
 
@@ -80,6 +105,11 @@ export function validateChangePassword({ currentPassword, newPassword, confirmPa
     errors.confirmPassword = 'Confirma la nueva contraseña'
   } else if (next && confirm !== next) {
     errors.confirmPassword = 'Las contraseñas no coinciden'
+  } else {
+    const maxError = validatePasswordMaxLength(confirm)
+    if (maxError) {
+      errors.confirmPassword = maxError
+    }
   }
 
   return { isValid: Object.keys(errors).length === 0, errors }

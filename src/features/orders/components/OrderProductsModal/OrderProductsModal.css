@@ -18,6 +18,11 @@
   gap: 10px;
 }
 
+.order-products-modal__search {
+  margin-top: 4px;
+  width: 100%;
+}
+
 .order-products-modal__body {
   flex: 1;
   min-height: 0;

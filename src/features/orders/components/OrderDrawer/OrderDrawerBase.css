@@ -199,6 +199,7 @@
 }
 
 .order-packaging__count {
+  color: var(--drawer-color, var(--color-gris-oscuro));
   font-size: 15px;
   font-weight: 400;
 }
@@ -208,4 +209,12 @@
   display: flex;
   gap: 10px;
 }
+
+.order-accordion__section--packaging .order-accordion__trigger,
+.order-accordion__section--packaging .content-list-data__label,
+.order-accordion__section--packaging .content-list-data__value,
+.order-accordion__section--packaging .content-list-data__hint {
+  color: var(--drawer-color, var(--color-gris-oscuro));
+}
+
 

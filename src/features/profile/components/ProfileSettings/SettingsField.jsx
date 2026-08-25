@@ -3,7 +3,16 @@ import eyeIcon from '@/assets/icons/eye.svg'
 import eyeOffIcon from '@/assets/icons/eye-off.svg'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
-export function SettingsField({ id, label, type = 'text', value, onChange, disabled = false }) {
+export function SettingsField({
+  id,
+  label,
+  type = 'text',
+  value,
+  onChange,
+  disabled = false,
+  maxLength,
+  error = '',
+}) {
   const [showPassword, setShowPassword] = useState(false)
   const isPassword = type === 'password'
   const inputType = isPassword && showPassword ? 'text' : type
@@ -22,6 +31,8 @@ export function SettingsField({ id, label, type = 'text', value, onChange, disab
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
           readOnly={disabled}
+          maxLength={maxLength}
+          aria-invalid={Boolean(error)}
           className={isPassword ? 'profile-settings-field__input--password' : ''}
           {...namedControl(label)}
         />
@@ -41,6 +52,9 @@ export function SettingsField({ id, label, type = 'text', value, onChange, disab
           </button>
         )}
       </div>
+      {error ? (
+        <span className="auth-field__error" role="alert">{error}</span>
+      ) : null}
     </label>
   )
 }

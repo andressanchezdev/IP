@@ -103,6 +103,7 @@ export function OrderDrawerContent({
             isOpen={openSections.includes(section.id)}
             onToggle={onToggleSection}
             onClose={onCloseSection}
+            className={section.id === 'packaging' ? 'order-accordion__section--packaging' : ''}
           >
             {renderSectionContent(section.id)}
           </DrawerAccordionSection>

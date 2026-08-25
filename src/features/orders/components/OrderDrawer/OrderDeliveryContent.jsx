@@ -1,5 +1,4 @@
 import { useProfile } from '@/app/providers'
-import { formatOrderDateTime } from '@/features/orders/utils/orderFormat'
 
 function text(value) {
   if (value == null) {
@@ -22,8 +21,8 @@ function PanelRow({ label, value, highlight = false, subdued = false }) {
 }
 
 /**
- * Dirección de entrega: prioriza datos del pedido y completa
- * correo/teléfono desde el perfil del login (user.email + usuario.telefono).
+ * Dirección de entrega: solo datos del pedido + perfil API (/users/about).
+ * Sin fecha de entrega / quien entrega / quien recibe (no vienen de la API).
  */
 export function OrderDeliveryContent({ order }) {
   const { profile, profileSettings } = useProfile()
@@ -31,7 +30,6 @@ export function OrderDeliveryContent({ order }) {
   const delivery = order?.delivery ?? {}
   const client = order?.client ?? {}
 
-  // Login: data.user.email + data.user.usuario.telefono/celular
   const loginEmail = text(personal.email)
     || text(profileSettings?.access?.email)
     || text(profile?.email)
@@ -52,19 +50,13 @@ export function OrderDeliveryContent({ order }) {
   const email = text(client.email) || loginEmail || '—'
   const phone = text(client.phone) || text(client.mobile) || loginPhone || '—'
   const address = text(delivery.address) || text(client.address) || loginAddress || '—'
-  const notes = text(delivery.notes) || '—'
-  const receivedBy = text(delivery.receivedBy) || fullName
 
   return (
     <>
       <PanelRow label="Cliente" value={fullName} highlight />
       <PanelRow label="Correo" value={email} subdued />
       <PanelRow label="Teléfono" value={phone} subdued />
-      <PanelRow label="Fecha de entrega" value={formatOrderDateTime(delivery.date)} highlight />
       <PanelRow label="Dirección" value={address} highlight />
-      <PanelRow label="Datos de entrega" value={notes} subdued />
-      <PanelRow label="Quien entrega" value={text(delivery.deliveredBy) || '—'} />
-      <PanelRow label="Quien recibe" value={receivedBy} subdued />
     </>
   )
 }

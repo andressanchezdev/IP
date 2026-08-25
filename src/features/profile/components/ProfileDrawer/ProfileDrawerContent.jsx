@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAuth, useProfile } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
+import { formatAddressDisplay } from '@/features/auth/utils/mapAboutAddresses'
 import { ProfileIdentityCard } from '@/features/profile/components/ProfileIdentityCard/ProfileIdentityCard'
 import { useGeneralFilter } from '@/features/catalog/hooks/useGeneralFilter'
 import { MultiFilterField } from '@/features/catalog/components/FilterDrawer/MultiFilterField'
@@ -372,7 +373,9 @@ export function ProfileDrawerContent({ onOpenBulkUpload }) {
         return profile.addresses.map((entry) => (
           <div key={entry.id} className="profile-address">
             <strong className="profile-address__label">{entry.label}</strong>
-            <span className="profile-address__value">{entry.address}</span>
+            <span className="profile-address__value">
+              {formatAddressDisplay(entry) || entry.address}
+            </span>
           </div>
         ))
       default:

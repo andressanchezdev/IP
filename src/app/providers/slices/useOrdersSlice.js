@@ -32,6 +32,17 @@ export function useOrdersSlice({
     setOrderSubView(null)
   }, [])
 
+  const addPendingOrder = useCallback((order) => {
+    if (!order?.id) {
+      return
+    }
+    const enriched = enrichOrder(order)
+    setPendingOrders((current) => [
+      enriched,
+      ...current.filter((entry) => entry.id !== enriched.id),
+    ])
+  }, [])
+
   const openOrderDrawer = useCallback((orderId) => {
     setSelectedOrderId(orderId)
     events.emit(APP_EVENTS.ORDER_OPENED)
@@ -204,13 +215,18 @@ export function useOrdersSlice({
 
     setIsLoadingHistory(true)
     setHistoryLoadError('')
-    setPendingOrders([])
-    setHistoryOrders([])
     try {
       const response = await getManagementSales({ token, signal })
       const mappedPending = mapSalesToPendingOrders(response.data)
       const mappedCreditHistory = mapSalesToCreditHistoryOrders(response.data)
-      setPendingOrders(mappedPending)
+      const apiIds = new Set(mappedPending.map((entry) => String(entry.id)))
+
+      setPendingOrders((current) => {
+        const localCheckout = current.filter((entry) => (
+          entry?.source === 'checkout' && !apiIds.has(String(entry.id))
+        ))
+        return [...localCheckout, ...mappedPending]
+      })
       setHistoryOrders(mappedCreditHistory)
       return {
         success: true,
@@ -237,6 +253,7 @@ export function useOrdersSlice({
     orderSubView,
     setOrderSubView,
     openOrderDrawer,
+    addPendingOrder,
     formalizeOrderPayment,
     verifyTransferProof,
     loadHistoryFromApi,
@@ -249,6 +266,7 @@ export function useOrdersSlice({
     selectedOrder,
     orderSubView,
     openOrderDrawer,
+    addPendingOrder,
     formalizeOrderPayment,
     verifyTransferProof,
     loadHistoryFromApi,
@@ -263,6 +281,7 @@ export function useOrdersSlice({
     historyLoadError,
     loadHistoryFromApi,
     resetOrderDrawer,
+    addPendingOrder,
     value,
   }
 }

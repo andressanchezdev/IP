@@ -8,7 +8,7 @@ const LOCAL_PDF_MARCAS = '/listado-precios/marcas'
 
 /** Marcas por defecto en encabezado PDF cuando no hay filtro de marca (máx. 8). */
 export const DEFAULT_PRICE_LIST_HEADER_BRANDS = [
-  'AKT',
+  'MOTUL',
   'YAMAHA',
   'BAJAJ',
   'HONDA',
@@ -19,7 +19,6 @@ export const DEFAULT_PRICE_LIST_HEADER_BRANDS = [
 ]
 
 const LOCAL_BRAND_LOGO_FILES = {
-  akt: `${LOCAL_PDF_MARCAS}/10656650_marcas-09.png`,
   yamaha: `${LOCAL_PDF_MARCAS}/57432582_marcas-06.png`,
   bajaj: `${LOCAL_PDF_MARCAS}/15060940_marcas-10.png`,
   honda: `${LOCAL_PDF_MARCAS}/22885058_marcas-12.png`,
@@ -133,7 +132,7 @@ export function resolvePriceListHeaderLogoUrls({
     .map((entry) => resolveBrandLogoFromFilterOption(entry))
     .filter(Boolean)
 
-  return urls.length > 0 ? urls : [getBrandLogoUrl('akt')]
+  return urls.length > 0 ? urls : [getBrandLogoUrl('motul')]
 }
 
 /** @deprecated Usar resolvePriceListHeaderLogoUrls */

@@ -33,6 +33,7 @@ export function SearchBar({
         onFocus={(event) => onFocus?.(event)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        maxLength={60}
         enterKeyHint="search"
         {...namedControl(ariaLabel)}
       />

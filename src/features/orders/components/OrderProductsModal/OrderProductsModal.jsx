@@ -7,6 +7,7 @@ import { formatPrice } from '@/shared/lib/formatPrice'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import '@/features/auth/components/AuthModal/AuthModal.css'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
+import '@/features/cart/components/CartDrawer/CartDrawerExtra.css'
 import './OrderProductsModal.css'
 
 function normalizeItems(order) {
@@ -36,37 +37,31 @@ function matchesProductSearch(item, query) {
 }
 
 /**
- * Modal flotante (estilo login) con productos del pedido + búsqueda (Enter).
+ * Modal flotante (estilo carrito) con productos del pedido + búsqueda.
+ * Fuente: ítems del pedido (checkout snapshot o venta de /managment/sales).
  */
 export function OrderProductsModal({ isOpen, onClose, order }) {
-  const [draftSearch, setDraftSearch] = useState('')
-  const [committedSearch, setCommittedSearch] = useState('')
+  const [searchValue, setSearchValue] = useState('')
 
   useEffect(() => {
     if (!isOpen) {
       return
     }
-    setDraftSearch('')
-    setCommittedSearch('')
+    setSearchValue('')
   }, [isOpen, order?.id, order?.idventa])
 
   const items = useMemo(() => normalizeItems(order), [order])
 
   const visibleItems = useMemo(() => {
-    const query = committedSearch.trim().toLowerCase()
+    const query = searchValue.trim().toLowerCase()
     if (!query) {
       return items
     }
     return items.filter((item) => matchesProductSearch(item, query))
-  }, [items, committedSearch])
-
-  const handleSubmitSearch = useCallback(() => {
-    setCommittedSearch(String(draftSearch || '').trim())
-  }, [draftSearch])
+  }, [items, searchValue])
 
   const handleClearSearch = useCallback(() => {
-    setDraftSearch('')
-    setCommittedSearch('')
+    setSearchValue('')
   }, [])
 
   if (typeof document === 'undefined') {
@@ -100,29 +95,32 @@ export function OrderProductsModal({ isOpen, onClose, order }) {
           <p className="auth-form__subtitle">
             {orderId ? `Pedido #${orderId}` : 'Detalle de productos'}
           </p>
-          <SearchBar
-            value={draftSearch}
-            onChange={setDraftSearch}
-            onSubmit={handleSubmitSearch}
-            onClear={handleClearSearch}
-            canClear={Boolean(draftSearch || committedSearch)}
-            placeholder="Buscar productos (Enter)"
-            ariaLabel="Buscar productos del pedido"
-          />
+          <div className="carrito-search order-products-modal__search">
+            <SearchBar
+              value={searchValue}
+              onChange={setSearchValue}
+              onClear={handleClearSearch}
+              canClear={Boolean(searchValue)}
+              placeholder="Buscar en el pedido"
+              ariaLabel="Buscar productos del pedido"
+            />
+          </div>
         </header>
 
         <div className="order-products-modal__body">
           {visibleItems.length === 0 ? (
             <p className="order-products-modal__empty">
-              {committedSearch
-                ? 'Ningún producto coincide con la búsqueda.'
+              {searchValue.trim()
+                ? 'Sin coincidencias en el pedido'
                 : 'Este pedido no tiene productos.'}
             </p>
           ) : (
             <ul className="carrito-list order-products-modal__list">
               {visibleItems.map((item, index) => {
                 const categoryText = String(item.category || '').trim()
-                const descriptionText = String(item.description || `Producto #${item.idpr ?? item.id ?? index + 1}`).trim()
+                const descriptionText = String(
+                  item.description || `Producto #${item.idpr ?? item.id ?? index + 1}`,
+                ).trim()
                 const brandText = String(item.brand || '').trim()
                 const modelText = String(item.model || '').trim()
                 const imageSrc = item.imageUrl || item.brandLogo || item.brandLogoUrl

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Modal } from '@/shared/ui/Modal/Modal'
 import { AuthField } from '@/features/auth/components/AuthModal/AuthField'
 import {
+  INPUT_CHAR_MAX,
   getPasswordRuleStatus,
   validateChangePassword,
   validateChangePasswordField,
@@ -143,6 +144,7 @@ export function ChangePasswordModal({ isOpen, onClose, onConfirm }) {
             value={form.currentPassword}
             error={getError('currentPassword')}
             onChange={(value) => setField('currentPassword', value)}
+            maxLength={INPUT_CHAR_MAX}
           />
           <AuthField
             id="change-password-new"
@@ -151,6 +153,7 @@ export function ChangePasswordModal({ isOpen, onClose, onConfirm }) {
             value={form.newPassword}
             error={getError('newPassword')}
             onChange={(value) => setField('newPassword', value)}
+            maxLength={INPUT_CHAR_MAX}
           />
           <AuthField
             id="change-password-confirm"
@@ -159,6 +162,7 @@ export function ChangePasswordModal({ isOpen, onClose, onConfirm }) {
             value={form.confirmPassword}
             error={getError('confirmPassword')}
             onChange={(value) => setField('confirmPassword', value)}
+            maxLength={INPUT_CHAR_MAX}
           />
 
           <ul className="change-password-modal__rules" aria-label="Requisitos de contraseña">

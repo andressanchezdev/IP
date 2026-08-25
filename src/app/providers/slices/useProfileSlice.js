@@ -64,8 +64,8 @@ export function useProfileSlice({
     setProfileSettings((current) => ({ ...current, notificationsEnabled }))
   }, [])
 
-  const loadProfileFromAboutApi = useCallback(async () => {
-    const token = tokenAccess
+  const loadProfileFromAboutApi = useCallback(async ({ token: tokenOverride, signal } = {}) => {
+    const token = tokenOverride || tokenAccess
     if (!token) {
       return { success: false, error: 'Sesión requerida', needsAuth: true }
     }
@@ -79,7 +79,10 @@ export function useProfileSlice({
     setAboutError('')
 
     try {
-      const response = await getUserAbout({ token, signal: controller.signal })
+      const response = await getUserAbout({
+        token,
+        signal: signal ?? controller.signal,
+      })
       if (aboutRequestRef.current !== requestId) {
         return { success: false, stale: true }
       }

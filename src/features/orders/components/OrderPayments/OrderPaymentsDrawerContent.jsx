@@ -4,11 +4,13 @@ import { useToast } from '@/app/providers/ToastProvider'
 import { Accordion } from '@/shared/ui/Accordion/Accordion'
 import { CurrencyInput } from '@/shared/ui/CurrencyInput/CurrencyInput'
 import {
+  ABONO_PAYMENT_TYPES,
   PAYMENT_FIELDS,
-  PAYMENT_TYPES,
   validatePaymentDetails,
 } from '@/features/orders/constants/paymentConfig'
+import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
 import { formatRealAmount } from '@/features/orders/utils/orderFormat'
+import { readFileAsDataUrl } from '@/shared/lib/readFileAsDataUrl'
 import { namedControl } from '@/shared/lib/namedControl'
 import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
 import '@/shared/ui/FieldHint/FieldHint.css'
@@ -16,10 +18,20 @@ import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import '@/shared/ui/Drawer/Drawer.css'
 import '@/features/orders/components/OrderDrawer/OrderDrawer.css'
 
+function resolveInitialAbonoType(orderType) {
+  const normalized = String(orderType || '').toLowerCase()
+  if (normalized === 'transferencia') {
+    return 'transferencia'
+  }
+  return 'efectivo'
+}
+
 export function OrderPaymentsDrawerContent() {
   const { selectedOrder, formalizeOrderPayment } = useOrders()
   const { showToast } = useToast()
-  const [paymentType, setPaymentType] = useState(selectedOrder?.payment?.type ?? 'efectivo')
+  const [paymentType, setPaymentType] = useState(
+    () => resolveInitialAbonoType(selectedOrder?.payment?.type),
+  )
   const [formValues, setFormValues] = useState({})
 
   const payment = selectedOrder?.payment
@@ -30,7 +42,10 @@ export function OrderPaymentsDrawerContent() {
   const payments = payment?.payments ?? []
 
   const validation = useMemo(
-    () => validatePaymentDetails(paymentType, formValues, { remainingAmount }),
+    () => validatePaymentDetails(paymentType, formValues, {
+      remainingAmount,
+      requireTransferProof: paymentType === 'transferencia',
+    }),
     [paymentType, formValues, remainingAmount],
   )
 
@@ -46,6 +61,34 @@ export function OrderPaymentsDrawerContent() {
     setFormValues((current) => ({ ...current, [key]: value }))
   }
 
+  const handleProofChange = async (file) => {
+    if (!file) {
+      setFormValues((current) => ({
+        ...current,
+        proofName: '',
+        proofDataUrl: '',
+      }))
+      return
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setFormValues((current) => ({
+        ...current,
+        proofName: file.name,
+        proofDataUrl: dataUrl || '',
+        account: TRANSFER_ACCOUNT.account,
+        bank: TRANSFER_ACCOUNT.bank,
+      }))
+    } catch {
+      setFormValues((current) => ({
+        ...current,
+        proofName: '',
+        proofDataUrl: '',
+      }))
+      showToast('No se pudo leer el comprobante', 'error')
+    }
+  }
+
   const handleSubmit = () => {
     if (!validation.isValid) {
       showToast('Complete los datos de pago', 'error')
@@ -55,6 +98,12 @@ export function OrderPaymentsDrawerContent() {
     const result = formalizeOrderPayment(selectedOrder.id, {
       type: paymentType,
       ...formValues,
+      ...(paymentType === 'transferencia'
+        ? {
+            account: TRANSFER_ACCOUNT.account,
+            bank: TRANSFER_ACCOUNT.bank,
+          }
+        : {}),
     })
 
     if (!result.success) {
@@ -71,18 +120,13 @@ export function OrderPaymentsDrawerContent() {
     )
   }
 
-  const checkoutDetails = payment.checkoutDetails ?? {}
-  const hasCheckoutDetails = Object.keys(checkoutDetails).length > 0
-  const checkoutFields = PAYMENT_FIELDS[payment.type] ?? []
-
-  const getDetailLabel = (key) =>
-    checkoutFields.find((field) => field.key === key)?.label ?? key
+  const selectedLabel = ABONO_PAYMENT_TYPES.find((entry) => entry.id === paymentType)?.label || ''
 
   return (
     <div className="content-main-carrito">
       <div className="content-main-aux-carrito order-payments-panel">
         <p className="order-payments-panel__intro">
-          Formalice el pago del pedido <strong>{selectedOrder.id}</strong>. Seleccione el medio y complete los datos.
+          Registre un abono del pedido <strong>{selectedOrder.id}</strong>. Solo efectivo o transferencia.
         </p>
 
         <div className="order-payments-panel__summary">
@@ -92,17 +136,6 @@ export function OrderPaymentsDrawerContent() {
             Abonado: {formatRealAmount(paidAmount)} de {formatRealAmount(totalAmount)}
           </span>
         </div>
-
-        {hasCheckoutDetails && (
-          <Accordion title="Datos definidos al crear el pedido">
-            {Object.entries(checkoutDetails).map(([key, value]) => (
-              <div key={key} className="content-list-data__row">
-                <span className="content-list-data__label">{getDetailLabel(key)}</span>
-                <span className="content-list-data__value">{String(value)}</span>
-              </div>
-            ))}
-          </Accordion>
-        )}
 
         {payments.length > 0 && (
           <Accordion title={`Abonos registrados (${payments.length})`} defaultOpen>
@@ -120,23 +153,41 @@ export function OrderPaymentsDrawerContent() {
         )}
 
         <div className="order-payment__types order-payments-panel__types">
-          {PAYMENT_TYPES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              className={`order-payment__type order-payment__type--selectable ${paymentType === id ? 'order-payment__type--active' : ''}`}
-              onClick={() => {
-                setPaymentType(id)
-                setFormValues({})
-              }}
-              {...namedControl(label)}
-            >
-              {label}
-            </button>
-          ))}
+          {ABONO_PAYMENT_TYPES.map(({ id, label }) => {
+            const isSelected = paymentType === id
+            return (
+              <button
+                key={id}
+                type="button"
+                title={isSelected ? label : undefined}
+                aria-pressed={isSelected}
+                className={`order-payment__type order-payment__type--selectable ${isSelected ? 'order-payment__type--active' : ''}`}
+                onClick={() => {
+                  setPaymentType(id)
+                  setFormValues({})
+                }}
+                {...namedControl(label)}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
 
-        <Accordion title={`Datos — ${PAYMENT_TYPES.find((t) => t.id === paymentType)?.label}`} defaultOpen>
+        <Accordion title={`Datos — ${selectedLabel}`} defaultOpen>
+          {paymentType === 'transferencia' && (
+            <>
+              <div className="content-list-data__row">
+                <span className="content-list-data__label">{TRANSFER_ACCOUNT.accountLabel}</span>
+                <span className="content-list-data__value">{TRANSFER_ACCOUNT.account}</span>
+              </div>
+              <div className="content-list-data__row">
+                <span className="content-list-data__label">{TRANSFER_ACCOUNT.bankLabel}</span>
+                <span className="content-list-data__value">{TRANSFER_ACCOUNT.bank}</span>
+              </div>
+            </>
+          )}
+
           {fields.map((field) => {
             const fieldError = validation.errors[field.key] ?? ''
             const inputId = `payment-${field.key}`
@@ -163,7 +214,6 @@ export function OrderPaymentsDrawerContent() {
                     placeholder={field.placeholder}
                     className={fieldError ? 'order-payments-panel__input--error' : ''}
                     aria-invalid={Boolean(fieldError)}
-                    aria-describedby={fieldError ? `${inputId}-error` : undefined}
                     {...namedControl(field.label)}
                   />
                 )}
@@ -171,6 +221,27 @@ export function OrderPaymentsDrawerContent() {
               </label>
             )
           })}
+
+          {paymentType === 'transferencia' && (
+            <label className="order-payments-panel__field">
+              <span>Comprobante de pago</span>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null
+                  handleProofChange(file)
+                }}
+                className={validation.errors.proof ? 'order-payments-panel__input--error' : ''}
+                aria-invalid={Boolean(validation.errors.proof)}
+                {...namedControl('Comprobante de pago')}
+              />
+              {formValues.proofName ? (
+                <span className="order-payments-panel__quota">Archivo: {formValues.proofName}</span>
+              ) : null}
+              <FieldHint message={validation.errors.proof || ''} />
+            </label>
+          )}
         </Accordion>
       </div>
 

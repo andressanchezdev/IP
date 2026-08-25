@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Modal } from '@/shared/ui/Modal/Modal'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import {
+  INPUT_CHAR_MAX,
+  validateAddressLine,
+  validateBoundedText,
+  validateReason,
+  validateUnique,
+} from '@/shared/lib/fieldValidation'
 import '@/features/auth/components/AuthModal/AuthModal.css'
 import userIcon from '@/assets/icons/user.svg'
 import mapPinIcon from '@/assets/icons/map-pin.svg'
@@ -38,34 +45,36 @@ function createEmptyAddress() {
   return ADDRESS_FIELDS.reduce((acc, f) => ({ ...acc, [f.key]: '' }), {})
 }
 
-function validateField(key, value, optional = false) {
-  const trimmed = String(value ?? '').trim()
-  if (optional) {
-    return ''
-  }
-  if (!trimmed) {
-    return 'Campo obligatorio'
+function validateField(key, value, optional = false, existingLabels = []) {
+  if (key === 'notes') {
+    return validateReason(value, { required: false, label: 'Las notas' })
   }
 
-  if (key === 'postalCode' && trimmed.length < 4) {
-    return 'Código postal mínimo de 4 caracteres'
-  }
-  if (key === 'address' && trimmed.length < 5) {
-    return 'La dirección debe tener al menos 5 caracteres'
-  }
-  if ((key === 'label' || key === 'neighborhood') && trimmed.length < 3) {
-    return 'Debe tener al menos 3 caracteres'
-  }
-  if ((key === 'city' || key === 'department' || key === 'country') && trimmed.length < 2) {
-    return 'Debe tener al menos 2 caracteres'
+  if (key === 'label') {
+    const lengthError = validateBoundedText(value, {
+      required: !optional,
+      label: 'El nombre de la dirección',
+    })
+    if (lengthError) {
+      return lengthError
+    }
+    return validateUnique(value, existingLabels, { label: 'El nombre de la dirección' })
   }
 
-  return ''
+  if (key === 'address') {
+    return validateAddressLine(value, { required: !optional })
+  }
+
+  return validateBoundedText(value, {
+    required: !optional,
+    label: 'Campo',
+  })
 }
 
-export function AddressModal({ isOpen, onClose, onSave }) {
+export function AddressModal({ isOpen, onClose, onSave, existingAddresses = [] }) {
   const [draft, setDraft] = useState(createEmptyAddress)
   const [errors, setErrors] = useState({})
+  const existingLabels = existingAddresses.map((entry) => entry?.label).filter(Boolean)
 
   const handleClose = () => {
     setDraft(createEmptyAddress())
@@ -76,7 +85,7 @@ export function AddressModal({ isOpen, onClose, onSave }) {
   const validate = () => {
     const next = {}
     ADDRESS_FIELDS.forEach(({ key, optional }) => {
-      const message = validateField(key, draft[key], optional)
+      const message = validateField(key, draft[key], optional, existingLabels)
       if (message) {
         next[key] = message
       }
@@ -127,7 +136,7 @@ export function AddressModal({ isOpen, onClose, onSave }) {
               onBlur={() => {
                 setDraft((c) => {
                   const normalized = normalizeAddressField(c[key])
-                  const message = validateField(key, normalized, optional)
+                  const message = validateField(key, normalized, optional, existingLabels)
                   setErrors((prev) => ({ ...prev, [key]: message || undefined }))
                   return { ...c, [key]: normalized }
                 })
@@ -150,10 +159,11 @@ export function AddressModal({ isOpen, onClose, onSave }) {
                   className={`address-modal--input${errors[key] ? ' address-modal--input-error' : ''}`}
                   value={draft[key]}
                   placeholder={placeholder || ''}
+                  maxLength={INPUT_CHAR_MAX}
                   onChange={(event) => {
                     const value = event.target.value
                     setDraft((c) => ({ ...c, [key]: value }))
-                    const message = validateField(key, value, optional)
+                    const message = validateField(key, value, optional, existingLabels)
                     setErrors((c) => ({ ...c, [key]: message || undefined }))
                   }}
                   aria-invalid={Boolean(errors[key])}

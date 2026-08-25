@@ -20,8 +20,8 @@ import keyIcon from '@/assets/icons/key.svg'
 import fileTextIcon from '@/assets/icons/file-text.svg'
 import deleteAccountIcon from '@/assets/icons/delete-account.svg'
 import mapPinIcon from '@/assets/icons/map-pin.svg'
-import { PersonalDataForm } from './PersonalDataForm'
-import { AccessForm, CompanyDataForm } from './CompanyAccessForms'
+import { PersonalDataForm, validatePersonalDraft } from './PersonalDataForm'
+import { AccessForm, CompanyDataForm, validateCompanyDraft } from './CompanyAccessForms'
 import { LegalLinksSection, NotificationsSection } from './SettingsStaticSections'
 import { AddressModal } from './AddressModal'
 import { ChangePasswordModal } from './ChangePasswordModal'
@@ -66,6 +66,8 @@ export function ProfileSettingsDrawerContent() {
   }))
   const [companyDraft, setCompanyDraft] = useState(profileSettings.company)
   const [accessDraft, setAccessDraft] = useState(profileSettings.access)
+  const [personalErrors, setPersonalErrors] = useState({})
+  const [companyErrors, setCompanyErrors] = useState({})
 
   useEffect(() => {
     setPersonalDraft({
@@ -95,21 +97,39 @@ export function ProfileSettingsDrawerContent() {
     showToast(successMessage, 'success')
   }
 
-  const handleSavePersonal = () => confirmAndSave({
-    title: '¿Guardar datos personales?',
-    text: 'Se actualizará la información de tu perfil.',
-    confirmText: 'Guardar datos',
-    action: () => saveProfilePersonal(personalDraft),
-    successMessage: 'Datos personales guardados',
-  })
+  const handleSavePersonal = () => {
+    const result = validatePersonalDraft(personalDraft)
+    setPersonalErrors(result.errors)
+    if (!result.isValid) {
+      showToast('Revise los datos personales', 'error')
+      return
+    }
 
-  const handleSaveCompany = () => confirmAndSave({
-    title: '¿Guardar datos de la empresa?',
-    text: 'Se actualizará la información empresarial.',
-    confirmText: 'Guardar datos',
-    action: () => saveProfileCompany(companyDraft),
-    successMessage: 'Datos de la empresa guardados',
-  })
+    return confirmAndSave({
+      title: '¿Guardar datos personales?',
+      text: 'Se actualizará la información de tu perfil.',
+      confirmText: 'Guardar datos',
+      action: () => saveProfilePersonal(personalDraft),
+      successMessage: 'Datos personales guardados',
+    })
+  }
+
+  const handleSaveCompany = () => {
+    const result = validateCompanyDraft(companyDraft)
+    setCompanyErrors(result.errors)
+    if (!result.isValid) {
+      showToast('Revise los datos de la empresa', 'error')
+      return
+    }
+
+    return confirmAndSave({
+      title: '¿Guardar datos de la empresa?',
+      text: 'Se actualizará la información empresarial.',
+      confirmText: 'Guardar datos',
+      action: () => saveProfileCompany(companyDraft),
+      successMessage: 'Datos de la empresa guardados',
+    })
+  }
 
   const handleChangePassword = async ({ currentPassword, newPassword }) => {
     if (!tokenAccess) {
@@ -176,16 +196,24 @@ export function ProfileSettingsDrawerContent() {
         return (
           <PersonalDataForm
             draft={personalDraft}
-            onDraftChange={setPersonalDraft}
+            onDraftChange={(updater) => {
+              setPersonalErrors({})
+              setPersonalDraft(updater)
+            }}
             onSave={handleSavePersonal}
+            errors={personalErrors}
           />
         )
       case 'company':
         return (
           <CompanyDataForm
             draft={companyDraft}
-            onDraftChange={setCompanyDraft}
+            onDraftChange={(updater) => {
+              setCompanyErrors({})
+              setCompanyDraft(updater)
+            }}
             onSave={handleSaveCompany}
+            errors={companyErrors}
           />
         )
       case 'addresses': {
@@ -330,6 +358,7 @@ export function ProfileSettingsDrawerContent() {
       <AddressModal
         isOpen={addressModalOpen}
         onClose={() => setAddressModalOpen(false)}
+        existingAddresses={profileSettings.addresses ?? []}
         onSave={(address) => {
           addAddress(address)
           setAddressModalOpen(false)

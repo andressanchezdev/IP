@@ -1,4 +1,5 @@
 import { useAuthForm } from '@/features/auth/hooks/useAuthForm'
+import { INPUT_CHAR_MAX } from '@/features/auth/utils/authValidation'
 import { AuthField } from './AuthField'
 import { namedControl } from '@/shared/lib/namedControl'
 
@@ -25,6 +26,7 @@ export function LoginForm({ onSubmit }) {
         value={form.email}
         error={getError('email')}
         onChange={(value) => setField('email', value)}
+        maxLength={INPUT_CHAR_MAX}
       />
       <AuthField
         id="auth-password"
@@ -33,6 +35,7 @@ export function LoginForm({ onSubmit }) {
         value={form.password}
         error={getError('password')}
         onChange={(value) => setField('password', value)}
+        maxLength={INPUT_CHAR_MAX}
       />
 
       <label className="auth-form__remember">
