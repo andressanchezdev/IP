@@ -5,7 +5,13 @@ export function matchesOrderIdSearch(order, query) {
   }
 
   const normalizedQuery = trimmed.toLowerCase()
-  const orderIdValue = order?.idventa ?? order?.id ?? ''
+  const candidates = [
+    order?.clave_venta,
+    order?.claveVenta,
+    order?.id,
+    order?.idventa,
+  ]
+  const orderIdValue = candidates.find((value) => value != null && String(value).trim() !== '') ?? ''
   const orderId = String(orderIdValue).toLowerCase()
   const queryDigits = trimmed.replace(/\D/g, '')
   const orderDigits = String(orderIdValue).replace(/\D/g, '')

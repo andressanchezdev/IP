@@ -10,6 +10,7 @@ import {
   ORDER_STEP_DEFS,
 } from '@/features/orders/constants/orderSteps'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import { formatRelativeTime } from '@/features/orders/utils/orderFormat'
 import './PendingOrderCard.css'
 
 const DESKTOP_VISUAL_QUERY = '(min-width: 769px)'
@@ -22,6 +23,19 @@ function formatOrderDate(value) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/** Formato card Historial: `fecha || hace X días`. */
+function formatCardCreationLabel(order) {
+  const createdAt = order?.fecha || order?.createdAt
+  const rawFecha = String(order?.fecha ?? '').trim()
+  const displayFecha = rawFecha || (createdAt ? formatOrderDate(createdAt) : '')
+  const creationAge = formatRelativeTime(createdAt)
+
+  if (!displayFecha) {
+    return creationAge
+  }
+  return `${displayFecha} | ${creationAge}`
 }
 
 function formatPrice(price) {
@@ -79,7 +93,7 @@ export const PendingOrderCard = memo(function PendingOrderCard({
               <img src={copyIcon} className="espera-card__copy-icon" {...namedImage('Copiar ID')} />
             </button>
           </div>
-          <p className="espera-card__date">{formatOrderDate(order.createdAt)}</p>
+          <p className="espera-card__date">{formatCardCreationLabel(order)}</p>
         </div>
         <div className="espera-card__header-actions">
           <span className="espera-card__total">{formatPrice(order.total)}</span>

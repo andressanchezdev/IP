@@ -1,5 +1,6 @@
 import { Accordion } from '@/shared/ui/Accordion/Accordion'
 import { formatPrice } from '@/shared/lib/formatPrice'
+import checkGreenIcon from '@/assets/icons/check-green.svg'
 import editIcon from '@/assets/icons/edit.svg'
 import { SummaryRow } from './SummaryRow'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
@@ -43,7 +44,17 @@ export function CheckoutOrderSummary({
                 <img src={editIcon} width={16} height={16} {...namedImage('Editar entrega')} />
               </button>
             </div>
-            <strong>{deliveryAddress}</strong>
+            <strong className="checkout-finalize__confirmed-value">
+              <img
+                src={checkGreenIcon}
+                className="checkout-finalize__check"
+                width={16}
+                height={16}
+                alt=""
+                {...namedImage('Entrega confirmada')}
+              />
+              {deliveryAddress}
+            </strong>
           </div>
         )}
         {paymentConfirmed && (
@@ -59,7 +70,15 @@ export function CheckoutOrderSummary({
                 <img src={editIcon} width={16} height={16} {...namedImage('Editar método de pago')} />
               </button>
             </div>
-            <strong>
+            <strong className="checkout-finalize__confirmed-value">
+              <img
+                src={checkGreenIcon}
+                className="checkout-finalize__check"
+                width={16}
+                height={16}
+                alt=""
+                {...namedImage('Pago confirmado')}
+              />
               {paymentMethod === 'efectivo' && 'Efectivo'}
               {paymentMethod === 'transferencia' && 'Transferencia'}
               {paymentMethod === 'credito' && 'Crédito'}

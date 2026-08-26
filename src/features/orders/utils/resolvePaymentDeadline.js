@@ -1,6 +1,7 @@
 const MISSING_LIMIT_MESSAGE = 'Valor no obtenido'
 
 const DAY_FIELD_KEYS = [
+  'dias',
   'dias_limite',
   'dias_pago',
   'limite_dias',
@@ -70,6 +71,46 @@ export function resolvePaymentLimitDays(entry = {}, extras = {}) {
   return null
 }
 
+function formatDeadlineResult(deadline, days, format = 'display') {
+  const safeDays = Number(days)
+  const normalizedDays = Number.isFinite(safeDays) && safeDays > 0
+    ? Math.floor(safeDays)
+    : null
+  const yyyy = deadline.getFullYear()
+  const mm = String(deadline.getMonth() + 1).padStart(2, '0')
+  const dd = String(deadline.getDate()).padStart(2, '0')
+
+  return {
+    days: normalizedDays,
+    deadlineIso: deadline.toISOString(),
+    dateLimitLabel: format === 'iso'
+      ? deadline.toISOString()
+      : `${yyyy}/${mm}/${dd}`,
+    hasLimit: true,
+  }
+}
+
+/**
+ * Fecha límite explícita (p. ej. sales → credito.fecha).
+ */
+export function resolvePaymentDeadlineFromDate({
+  deadlineAt,
+  paymentLimitDays = null,
+  format = 'display',
+} = {}) {
+  const deadline = toSafeDate(deadlineAt)
+  if (!deadline) {
+    return {
+      days: null,
+      deadlineIso: null,
+      dateLimitLabel: MISSING_LIMIT_MESSAGE,
+      hasLimit: false,
+    }
+  }
+
+  return formatDeadlineResult(deadline, paymentLimitDays, format)
+}
+
 /**
  * fecha creación + N días → fecha límite.
  * Sin días → mensaje claro para el usuario.
@@ -93,18 +134,7 @@ export function resolvePaymentDeadline({
   const deadline = new Date(base.getTime())
   deadline.setDate(deadline.getDate() + Math.floor(days))
 
-  const yyyy = deadline.getFullYear()
-  const mm = String(deadline.getMonth() + 1).padStart(2, '0')
-  const dd = String(deadline.getDate()).padStart(2, '0')
-
-  return {
-    days: Math.floor(days),
-    deadlineIso: deadline.toISOString(),
-    dateLimitLabel: format === 'iso'
-      ? deadline.toISOString()
-      : `${yyyy}/${mm}/${dd}`,
-    hasLimit: true,
-  }
+  return formatDeadlineResult(deadline, days, format)
 }
 
 export const PAYMENT_LIMIT_MISSING_MESSAGE = MISSING_LIMIT_MESSAGE

@@ -7,6 +7,7 @@ import {
 } from '@/features/orders/constants/orderSteps'
 import {
   resolvePaymentDeadline,
+  resolvePaymentDeadlineFromDate,
   resolvePaymentLimitDays,
 } from '@/features/orders/utils/resolvePaymentDeadline'
 
@@ -42,6 +43,7 @@ function toHistoryItems(venta = []) {
 
 export function mapSaleToHistoryOrder(entry) {
   const idventa = toSafeNumber(entry?.id_venta, 0)
+  const claveVenta = String(entry?.clave_venta ?? '').trim()
   const venta = toHistoryItems(entry?.venta)
   const metodo_pago = String(entry?.metodo_pago ?? '').trim()
   const estado = String(entry?.estado ?? '').trim()
@@ -52,14 +54,23 @@ export function mapSaleToHistoryOrder(entry) {
   const status = resolveOrderStepFromEstado(estado)
   const stepIndex = getOrderStepIndex(estado)
   const paymentLimitDays = resolvePaymentLimitDays(entry)
-  const deadline = resolvePaymentDeadline({
-    createdAt: fecha,
-    paymentLimitDays,
-  })
+  // Cartera: Fecha límite desde sales.credito.fecha; fallback = creación + dias.
+  const creditoFecha = entry?.credito?.fecha
+  const deadline = creditoFecha
+    ? resolvePaymentDeadlineFromDate({
+      deadlineAt: creditoFecha,
+      paymentLimitDays,
+    })
+    : resolvePaymentDeadline({
+      createdAt: fecha,
+      paymentLimitDays,
+    })
 
   return {
     idventa,
-    id: String(idventa || ''),
+    clave_venta: claveVenta,
+    claveVenta,
+    id: claveVenta || String(idventa || ''),
     estado,
     estado_factura,
     estadoFacturaLabel: mapEstadoFacturaLabel(estado_factura),

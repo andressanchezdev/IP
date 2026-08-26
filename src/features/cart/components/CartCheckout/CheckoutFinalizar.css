@@ -11,8 +11,8 @@
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
+  gap: 2px;
+  padding: 8px;
 }
 
 .checkout-finalize__box-title {
@@ -56,6 +56,18 @@
   font-size: 12px;
   gap: 4px;
   padding-top: 8px;
+}
+
+.checkout-finalize__confirmed-value {
+  align-items: flex-start;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.checkout-finalize__check {
+  display: block;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .checkout-finalize__field-head {

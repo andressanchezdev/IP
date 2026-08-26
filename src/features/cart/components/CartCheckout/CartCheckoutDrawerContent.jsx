@@ -14,7 +14,6 @@ import { validateAddressLine } from '@/shared/lib/fieldValidation'
 import { formatAddressDisplay } from '@/features/auth/utils/mapAboutAddresses'
 import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
 
-const CREDIT_AVAILABLE = 20000000
 const MAX_ADDRESSES = 3
 
 export function CartCheckoutDrawerContent() {
@@ -31,14 +30,19 @@ export function CartCheckoutDrawerContent() {
   const [paymentDetails, setPaymentDetails] = useState({})
   const [transferProofName, setTransferProofName] = useState('')
   const [transferProofDataUrl, setTransferProofDataUrl] = useState('')
-  const [creditLimitDays, setCreditLimitDays] = useState(1)
   const [paymentPanel, setPaymentPanel] = useState(null)
   const [editingDelivery, setEditingDelivery] = useState(false)
   const [editingPayment, setEditingPayment] = useState(false)
-  const [orderSummaryOpen, setOrderSummaryOpen] = useState(true)
-  const [paymentAccordionOpen, setPaymentAccordionOpen] = useState(true)
 
   const personal = profileSettings?.personal ?? {}
+  const credit = profileSettings?.credit ?? profile?.credit ?? {
+    available: 0,
+    paymentLimitDays: null,
+    hasCredit: false,
+  }
+  const creditAvailable = Number(credit.available) || 0
+  const creditPaymentLimitDays = credit.paymentLimitDays ?? null
+  const hasCredit = Boolean(credit.hasCredit) && creditAvailable > 0
 
   const registeredAddresses = useMemo(() => {
     const fromProfile = (profile?.addresses ?? profileSettings?.addresses ?? [])
@@ -66,6 +70,17 @@ export function CartCheckoutDrawerContent() {
     }
   }, [profileSettings?.addresses, isLoadingAbout, loadProfileFromAboutApi])
 
+  useEffect(() => {
+    if (!hasCredit && paymentPanel === 'credito') {
+      setPaymentPanel(null)
+    }
+    if (!hasCredit && paymentMethod === 'credito') {
+      setPaymentMethod(null)
+      setPaymentConfirmed(false)
+      setPaymentDetails({})
+    }
+  }, [hasCredit, paymentPanel, paymentMethod])
+
   const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
   const subtotal = cartTotals.subtotal
   const shippingCost = 0
@@ -73,14 +88,21 @@ export function CartCheckoutDrawerContent() {
   const totalToPay = cartTotals.total + shippingCost
 
   const hasDelivery = Boolean(deliveryAddress.trim())
-  const showDeliverySection = !hasDelivery || editingDelivery
-  const showPaymentSection = !paymentConfirmed || editingPayment
   const canConfirmOrder = hasDelivery && paymentConfirmed
+  // Visible solo mientras faltan datos o se está editando ese bloque.
+  const showDeliverySection = !hasDelivery || editingDelivery
+  const showPaymentSection = hasDelivery
+    && !editingDelivery
+    && (!paymentConfirmed || editingPayment)
 
-  const handleDeliveryOptionOpen = () => {
-    setOrderSummaryOpen(false)
-    setPaymentAccordionOpen(false)
-    setPaymentPanel(null)
+  const handleEditDelivery = () => {
+    setEditingPayment(false)
+    setEditingDelivery(true)
+  }
+
+  const handleEditPayment = () => {
+    setEditingDelivery(false)
+    setEditingPayment(true)
   }
 
   const confirmRegisteredAddress = () => {
@@ -169,20 +191,19 @@ export function CartCheckoutDrawerContent() {
   }
 
   const handleConfirmCredit = () => {
-    const days = Number(creditLimitDays)
-    if (!Number.isFinite(days) || days < 1 || days > 30) {
-      showToast('Ingrese un límite de pago entre 1 y 30 días', 'error')
+    if (!hasCredit) {
+      showToast('El usuario no cuenta con crédito disponible', 'error')
       return
     }
-    if (totalToPay > CREDIT_AVAILABLE) {
+    if (totalToPay > creditAvailable) {
       showToast('El pedido supera el cupo de crédito', 'error')
       return
     }
     setPaymentMethod('credito')
     setPaymentConfirmed(true)
     setPaymentDetails({
-      availableCredit: CREDIT_AVAILABLE,
-      paymentLimitDays: days,
+      availableCredit: creditAvailable,
+      paymentLimitDays: creditPaymentLimitDays,
       amount: totalToPay,
     })
     setPaymentPanel(null)
@@ -228,8 +249,8 @@ export function CartCheckoutDrawerContent() {
     <div className="content-main-carrito">
       <div className="content-main-aux-carrito order-payments-panel checkout-panel checkout-finalize">
         <CheckoutOrderSummary
-          isOpen={orderSummaryOpen}
-          onToggle={setOrderSummaryOpen}
+          isOpen
+          onToggle={() => {}}
           subtotal={subtotal}
           iva={iva}
           totalToPay={totalToPay}
@@ -238,12 +259,14 @@ export function CartCheckoutDrawerContent() {
           paymentConfirmed={paymentConfirmed}
           paymentMethod={paymentMethod}
           paymentDetails={paymentDetails}
-          onEditDelivery={() => setEditingDelivery(true)}
-          onEditPayment={() => setEditingPayment(true)}
+          onEditDelivery={handleEditDelivery}
+          onEditPayment={handleEditPayment}
         />
 
         {showDeliverySection && (
           <CheckoutDeliverySection
+            isOpen
+            onToggle={() => {}}
             registeredAddresses={registeredAddresses}
             selectedAddressId={selectedAddressId}
             onSelectAddress={setSelectedAddressId}
@@ -254,16 +277,17 @@ export function CartCheckoutDrawerContent() {
             onConfirmRegistered={confirmRegisteredAddress}
             onConfirmNew={confirmNewAddress}
             onConfirmMap={confirmMapAddress}
-            onDeliveryOptionOpen={handleDeliveryOptionOpen}
           />
         )}
 
         {showPaymentSection && (
           <CheckoutPaymentSection
-            isOpen={paymentAccordionOpen}
-            onToggle={setPaymentAccordionOpen}
+            isOpen
+            onToggle={() => {}}
             totalToPay={totalToPay}
-            creditAvailable={CREDIT_AVAILABLE}
+            creditAvailable={creditAvailable}
+            creditPaymentLimitDays={creditPaymentLimitDays}
+            hasCredit={hasCredit}
             paymentPanel={paymentPanel}
             onSelectPanel={setPaymentPanel}
             paymentMethod={paymentMethod}
@@ -272,14 +296,14 @@ export function CartCheckoutDrawerContent() {
             onConfirmTransfer={handleConfirmTransfer}
             onConfirmEfectivo={handleConfirmEfectivo}
             onConfirmCredit={handleConfirmCredit}
-            creditLimitDays={creditLimitDays}
-            onCreditLimitDaysChange={setCreditLimitDays}
           />
         )}
+      </div>
 
+      <div className="content-main-data-carrito content-main-data-carrito--stack">
         <button
           type="button"
-          className="content-main-data-carrito__checkout checkout-finalize__confirm"
+          className="content-main-data-carrito__checkout"
           onClick={handleConfirmOrder}
           disabled={!canConfirmOrder}
           {...namedControl('Confirmar pedido')}

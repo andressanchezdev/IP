@@ -7,20 +7,6 @@ import { CHECKOUT_PAYMENT_TYPES } from '@/features/orders/constants/paymentConfi
 import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
 import '@/shared/ui/FieldHint/FieldHint.css'
 
-const CREDIT_DAYS_MIN = 1
-const CREDIT_DAYS_MAX = 30
-
-function clampCreditDays(raw) {
-  if (raw === '') {
-    return ''
-  }
-  const parsed = Number.parseInt(raw, 10)
-  if (!Number.isFinite(parsed)) {
-    return ''
-  }
-  return Math.max(CREDIT_DAYS_MIN, Math.min(CREDIT_DAYS_MAX, parsed))
-}
-
 function creditAmountClass(amount) {
   if (amount > 0) {
     return 'checkout-finalize__amount--positive'
@@ -36,6 +22,8 @@ export function CheckoutPaymentSection({
   onToggle,
   totalToPay,
   creditAvailable,
+  creditPaymentLimitDays = null,
+  hasCredit = false,
   paymentPanel,
   onSelectPanel,
   paymentMethod,
@@ -44,21 +32,20 @@ export function CheckoutPaymentSection({
   onConfirmTransfer,
   onConfirmEfectivo,
   onConfirmCredit,
-  creditLimitDays,
-  onCreditLimitDaysChange,
 }) {
+  const paymentTypes = hasCredit
+    ? CHECKOUT_PAYMENT_TYPES
+    : CHECKOUT_PAYMENT_TYPES.filter((entry) => entry.id !== 'credito')
+
   const methodHint = paymentPanel
     ? ''
     : 'Seleccione un método de pago para continuar'
   const transferHint = transferProofName
     ? ''
     : 'El comprobante de transferencia es obligatorio'
-  const creditDaysHint = creditLimitDays === '' || creditLimitDays < CREDIT_DAYS_MIN || creditLimitDays > CREDIT_DAYS_MAX
-    ? `Ingrese un plazo de ${CREDIT_DAYS_MIN} a ${CREDIT_DAYS_MAX} días`
-    : ''
   const creditHint = totalToPay > creditAvailable
     ? 'El pedido supera el cupo de crédito disponible'
-    : creditDaysHint
+    : ''
 
   return (
     <Accordion
@@ -69,7 +56,7 @@ export function CheckoutPaymentSection({
     >
       <div className="checkout-finalize__box">
         <div className="order-payment__types order-payments-panel__types">
-          {CHECKOUT_PAYMENT_TYPES.map(({ id, label }) => {
+          {paymentTypes.map(({ id, label }) => {
             const isSelected = paymentPanel === id || paymentMethod === id
             return (
               <button
@@ -138,34 +125,20 @@ export function CheckoutPaymentSection({
           </div>
         )}
 
-        {paymentPanel === 'credito' && (
+        {hasCredit && paymentPanel === 'credito' && (
           <div className="checkout-finalize__payment-panel">
-            <SummaryRow label="Total del pedido" value={formatPrice(totalToPay)} highlight />
+            {creditPaymentLimitDays != null && (
+              <SummaryRow
+                label="Pago en:"
+                value={`${creditPaymentLimitDays} días`}
+              />
+            )}
             <SummaryRow
               label="Crédito disponible"
               value={formatPrice(creditAvailable)}
               valueClassName={creditAmountClass(creditAvailable)}
             />
-            <label className="order-payments-panel__field">
-              <span>Límite de pago (días)</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                min={CREDIT_DAYS_MIN}
-                max={CREDIT_DAYS_MAX}
-                step="1"
-                value={creditLimitDays}
-                onChange={(event) => onCreditLimitDaysChange(clampCreditDays(event.target.value))}
-                onBlur={() => {
-                  if (creditLimitDays === '') {
-                    onCreditLimitDaysChange(CREDIT_DAYS_MIN)
-                  }
-                }}
-                className={creditDaysHint ? 'order-payments-panel__input--error' : ''}
-                aria-invalid={Boolean(creditDaysHint)}
-                {...namedControl('Límite de pago en días')}
-              />
-            </label>
+            <SummaryRow label="Total del pedido" value={formatPrice(totalToPay)} highlight />
             <FieldHint message={creditHint} />
             <button
               type="button"

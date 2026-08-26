@@ -22,18 +22,13 @@ export function CheckoutDeliverySection({
   onConfirmRegistered,
   onConfirmNew,
   onConfirmMap,
-  onDeliveryOptionOpen,
+  isOpen,
+  onToggle,
 }) {
   const [openPanel, setOpenPanel] = useState(PANEL_REGISTERED)
 
   const toggle = (panel) => {
-    setOpenPanel((current) => {
-      const next = current === panel ? null : panel
-      if (next) {
-        onDeliveryOptionOpen?.()
-      }
-      return next
-    })
+    setOpenPanel((current) => (current === panel ? null : panel))
   }
 
   const registeredHint = registeredAddresses.length === 0
@@ -47,7 +42,12 @@ export function CheckoutDeliverySection({
     : 'Seleccione un punto en el mapa para confirmar la entrega'
 
   return (
-    <Accordion title="Entrega" defaultOpen>
+    <Accordion
+      title="Entrega"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      defaultOpen
+    >
       <div className="checkout-finalize__box">
         <Accordion
           title="1. Direcciones registradas"

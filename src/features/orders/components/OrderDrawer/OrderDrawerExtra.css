@@ -104,9 +104,8 @@
 }
 
 .order-payment__type--active {
-  background: #fff8e8;
-  border-color: #ffc46f;
-  box-shadow: 0 0 0 1px rgba(255, 196, 111, 0.45);
+  background: #bbbaba;
+  border-color: #494949;  /* contempalr otros colores (verde)*/
   color: var(--color-text-primary);
   font-weight: 600;
 }
@@ -178,7 +177,7 @@
 
 .order-payments-panel__quota {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 10.5px;
 }
 
 .order-payments-panel__summary {

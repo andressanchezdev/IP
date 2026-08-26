@@ -15,6 +15,21 @@ import { ProfileDrawerSubViews } from './ProfileDrawerSubViews'
 import { getCloseAriaLabel, getDrawerTitle } from './appDrawerMeta'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 
+const MAX_OPEN_ORDER_SECTIONS = 2
+
+function toggleOrderOpenSections(current = [], sectionId) {
+  const open = Array.isArray(current) ? current : []
+  if (open.includes(sectionId)) {
+    return open.filter((id) => id !== sectionId)
+  }
+  const next = [...open, sectionId]
+  if (next.length <= MAX_OPEN_ORDER_SECTIONS) {
+    return next
+  }
+  // Cierra el primero abierto (FIFO) al superar el máximo.
+  return next.slice(next.length - MAX_OPEN_ORDER_SECTIONS)
+}
+
 export function AppDrawer() {
   const { clearFilters } = useCatalog()
   const {
@@ -118,11 +133,7 @@ export function AppDrawer() {
         <OrderDrawerContent
           openSections={orderOpenSections}
           onToggleSection={(sectionId) => {
-            setOrderOpenSections((current) =>
-              current.includes(sectionId)
-                ? current.filter((id) => id !== sectionId)
-                : [...current, sectionId],
-            )
+            setOrderOpenSections((current) => toggleOrderOpenSections(current, sectionId))
           }}
           onCloseSection={(sectionId) => {
             setOrderOpenSections((current) => current.filter((id) => id !== sectionId))

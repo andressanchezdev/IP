@@ -1,5 +1,6 @@
 # Guía de Reglas de Cursor
 @agent/agent-token-efficiency.mdc
+@agent/agent-scope.mdc
 @react/react-state-management.mdc
 
 Este directorio contiene reglas que el agente de Cursor seguirá automáticamente para trabajar de forma más eficiente y sin perder el enfoque.
@@ -32,6 +33,7 @@ Estas reglas ayudan al agente a mantener el enfoque y evitar errores comunes:
 - `agent-focus.mdc` - Mantener el hilo de la conversación
 - `agent-errors.mdc` - Prevenir errores comunes
 - `agent-token-efficiency.mdc` - Uso eficiente de tokens (sin narraciones innecesarias)
+- `agent-scope.mdc` - No aplicar cambios fuera de los requerimientos solicitados
 
 ### ⚛️ react/ - Reglas de React
 

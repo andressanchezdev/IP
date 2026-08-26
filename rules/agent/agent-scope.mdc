@@ -1,0 +1,47 @@
+---
+description: No aplicar cambios fuera de los requerimientos solicitados
+alwaysApply: true
+---
+
+# Alcance Estricto de Cambios
+
+## Principio
+
+Solo implementar lo que el usuario pidió de forma explícita en el mensaje o en la lista de requerimientos. Nada más.
+
+## Obligatorio
+
+1. Extraer la lista de requerimientos del mensaje del usuario antes de editar
+2. Cada cambio de código debe mapear a un requerimiento de esa lista
+3. Si un archivo o comportamiento no está en los requerimientos, no tocarlo
+4. No “mejorar”, refactorizar, renombrar, ni limpiar código adyacente sin pedido
+5. No agregar archivos, dependencias, docs ni tests no solicitados
+6. No expandir el alcance (“también podría…”, “aprovecho para…”)
+
+## Prohibido
+
+- Cambios cosméticos no pedidos (formato, comentarios, estilos no relacionados)
+- Optimizaciones o refactors “por si acaso”
+- Reescribir módulos enteros cuando basta un cambio local
+- Corregir issues no relacionados descubiertos de paso (informar; no aplicar)
+- Alterar reglas existentes de `rules/` salvo que el requerimiento lo diga
+
+## Si hace falta algo fuera del alcance
+
+```
+Correcto:
+1. Completar solo lo pedido
+2. Mencionar el hallazgo extra en la respuesta final
+3. Preguntar si debe implementarse en un siguiente paso
+
+Incorrecto:
+1. Aplicar el hallazgo extra sin pedirlo
+2. Mezclar fixes no solicitados en el mismo cambio
+```
+
+## Checklist Pre-Commit / Pre-Respuesta
+
+- [ ] Cada diff responde a un requerimiento explícito
+- [ ] No hay diffs en archivos ajenos al pedido
+- [ ] No se modificaron reglas u otras áreas “de paso”
+- [ ] Lo no pedido quedó solo como nota opcional, no como código

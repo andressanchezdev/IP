@@ -33,7 +33,7 @@ export const PAYMENT_FIELDS = {
     { key: 'amountReceived', label: 'Monto recibido', type: 'number', placeholder: '0', required: true },
   ],
   transferencia: [
-    { key: 'amount', label: 'Monto transferido', type: 'number', placeholder: '0', required: true },
+    { key: 'amount', label: 'Monto a transferir', type: 'number', placeholder: '0', required: true },
   ],
   credito: [
     { key: 'amount', label: 'Monto abonado', type: 'number', placeholder: '0', required: true },

@@ -1,5 +1,6 @@
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import { formatAddressDisplay, mapAboutAddresses } from './mapAboutAddresses'
+import { mapAboutCredit } from './mapAboutCredit'
 
 function text(value) {
   if (value == null) {
@@ -115,6 +116,9 @@ export function mergeApiProfileWithWorkspace(apiProfile, workspaceProfile) {
     },
     // Direcciones siempre desde /users/about (no mezclar mocks ni lista local vieja).
     addresses: Array.isArray(apiProfile.addresses) ? apiProfile.addresses : [],
+    credit: apiProfile.credit && typeof apiProfile.credit === 'object'
+      ? apiProfile.credit
+      : (previous.credit ?? defaultProfileSettings.credit),
     notificationsEnabled: previous.notificationsEnabled ?? apiProfile.notificationsEnabled,
   }
 }
@@ -153,6 +157,7 @@ export function mapAboutUserToClient(aboutData, fallbackEmail = '') {
   const mobile = text(usuario.celular) || text(usuario.mobile) || phone
   const addresses = mapAboutAddresses(user, usuario)
   const primaryAddress = addresses[0]
+  const credit = mapAboutCredit(user?.credito)
   const address = text(typeof usuario.direccion === 'string' ? usuario.direccion : '')
     || text(typeof user?.direccion === 'string' ? user.direccion : '')
     || formatAddressDisplay(primaryAddress)
@@ -179,6 +184,9 @@ export function mapAboutUserToClient(aboutData, fallbackEmail = '') {
     companyPhone: text(empresa?.celular) || text(empresa?.telefono) || text(empresa?.phone),
     companyAddress: text(empresa?.direccion) || text(empresa?.address),
     addresses,
+    creditAvailable: credit.available,
+    creditPaymentLimitDays: credit.paymentLimitDays,
+    hasCredit: credit.hasCredit,
   }
 }
 
@@ -224,5 +232,10 @@ export function mapAboutUserToProfileSettings(aboutData, fallbackEmail = '') {
       password: '',
     },
     addresses: client.addresses,
+    credit: {
+      available: client.creditAvailable,
+      paymentLimitDays: client.creditPaymentLimitDays,
+      hasCredit: client.hasCredit,
+    },
   }
 }

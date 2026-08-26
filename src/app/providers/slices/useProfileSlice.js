@@ -46,6 +46,8 @@ export function useProfileSlice({
     mobile: profileSettings.personal.mobile || profileSettings.personal.phone || '',
     status: profileSettings.personal.role || '',
     addresses: profileSettings.addresses ?? [],
+    credit: profileSettings.credit ?? { available: 0, paymentLimitDays: null, hasCredit: false },
+    credito: Number(profileSettings.credit?.available) || 0,
   }), [profileSettings])
 
   const saveProfilePersonal = useCallback((personal) => {

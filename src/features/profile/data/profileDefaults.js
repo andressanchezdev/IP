@@ -33,6 +33,11 @@ export const defaultProfileSettings = {
   },
   notificationsEnabled: true,
   addresses: [],
+  credit: {
+    available: 0,
+    paymentLimitDays: null,
+    hasCredit: false,
+  },
 }
 
 export function createEmptyProfileView(profileSettings = defaultProfileSettings) {
@@ -49,7 +54,8 @@ export function createEmptyProfileView(profileSettings = defaultProfileSettings)
     status: personal.role || '',
     priceList: [],
     adeudos: 0,
-    credito: 0,
+    credito: Number(profileSettings.credit?.available) || 0,
+    credit: profileSettings.credit ?? defaultProfileSettings.credit,
     descuentos: 0,
     compras: 0,
     saldoFavor: 0,

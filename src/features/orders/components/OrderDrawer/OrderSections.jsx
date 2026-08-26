@@ -59,9 +59,15 @@ export function OrderDetailsContent({ order, onDownloadPdf }) {
 export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
   const { payment } = order
   const chosenType = String(payment.type ?? '').toLowerCase() || 'efectivo'
-  const paidAmount = Number(payment.paidAmount ?? 0)
-  const remainingAmount = Math.max(0, Number(payment.amount ?? order.total ?? 0) - paidAmount)
+  const totalAmount = Number(payment.amount ?? order.total ?? 0)
   const isCredito = chosenType === 'credito'
+  // Efectivo / transferencia: pago al 100% al crear el pedido (sin saldo pendiente).
+  const paidAmount = isCredito
+    ? Number(payment.paidAmount ?? 0)
+    : totalAmount
+  const remainingAmount = isCredito
+    ? Math.max(0, totalAmount - Number(payment.paidAmount ?? 0))
+    : 0
   const paidLabel = isCredito ? 'Abonado' : 'Pagado'
 
   return (
@@ -85,13 +91,14 @@ export function OrderPaymentContent({ order, onOpenPayments, onVerifyProof }) {
         }
         subdued
       />
-      <PanelRow label="Monto total" value={formatRealAmount(payment.amount)} highlight />
+      <PanelRow label="Monto total" value={formatRealAmount(totalAmount)} highlight />
       <PanelRow label={paidLabel} value={formatRealAmount(paidAmount)} />
-      <PanelRow label="Pendiente" value={formatRealAmount(remainingAmount)} highlight />
+      {isCredito && (
+        <PanelRow label="Pendiente" value={formatRealAmount(remainingAmount)} highlight />
+      )}
       <OrderPaymentAbonos
         order={order}
         onOpenPayments={onOpenPayments}
-        onVerifyProof={onVerifyProof}
       />
     </>
   )

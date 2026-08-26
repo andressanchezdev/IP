@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadLeaflet } from '@/shared/maps/loadLeaflet'
 import { namedControl } from '@/shared/lib/namedControl'
+import { formatNominatimAddress } from '@/features/cart/utils/formatMapAddress'
 
 const BOGOTA = { lat: 4.711, lng: -74.0721 }
 const GEOLOCATION_TIMEOUT = 10_000
@@ -32,12 +33,12 @@ async function reverseGeocode(lat, lng) {
       headers: { Accept: 'application/json' },
     })
     if (!response.ok) {
-      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      return formatNominatimAddress(null, { lat, lng })
     }
     const data = await response.json()
-    return data?.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    return formatNominatimAddress(data, { lat, lng })
   } catch {
-    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    return formatNominatimAddress(null, { lat, lng })
   }
 }
 
