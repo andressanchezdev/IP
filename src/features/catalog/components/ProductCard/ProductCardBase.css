@@ -98,6 +98,16 @@
   width: 100%;
 }
 
+.product-card__image-trigger {
+  background: transparent;
+  border: none;
+  cursor: zoom-in;
+  display: block;
+  height: 100%;
+  padding: 0;
+  width: 100%;
+}
+
 .product-card__media {
   aspect-ratio: 1.15;
   background: var(--color-gris-claro);
@@ -125,7 +135,7 @@
 }
 
 .product-card__order {
-  background: #ffc46f;
+  background: #ffc629;
   border-radius: 8px;
   box-sizing: border-box;
   color: var(--color-gris-oscuro);

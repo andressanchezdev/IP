@@ -1,4 +1,5 @@
 export { ProductCard } from './components/ProductCard/ProductCard'
+export { ProductDetailModal } from './components/ProductDetailModal/ProductDetailModal'
 export { FilterDrawerContent } from './components/FilterDrawer/FilterDrawerContent'
 export {
   getGeneral,

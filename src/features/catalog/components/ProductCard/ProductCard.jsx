@@ -22,6 +22,7 @@ export const ProductCard = memo(function ProductCard({
   brandLogoUrl,
   isInCart = false,
   onOrder,
+  onOpenDetail,
 }) {
   const [quantity, setQuantity] = useState(1)
   const [imageFailed, setImageFailed] = useState(false)
@@ -99,16 +100,30 @@ export const ProductCard = memo(function ProductCard({
     <article className="product-card">
       <div className="product-card__media">
         {mediaSrc ? (
-          <img
-            src={mediaSrc}
-            className="product-card__image"
-            loading="lazy"
-            decoding="async"
-            onError={() => setImageFailed(true)}
-            {...namedImage(productName)}
-          />
+          <button
+            type="button"
+            className="product-card__image-trigger"
+            onClick={() => onOpenDetail?.(id)}
+            {...namedControl(`Ver detalles de ${productName}`)}
+          >
+            <img
+              src={mediaSrc}
+              className="product-card__image"
+              loading="lazy"
+              decoding="async"
+              onError={() => setImageFailed(true)}
+              {...namedImage(productName)}
+            />
+          </button>
         ) : (
-          <div className="product-card__image product-card__image--empty" aria-hidden="true" />
+          <button
+            type="button"
+            className="product-card__image-trigger"
+            onClick={() => onOpenDetail?.(id)}
+            {...namedControl(`Ver detalles de ${productName}`)}
+          >
+            <div className="product-card__image product-card__image--empty" aria-hidden="true" />
+          </button>
         )}
       </div>
 

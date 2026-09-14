@@ -1,0 +1,77 @@
+.product-magnify {
+  background: var(--color-bg-surface);
+  cursor: zoom-in;
+  height: 100%;
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+}
+
+.product-magnify.is-zooming {
+  cursor: zoom-in;
+}
+
+.product-magnify__media {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  pointer-events: none;
+  transform: scale(1);
+  transition:
+    transform 16ms ease-out,
+    transform-origin 18ms ease-out;
+  user-select: none;
+  width: 100%;
+}
+
+.product-magnify.is-zooming .product-magnify__media {
+  transition:
+    transform 160ms ease-out,
+    transform-origin 200ms linear;
+  will-change: transform, transform-origin;
+}
+
+.product-magnify__empty {
+  background: var(--color-gris-claro);
+  height: 100%;
+  width: 100%;
+}
+
+.product-magnify-lightbox {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 1200;
+}
+
+.product-magnify-lightbox__image {
+  display: block;
+  max-height: min(92vh, 100%);
+  max-width: min(96vw, 100%);
+  object-fit: contain;
+  user-select: none;
+}
+
+.product-magnify-lightbox__close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 12px;
+  position: absolute;
+  right: 16px;
+  top: 12px;
+}
+
+.product-magnify-lightbox__close:hover {
+  opacity: 0.85;
+}

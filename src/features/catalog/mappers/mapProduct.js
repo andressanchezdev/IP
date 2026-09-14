@@ -12,14 +12,23 @@ function isPlaceholderImage(path) {
   return PLACEHOLDER_IMAGE_HINTS.some((hint) => normalized.includes(hint))
 }
 
-function pickProductImageUrl(imagenProducto) {
+function pickProductImageUrls(imagenProducto) {
   const images = parseImageArray(imagenProducto)
   if (images.length === 0) {
-    return ''
+    return []
   }
 
-  const preferred = images.find((path) => !isPlaceholderImage(path)) ?? images[0]
-  return resolveAssetUrl(preferred)
+  const resolved = images
+    .filter((path) => !isPlaceholderImage(path))
+    .map((path) => resolveAssetUrl(path))
+    .filter(Boolean)
+
+  if (resolved.length > 0) {
+    return resolved
+  }
+
+  const fallback = resolveAssetUrl(images[0])
+  return fallback ? [fallback] : []
 }
 
 /** API `precio` → número para ProductCard / carrito. */
@@ -53,7 +62,8 @@ export function getCatalogProductId(product) {
 export function mapApiProduct(product) {
   const brand = String(product.marca ?? '').trim()
   const brandLogoUrl = resolveAssetUrl(product.imagen)
-  const imageUrl = pickProductImageUrl(product.imagen_producto)
+  const imageUrls = pickProductImageUrls(product.imagen_producto)
+  const imageUrl = imageUrls[0] ?? ''
   const precio = mapPrecio(product)
 
   const id = getCatalogProductId(product)
@@ -70,6 +80,7 @@ export function mapApiProduct(product) {
     stock: parseStock(product.stock),
     searching: String(product.searching ?? '').trim(),
     imageUrl,
+    imageUrls,
     brandLogo: brandLogoUrl,
     brandLogoUrl,
   }

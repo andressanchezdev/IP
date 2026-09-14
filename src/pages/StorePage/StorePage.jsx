@@ -5,12 +5,13 @@ import { FloatingCart } from '@/features/cart/components/FloatingCart/FloatingCa
 import { AppDrawer } from '@/widgets/AppDrawer/AppDrawer'
 import { Header } from '@/widgets/AppShell/Header/Header'
 import { Sidebar } from '@/widgets/AppShell/Sidebar/Sidebar'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStorePageActions } from './hooks/useStorePageActions'
 import { useStorePageFilters } from './hooks/useStorePageFilters'
 import { CatalogView } from './views/CatalogView'
 import { HistoryView } from './views/HistoryView'
 import { PendingOrdersView } from './views/PendingOrdersView'
+import { ProductDetailModal } from '@/features/catalog/components/ProductDetailModal/ProductDetailModal'
 import './StorePage.css'
 
 export function StorePage() {
@@ -145,6 +146,13 @@ export function StorePage() {
     pendingEsperaView,
   })
 
+  const [detailProductId, setDetailProductId] = useState(null)
+  const catalogProducts = filteredProducts.length ? filteredProducts : products
+  const detailProduct = useMemo(
+    () => catalogProducts.find((item) => item.id === detailProductId) ?? null,
+    [catalogProducts, detailProductId],
+  )
+
   useEffect(() => {
     if (!isStoreView) {
       setFilterNuevos(false)
@@ -224,6 +232,7 @@ export function StorePage() {
         products={filteredProducts}
         cartProductIds={cartProductIds}
         onOrder={handleOrderProduct}
+        onOpenDetail={setDetailProductId}
         isLoadingLatest={isLoadingLatest}
       />
     )
@@ -294,6 +303,14 @@ export function StorePage() {
         isOpen={authModalOpen}
         onClose={closeAuthModal}
         onLogin={handleLogin}
+      />
+
+      <ProductDetailModal
+        product={detailProduct}
+        isOpen={Boolean(detailProduct)}
+        onClose={() => setDetailProductId(null)}
+        isInCart={detailProduct ? cartProductIds.has(detailProduct.id) : false}
+        onOrder={handleOrderProduct}
       />
     </div>
   )

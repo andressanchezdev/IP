@@ -10,7 +10,7 @@ function getLandingScrollRoot(node) {
   return node.closest('.landing__content')
 }
 
-export function CatalogView({ products, cartProductIds, onOrder, isLoadingLatest = false }) {
+export function CatalogView({ products, cartProductIds, onOrder, onOpenDetail, isLoadingLatest = false }) {
   const {
     hasMoreProducts,
     isLoadingProducts,
@@ -109,6 +109,7 @@ export function CatalogView({ products, cartProductIds, onOrder, isLoadingLatest
             {...product}
             isInCart={cartProductIds.has(product.id)}
             onOrder={onOrder}
+            onOpenDetail={onOpenDetail}
           />
         ))}
       </div>

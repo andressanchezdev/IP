@@ -36,7 +36,7 @@
   .product-card__description-text,
   .product-card__category,
   .product-card__description-sep {
-    font-size: clamp(13px, 4.5cqw, 18px);
+    font-size: clamp(15px, 5.5cqw, 22px);
     line-height: 1.25;
   }
 
