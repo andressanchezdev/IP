@@ -12,6 +12,7 @@ import { CatalogView } from './views/CatalogView'
 import { HistoryView } from './views/HistoryView'
 import { PendingOrdersView } from './views/PendingOrdersView'
 import { ProductDetailModal } from '@/features/catalog/components/ProductDetailModal/ProductDetailModal'
+import { StoreChatWidget } from '@/features/chatbot'
 import './StorePage.css'
 
 export function StorePage() {
@@ -297,6 +298,11 @@ export function StorePage() {
       </div>
 
       <FloatingCart />
+      <StoreChatWidget
+        onLogin={() => openAuthModal()}
+        onOpenPriceList={() => openDrawer('profile')}
+        onOpenStore={() => navigateToView('tienda')}
+      />
       <AppDrawer />
 
       <AuthModal

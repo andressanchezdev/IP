@@ -1,53 +1,125 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
-import { HOVER_ZOOM, ORIGIN_CENTER, originFromPointer } from './magnifyConstants'
+import {
+  HOVER_ZOOM,
+  ORIGIN_TOP_LEFT,
+  REST_TRANSFORM,
+  formatMagnifyTransform,
+  panTargetFromPointer,
+  stepPanToward,
+} from './magnifyConstants'
 import './ProductImageMagnify.css'
 
 /**
- * Zoom de contenedor al hover (origin sigue al puntero) + lightbox al click.
+ * Hover: scale fijo + la imagen se desliza a velocidad constante hacia
+ * el destino que marca la posición del puntero en el contenedor.
  */
 export function ProductImageMagnify({ src, alt }) {
   const hostRef = useRef(null)
   const mediaRef = useRef(null)
+  const currentPanRef = useRef({ x: 0, y: 0 })
+  const targetPanRef = useRef({ x: 0, y: 0 })
+  const scaleRef = useRef(1)
+  const hoveringRef = useRef(false)
+  const rafRef = useRef(0)
+  const lastTsRef = useRef(0)
   const [hovering, setHovering] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
-  const resetHoverZoom = useCallback(() => {
+  const writeMediaTransform = useCallback(() => {
     const media = mediaRef.current
     if (!media) {
       return
     }
-    media.style.transform = 'scale(1)'
-    media.style.transformOrigin = ORIGIN_CENTER
+    media.style.transformOrigin = ORIGIN_TOP_LEFT
+    media.style.transform = formatMagnifyTransform(
+      currentPanRef.current.x,
+      currentPanRef.current.y,
+      scaleRef.current,
+    )
   }, [])
 
-  const applyHoverZoom = useCallback((clientX, clientY) => {
-    const host = hostRef.current
+  const stopPanLoop = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
+    }
+    lastTsRef.current = 0
+  }, [])
+
+  const startPanLoop = useCallback(() => {
+    if (rafRef.current) {
+      return
+    }
+
+    const tick = (timestamp) => {
+      const lastTs = lastTsRef.current
+      const dt = lastTs ? Math.min(0.032, (timestamp - lastTs) / 1000) : 0
+      lastTsRef.current = timestamp
+
+      const next = stepPanToward(currentPanRef.current, targetPanRef.current, dt)
+      currentPanRef.current = { x: next.x, y: next.y }
+      writeMediaTransform()
+
+      const shouldRun = hoveringRef.current || !next.arrived
+      if (shouldRun) {
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
+
+      rafRef.current = 0
+      lastTsRef.current = 0
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+  }, [writeMediaTransform])
+
+  const resetHoverZoom = useCallback(() => {
+    hoveringRef.current = false
+    stopPanLoop()
+    currentPanRef.current = { x: 0, y: 0 }
+    targetPanRef.current = { x: 0, y: 0 }
+    scaleRef.current = 1
     const media = mediaRef.current
-    if (!host || !media || lightboxOpen) {
+    if (!media) {
+      return
+    }
+    media.style.transform = REST_TRANSFORM
+    media.style.transformOrigin = ORIGIN_TOP_LEFT
+  }, [stopPanLoop])
+
+  const aimPanFromPointer = useCallback((clientX, clientY) => {
+    const host = hostRef.current
+    if (!host || lightboxOpen) {
       return
     }
     const rect = host.getBoundingClientRect()
-    const x = clientX - rect.left
-    const y = clientY - rect.top
-    media.style.transformOrigin = originFromPointer(x, y, rect.width, rect.height)
-    media.style.transform = `scale(${HOVER_ZOOM})`
-  }, [lightboxOpen])
+    targetPanRef.current = panTargetFromPointer(
+      clientX - rect.left,
+      clientY - rect.top,
+      rect.width,
+      rect.height,
+      HOVER_ZOOM,
+    )
+    scaleRef.current = HOVER_ZOOM
+    startPanLoop()
+  }, [lightboxOpen, startPanLoop])
 
   const handlePointerEnter = (event) => {
     if (lightboxOpen) {
       return
     }
+    hoveringRef.current = true
     setHovering(true)
-    applyHoverZoom(event.clientX, event.clientY)
+    aimPanFromPointer(event.clientX, event.clientY)
   }
 
   const handlePointerMove = (event) => {
-    if (!hovering || lightboxOpen) {
+    if (!hoveringRef.current || lightboxOpen) {
       return
     }
-    applyHoverZoom(event.clientX, event.clientY)
+    aimPanFromPointer(event.clientX, event.clientY)
   }
 
   const handlePointerLeave = (event) => {
@@ -75,6 +147,8 @@ export function ProductImageMagnify({ src, alt }) {
     setLightboxOpen(false)
     resetHoverZoom()
   }, [src, resetHoverZoom])
+
+  useEffect(() => () => stopPanLoop(), [stopPanLoop])
 
   useEffect(() => {
     if (!lightboxOpen) {
