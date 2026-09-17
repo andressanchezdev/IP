@@ -5,7 +5,7 @@ import { FloatingCart } from '@/features/cart/components/FloatingCart/FloatingCa
 import { AppDrawer } from '@/widgets/AppDrawer/AppDrawer'
 import { Header } from '@/widgets/AppShell/Header/Header'
 import { Sidebar } from '@/widgets/AppShell/Sidebar/Sidebar'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStorePageActions } from './hooks/useStorePageActions'
 import { useStorePageFilters } from './hooks/useStorePageFilters'
 import { CatalogView } from './views/CatalogView'
@@ -61,6 +61,7 @@ export function StorePage() {
     setLatestProducts,
     beginCatalogSearch,
     endCatalogSearch,
+    applyFiltersDirect,
   } = useCatalog()
   const {
     activeView,
@@ -121,6 +122,7 @@ export function StorePage() {
     handleTogglePromociones,
     handleSearchSubmit,
     handleClearSearch,
+    handleOpenCatalog,
     handleProfileClick,
     handleLogin,
     handleLogout,
@@ -148,6 +150,7 @@ export function StorePage() {
   })
 
   const [detailProductId, setDetailProductId] = useState(null)
+  const pendingCatalogDriveRef = useRef(null)
   const catalogProducts = filteredProducts.length ? filteredProducts : products
   const detailProduct = useMemo(
     () => catalogProducts.find((item) => item.id === detailProductId) ?? null,
@@ -184,6 +187,53 @@ export function StorePage() {
     setHistoryPaymentFilter('')
     setHistoryStatusFilter('')
   }, [activeView, setSearchValue, clearCommittedProductSearch])
+
+  const handleCatalogSearch = useCallback((query) => {
+    const next = String(query || '').trim()
+    if (!next) return
+    if (activeView !== 'tienda') {
+      pendingCatalogDriveRef.current = { type: 'search', query: next }
+      navigateToView('tienda')
+      return
+    }
+    clearFilters()
+    setSearchValue(next)
+    submitProductSearch(next)
+  }, [activeView, navigateToView, clearFilters, setSearchValue, submitProductSearch])
+
+  const handleCatalogFilter = useCallback((payload) => {
+    const next = {
+      brands: [...(payload?.brands || [])],
+      categories: [...(payload?.categories || [])],
+      models: [...(payload?.models || [])],
+    }
+    if (!next.brands.length && !next.categories.length && !next.models.length) {
+      return
+    }
+    if (activeView !== 'tienda') {
+      pendingCatalogDriveRef.current = { type: 'filter', payload: next }
+      navigateToView('tienda')
+      return
+    }
+    applyFiltersDirect(next)
+    clearCommittedProductSearch()
+  }, [activeView, navigateToView, applyFiltersDirect, clearCommittedProductSearch])
+
+  useEffect(() => {
+    const pending = pendingCatalogDriveRef.current
+    if (activeView !== 'tienda' || !pending) {
+      return
+    }
+    pendingCatalogDriveRef.current = null
+    if (pending.type === 'search') {
+      clearFilters()
+      setSearchValue(pending.query)
+      submitProductSearch(pending.query)
+      return
+    }
+    applyFiltersDirect(pending.payload)
+    clearCommittedProductSearch()
+  }, [activeView, applyFiltersDirect, clearCommittedProductSearch, clearFilters, setSearchValue, submitProductSearch])
 
   useEffect(() => {
     if (activeView !== 'espera' && activeView !== 'historial') {
@@ -301,7 +351,12 @@ export function StorePage() {
       <StoreChatWidget
         onLogin={() => openAuthModal()}
         onOpenPriceList={() => openDrawer('profile')}
-        onOpenStore={() => navigateToView('tienda')}
+        onOpenStore={() => {
+          handleOpenCatalog()
+          if (filterDrawerOpen) closeDrawer()
+        }}
+        onCatalogSearch={handleCatalogSearch}
+        onCatalogFilter={handleCatalogFilter}
       />
       <AppDrawer />
 

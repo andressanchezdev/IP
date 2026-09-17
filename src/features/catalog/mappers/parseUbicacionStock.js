@@ -77,6 +77,68 @@ export function parseStock(stock) {
   return parseUbicacionStock(stock)
 }
 
+/**
+ * Suma existencias de todas las bodegas. Número directo u objeto
+ * `{ "1": [{ cantidad, cantidadAux }] }`.
+ */
+export function stockTotal(stock) {
+  if (stock == null || stock === '') {
+    return 0
+  }
+
+  if (typeof stock === 'number') {
+    return toNonNegativeNumber(stock)
+  }
+
+  if (typeof stock === 'string') {
+    const trimmed = stock.trim()
+    if (!trimmed) {
+      return 0
+    }
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return toNonNegativeNumber(trimmed)
+    }
+  }
+
+  const parsed = parseMaybeJson(stock, null)
+  if (parsed == null) {
+    return 0
+  }
+
+  if (typeof parsed === 'number') {
+    return toNonNegativeNumber(parsed)
+  }
+
+  const addEntry = (sum, entry) => {
+    if (typeof entry === 'number') {
+      return sum + toNonNegativeNumber(entry)
+    }
+    if (!entry || typeof entry !== 'object') {
+      return sum
+    }
+    const quantity =
+      entry.cantidad !== undefined && entry.cantidad !== null && entry.cantidad !== ''
+        ? entry.cantidad
+        : entry.cantidadAux
+    return sum + toNonNegativeNumber(quantity)
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.reduce(addEntry, 0)
+  }
+
+  if (typeof parsed !== 'object') {
+    return 0
+  }
+
+  return Object.values(parsed).reduce((sum, value) => {
+    if (Array.isArray(value)) {
+      return value.reduce(addEntry, sum)
+    }
+    return addEntry(sum, value)
+  }, 0)
+}
+
 /** Campo API `imagen_producto`: string, JSON string o array de paths. */
 export function parseImageArray(imagenProducto) {
   if (typeof imagenProducto === 'string') {

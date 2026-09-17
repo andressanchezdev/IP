@@ -95,6 +95,16 @@ export function useStorePageActions({
     showToast,
   ])
 
+  const handleOpenCatalog = useCallback(() => {
+    if (isStoreView) {
+      showToast('Ya se encuentra viendo el catálogo', 'success')
+    }
+    setSearchValue('')
+    clearCommittedProductSearch()
+    clearFilters()
+    navigateToView('tienda')
+  }, [isStoreView, showToast, setSearchValue, clearCommittedProductSearch, clearFilters, navigateToView])
+
   const handleProfileClick = useCallback(() => {
     if (!isAuthenticated) {
       openAuthModal()
@@ -143,6 +153,7 @@ export function useStorePageActions({
     handleTogglePromociones,
     handleSearchSubmit,
     handleClearSearch,
+    handleOpenCatalog,
     handleProfileClick,
     handleLogin,
     handleLogout,

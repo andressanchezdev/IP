@@ -1,4 +1,4 @@
-import { liveCatalogProducts } from './botip/liveData'
+import { liveBrandNames, liveCatalogProducts, liveModelNames } from './botip/liveData'
 import { findTerm, liveAccessoryTerms, liveCatalogParts, liveOtherParts, liveWeakLexemes, listPartFamilies, resolvePartFamily } from './motoParts'
 import { keywordsOf } from './botSettings'
 import { matchLandingTeam } from './teamLookup'
@@ -7,33 +7,49 @@ import { parseUserFrame } from './userFrame'
 
 const PRICE_RE = /(?:\$|cop|usd)?\s*(\d+[.,]\d{2}|\d{3,})(?:\s*(?:cop|usd|mil))?/i
 
-const BRAND_TOKENS = new Set([
-  'honda',
-  'yamaha',
-  'bajaj',
-  'akt',
-  'suzuki',
-  'kawasaki',
-  'hero',
-  'kymco',
-  'victory',
-  'motul',
-  'mobil',
-  'havoline',
-  'advance',
-])
+function foldToken(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+}
 
-function extractMarcaModelo(tokens: readonly string[], raw: string) {
-  const marca = tokens.find((token) => BRAND_TOKENS.has(token))
-  const modeloToken = tokens.find(
-    (token) =>
-      (/^[a-z]*\d+[a-z]*$/i.test(token) && token.length >= 3) ||
-      ['cg125', 'ybr', 'cb190', 'pulsar', '125', '150', '190'].includes(token),
+function liveBrandTokens() {
+  return new Set(
+    liveBrandNames()
+      .flatMap((name) => foldToken(name).split(/[^a-z0-9]+/))
+      .filter((token) => token.length >= 3),
   )
-  const modeloFromRaw = raw.match(/\b([A-Za-z]{1,6}\s?\d{2,4}[A-Za-z]?)\b/)?.[1]
+}
+
+function liveModelTokens() {
+  return new Set(
+    liveModelNames()
+      .flatMap((name) => foldToken(name).split(/[^a-z0-9]+/))
+      .filter((token) => token.length >= 2),
+  )
+}
+
+export function isModelYear(token: string) {
+  const year = Number(token)
+  return Number.isInteger(year) && year >= 1990 && year <= 2035
+}
+
+export function extractMarcaModelo(tokens: readonly string[], raw: string) {
+  const brands = liveBrandTokens()
+  const models = liveModelTokens()
+  const marca = tokens.find((token) => brands.has(token))
+  const modeloToken = tokens.find((token) => {
+    if (isModelYear(token)) return false
+    if (models.has(token)) return true
+    return /^[a-z]+\d+[a-z0-9]*$/i.test(token) && token.length >= 3
+  })
+  const modeloFromRaw = raw.match(/\b([A-Za-z]{1,8}\s?\d{2,4}[A-Za-z]?)\b/)?.[1]
+  const modeloRaw = modeloFromRaw ? modeloFromRaw.toLowerCase().replace(/\s+/g, '') : ''
+  const modelo = modeloToken || (modeloRaw && !isModelYear(modeloRaw) ? modeloRaw : undefined)
   return {
     marca: marca || undefined,
-    modelo: modeloToken || (modeloFromRaw ? modeloFromRaw.toLowerCase().replace(/\s+/g, '') : undefined),
+    modelo,
   }
 }
 
@@ -114,7 +130,7 @@ export function extractEntities(tokens: readonly string[], raw: string, previous
   const productoNow = hits[0]?.label || ''
   const price = raw.match(PRICE_RE)?.[1]
   const queja = tokens.some((token) =>
-    ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr', 'garantia', 'devolucion'].includes(token),
+    ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr', 'garantia'].includes(token),
   )
   const compra = tokens.some((token) => keywordsOf('quote').includes(token)) || previous.compra
 

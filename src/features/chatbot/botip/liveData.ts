@@ -1,5 +1,6 @@
 import { getActiveDocument } from './store'
 import { getCachedChatProducts } from '../productSource'
+import { readGeneralFilterMemory } from '@/features/catalog/api/generalApi'
 import type { LandingTeamGroup, LandingTeamMember, ProductRecord } from '../types'
 
 export type LiveCatalogItem = {
@@ -84,44 +85,61 @@ export function liveInventoryIsDemoFallback(): boolean {
   return getCachedChatProducts().length === 0
 }
 
+function uniqueLabels(values: string[]) {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const value of values) {
+    const label = String(value || '').trim()
+    if (!label) continue
+    const key = label.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(label)
+  }
+  return out
+}
+
+function filterOptionLabels(list: Array<{ id?: string, label?: string }> | undefined) {
+  if (!Array.isArray(list) || !list.length) return []
+  return uniqueLabels(list.map((item) => String(item?.label || '')))
+}
+
 export function liveCatalogProducts(): LiveCatalogItem[] {
-  const cached = getCachedChatProducts().map((item) => ({
+  return getCachedChatProducts().map((item) => ({
     id: item.id,
     label: item.nombre,
     description: item.descripcion,
   })).filter((item) => item.id && item.label)
-  if (cached.length) return cached
-
-  const raw = catalog().catalogProducts
-  if (!Array.isArray(raw) || !raw.length) return []
-  return raw
-    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
-    .map((item) => ({
-      id: String(item.id ?? ''),
-      label: String(item.label ?? ''),
-      description: String(item.description ?? ''),
-    }))
-    .filter((item) => item.id && item.label)
 }
 
 export function liveCatalogLines(): LiveCatalogItem[] {
-  const raw = catalog().catalogLines
-  if (!Array.isArray(raw) || !raw.length) return []
-  return raw
-    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
-    .map((item) => ({
-      id: String(item.id ?? ''),
-      label: String(item.label ?? ''),
-      description: String(item.description ?? ''),
-    }))
-    .filter((item) => item.label)
+  const memory = readGeneralFilterMemory()
+  const fromFilter = filterOptionLabels(memory?.categorias)
+  if (fromFilter.length) {
+    return fromFilter.map((label) => ({ id: label, label, description: '' }))
+  }
+  const fromProducts = uniqueLabels(
+    getCachedChatProducts().map((item) => String(item.category || '').trim()),
+  )
+  return fromProducts.map((label) => ({ id: label, label, description: '' }))
 }
 
 export function liveCatalogLabels() {
-  const lines = liveCatalogLines().map((item) => item.label).filter(Boolean)
-  if (lines.length) return lines.join(', ')
-  const products = liveCatalogProducts().map((item) => item.label).filter(Boolean)
-  return products.join(', ') || 'el catálogo de la tienda'
+  return liveCatalogLines().map((item) => item.label).filter(Boolean).join(', ')
+}
+
+export function liveBrandNames(): string[] {
+  const memory = readGeneralFilterMemory()
+  const fromFilter = filterOptionLabels(memory?.marcas)
+  if (fromFilter.length) return fromFilter
+  return uniqueLabels(getCachedChatProducts().map((item) => String(item.marca || '').trim()))
+}
+
+export function liveModelNames(): string[] {
+  const memory = readGeneralFilterMemory()
+  const fromFilter = filterOptionLabels(memory?.modelos)
+  if (fromFilter.length) return fromFilter
+  return uniqueLabels(getCachedChatProducts().map((item) => String(item.modelo || '').trim()))
 }
 
 function toMember(row: Record<string, unknown>): LandingTeamMember {
@@ -166,7 +184,7 @@ export type LiveShipping = {
 
 export const DEFAULT_SHIPPING: LiveShipping = {
   nationwide: true,
-  freeMetroFrom: '250.000',
+  freeMetroFrom: '700.000',
   sameDay: true,
   doorSafe: true,
   cityScope: 'área metropolitana',
@@ -187,20 +205,8 @@ export function resolveShipping(raw: unknown): LiveShipping {
 
 export function liveShipping(): LiveShipping {
   try {
-    return resolveShipping(catalog().shipping)
+    return { ...resolveShipping(catalog().shipping), freeMetroFrom: DEFAULT_SHIPPING.freeMetroFrom }
   } catch {
     return { ...DEFAULT_SHIPPING }
   }
-}
-
-export function liveBrandNames(): string[] {
-  const raw = catalog().brands
-  if (Array.isArray(raw) && raw.length) {
-    const names = raw
-      .map((item) => (typeof item === 'string' ? item : String((item as { name?: string })?.name ?? '')))
-      .map((item) => item.trim())
-      .filter(Boolean)
-    if (names.length) return names
-  }
-  return getCachedChatProducts().map((item) => String(item.marca || '').trim()).filter(Boolean)
 }

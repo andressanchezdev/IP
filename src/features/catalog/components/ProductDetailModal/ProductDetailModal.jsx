@@ -3,6 +3,7 @@ import { Modal } from '@/shared/ui/Modal/Modal'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import { ProductImageMagnify } from '../ProductImageMagnify/ProductImageMagnify'
+import { isWeakDescription, productDisplayName } from '@/features/catalog/lib/catalogMatch'
 import { PRODUCT_SELLOS, pickProductLoremVersion } from './productDetailCopy'
 import '@/features/auth/components/AuthModal/AuthModal.css'
 import './ProductDetailModal.css'
@@ -59,7 +60,11 @@ export function ProductDetailModal({
   const isOrdered = isInCart
   const descriptionText = String(product.description || '').trim()
   const categoryText = String(product.category || '').trim()
-  const productName = descriptionText || categoryText || product.reference || 'Producto'
+  const modelText = String(product.model || '').trim()
+  const titleText = isWeakDescription(descriptionText)
+    ? modelText
+    : descriptionText
+  const productName = productDisplayName(product)
   const activeSrc = gallery[activeIndex] || gallery[0] || ''
   const loremText = pickProductLoremVersion(product.id)
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
@@ -96,6 +101,14 @@ export function ProductDetailModal({
       className="auth-modal product-detail-modal"
       backdropClassName="auth-modal-backdrop"
     >
+      <button
+        type="button"
+        className="auth-modal__close"
+        onClick={onClose}
+        {...namedControl('Cerrar')}
+      >
+        ×
+      </button>
       <div className="product-detail-modal__layout">
         <aside className="product-detail-modal__thumbs" aria-label="Imágenes del producto">
           {gallery.length > 0 ? (
@@ -153,7 +166,7 @@ export function ProductDetailModal({
               {categoryText ? categoryText.toUpperCase() : ''}
             </p>
             <h2 id="product-detail-title" className="product-detail-modal__title">
-              {descriptionText ? descriptionText.toUpperCase() : productName.toUpperCase()}
+              {(titleText || productName).toUpperCase()}
             </h2>
             <p className="product-detail-modal__meta">
               {`${String(product.brand || '').toUpperCase()} - ${String(product.model || '').toUpperCase()}`}

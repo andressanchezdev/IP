@@ -1,3 +1,4 @@
+import { rankCatalogProducts } from '@/features/catalog/lib/catalogMatch'
 import { liveInventory, liveLexiconSet } from './botip/liveData'
 import type { ProductRecord } from './types'
 import { familyOfText, resolvePartFamily, liveWeakLexemes } from './motoParts'
@@ -13,7 +14,7 @@ function fold(value: string) {
 }
 
 function wordsOf(product: ProductRecord) {
-  return `${product.nombre} ${product.descripcion} ${product.modelo} ${product.codigo}`
+  return `${product.nombre} ${product.modelo} ${product.marca || ''} ${product.category || ''} ${product.codigo} ${product.descripcion}`
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
@@ -38,42 +39,27 @@ export function retailPrice(product: ProductRecord) {
   return product.precios[0]?.empresarial ?? 0
 }
 
+function activeLote() {
+  return liveInventory().filter((product) => product.status === 'activo')
+}
+
+function familyText(product: ProductRecord) {
+  return `${product.nombre} ${product.category || ''} ${product.descripcion || ''}`
+}
+
 export function findInventoryMatches(tokens: readonly string[]): ProductRecord[] {
+  const lote = activeLote()
+  if (!lote.length) return []
   const useful = tokens.filter((token) => token.length >= 3 && !GENERIC.has(token) && !liveWeakLexemes().has(token))
-  if (!useful.length) return []
+  if (!useful.length) return lote.slice(0, 5)
+
+  const ranked = rankCatalogProducts(lote, useful.join(' '))
   const wanted = resolvePartFamily(useful)
-  const scored = liveInventory()
-    .map((product) => {
-      if (product.status !== 'activo') return { product, score: 0 }
-      const productFamily = familyOfText(product.nombre)
-      if (wanted && !wanted.ambiguous && productFamily?.id !== wanted.id) {
-        return { product, score: 0 }
-      }
-      if (wanted?.ambiguous) return { product, score: 0 }
-      const pool = wordsOf(product)
-      const hits = useful.filter((token) =>
-        pool.some((word) => word === token || (token.length >= 4 && (word.startsWith(token) || token.startsWith(word)))),
-      )
-      const modelHit = useful.some(
-        (token) =>
-          fold(product.modelo) === token ||
-          fold(product.codigo).includes(token) ||
-          fold(product.descripcion).includes(token),
-      )
-      return { product, score: hits.length + (modelHit ? 2 : 0) }
-    })
-    .filter((item) => item.score > 0)
-    .sort((left, right) => right.score - left.score)
-  const best = scored[0]?.score ?? 0
-  const winners = scored.filter((item) => item.score === best)
-  const seen = new Set<string>()
-  return winners
-    .map((item) => item.product)
-    .filter((product) => {
-      if (seen.has(product.id)) return false
-      seen.add(product.id)
-      return true
-    })
+  const wantedId = wanted && !wanted.ambiguous ? wanted.id : ''
+  if (!wantedId) return ranked
+
+  const familyHits = ranked.filter((product) => familyOfText(familyText(product))?.id === wantedId)
+  return familyHits.length ? familyHits : ranked
 }
 
 export function rememberOffers(ctx: SessionContext | undefined, products: readonly ProductRecord[]) {
@@ -82,13 +68,18 @@ export function rememberOffers(ctx: SessionContext | undefined, products: readon
     id: product.id,
     label: product.nombre,
     price: retailPrice(product),
-    family: familyOfText(product.nombre)?.id || '',
+    family: familyOfText(familyText(product))?.id || '',
+    marca: product.marca || undefined,
     modelo: product.modelo || undefined,
+    cantidad: product.cantidad,
+    codigo: product.codigo || undefined,
   }))
+  ctx.lastOffersAt = Date.now()
 }
 
 export function clearLastOffers(ctx: SessionContext) {
   ctx.lastOffers = []
+  ctx.lastOffersAt = 0
 }
 
 export function extractMentionedPrices(tokens: readonly string[], raw = '') {
@@ -143,12 +134,27 @@ function distinctiveTokens(tokens: readonly string[], offers: readonly OfferedPr
   })
 }
 
+function recordFromOffer(offer: OfferedProduct): ProductRecord {
+  return {
+    id: offer.id,
+    codigo: offer.codigo || '',
+    nombre: offer.label,
+    descripcion: offer.label,
+    modelo: offer.modelo || '',
+    marca: offer.marca,
+    precios: [{ mayorista: 0, minorista: 0, empresarial: offer.price }],
+    cantidad: typeof offer.cantidad === 'number' ? offer.cantidad : 0,
+    bodega: '',
+    status: 'activo',
+    creado_en: '',
+    actualizado_en: '',
+  }
+}
+
 function offeredProducts(offers: readonly OfferedProduct[]) {
   if (!offers.length) return [] as ProductRecord[]
   const inventory = liveInventory()
-  return offers
-    .map((offer) => inventory.find((product) => product.id === offer.id))
-    .filter((product): product is ProductRecord => Boolean(product))
+  return offers.map((offer) => inventory.find((product) => product.id === offer.id) || recordFromOffer(offer))
 }
 
 export function pickLastOffer(ctx: SessionContext, tokens: readonly string[], raw = ''): ProductRecord | null {
@@ -169,6 +175,10 @@ export function pickLastOffer(ctx: SessionContext, tokens: readonly string[], ra
     const priceHit = prices.some((value) => pricesMatch(value, price))
     return { product, nameScore: nameHits.length, priceScore: priceHit ? 1 : 0 }
   })
+
+  if (products.length === 1 && useful.length === 0 && prices.length === 0) {
+    return products[0]
+  }
 
   const byPrice = scored.filter((item) => item.priceScore > 0)
   if (byPrice.length === 1) return byPrice[0].product
@@ -214,8 +224,12 @@ export function inventorySummary(tokens: readonly string[], ctx?: SessionContext
   }
   const hits = findInventoryMatches(tokens)
   if (!hits.length) return null
+  if (hits.length > 5) {
+    rememberOffers(ctx, hits.slice(0, 5))
+    return null
+  }
   if (hits.length > 2) {
-    rememberOffers(ctx, hits.slice(0, 4))
+    rememberOffers(ctx, hits.slice(0, 5))
     return null
   }
   const only = hits[0]
@@ -236,27 +250,32 @@ export function inventorySummary(tokens: readonly string[], ctx?: SessionContext
   return formatOfferCard(only)
 }
 
-export function siblingSkuOptions(tokens: readonly string[], ctx?: SessionContext) {
+export function catalogSearchQuery(product: Pick<ProductRecord, 'codigo' | 'nombre'>) {
+  return String(product.codigo || product.nombre || '').trim()
+}
+
+export function catalogOptionLabel(product: ProductRecord, siblings: readonly ProductRecord[]) {
+  const extra = [product.marca, product.modelo].filter(Boolean).join(' · ')
+  const name = String(product.nombre || product.descripcion || '').trim()
+  if (!name) return extra || 'Producto'
+  const sameName = siblings.filter((item) => fold(item.nombre) === fold(name)).length > 1
+  if (!sameName) return name
+  return extra ? `${name} · ${extra}` : name
+}
+
+export function catalogChoiceOptions(tokens: readonly string[], ctx?: SessionContext) {
   const hits = findInventoryMatches(tokens)
-  if (hits.length < 2) return [] as { label: string; prompt: string }[]
-  const hasNarrow =
-    tokens.some((token) => token.length >= 4 && !GENERIC.has(token)) &&
-    tokens.some(
-      (token) =>
-        /^\d/.test(token) ||
-        ['honda', 'yamaha', 'bajaj', 'akt', 'suzuki', 'pistera', 'urbana', 'sintetico', 'mineral', 'premium'].includes(token),
-    )
-  if (hasNarrow && hits.length <= 2) {
-    rememberOffers(ctx, hits.slice(0, 1))
-    return [] as { label: string; prompt: string }[]
+  if (hits.length > 5) {
+    rememberOffers(ctx, hits.slice(0, 5))
+    return [] as { label: string; search: string }[]
   }
-  if (hits.length === 2) {
-    rememberOffers(ctx, hits)
-    return [] as { label: string; prompt: string }[]
+  if (hits.length < 2) {
+    if (hits.length === 1) rememberOffers(ctx, hits)
+    return [] as { label: string; search: string }[]
   }
-  rememberOffers(ctx, hits.slice(0, 4))
-  return hits.slice(0, 4).map((product) => ({
-    label: product.nombre,
-    prompt: product.nombre,
+  rememberOffers(ctx, hits)
+  return hits.map((product) => ({
+    label: catalogOptionLabel(product, hits),
+    search: catalogSearchQuery(product),
   }))
 }

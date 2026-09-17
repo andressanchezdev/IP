@@ -75,10 +75,9 @@
 /* Login en desktop: centra el bloque y reparte el alto entre campos. */
 @media (min-width: 769px) {
   .auth-form--login {
-    flex: 1;
+    flex: 1 1 auto;
     gap: clamp(14px, 2.6vh, 24px);
     justify-content: center;
-    min-height: 100%;
   }
 
   .auth-form--login .auth-form__subtitle {
@@ -90,9 +89,6 @@
     margin-top: clamp(4px, 1.2vh, 12px);
   }
 
-  .auth-modal__form-col:has(.auth-form--login) {
-    justify-content: center;
-  }
 }
 
 .auth-form__actions {

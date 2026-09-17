@@ -2,6 +2,8 @@ import { findTerm, liveAccessoryTerms, liveCatalogParts, liveOtherParts, partSte
 import type { ConversationFocus, FocusAspect, FocusReferent, SessionContext } from './sessionContext'
 import { liveLexiconSet } from './botip/liveData'
 import { pickLastOffer } from './inventory'
+import { VACANCY_EXACT_WORDS } from './botSettings'
+import { extractMarcaModelo } from './entities'
 
 export type TurnKind = 'continue' | 'switch' | 'social' | 'fresh' | 'aside'
 
@@ -37,7 +39,7 @@ export const FOLLOW_CUE_LIST = [
 export const SWITCH_CUE_LIST = ['cambiemos', 'olvidalo', 'olvidar', 'cancelar'] as const
 export const SOCIAL_GREET = ['hola', 'buenas', 'hey', 'hello', 'hi', 'buenos', 'buen'] as const
 export const SOCIAL_THANKS = ['gracias', 'grax', 'thanks', 'ty'] as const
-export const ASIDE_INTENT_LIST = ['location', 'company', 'social', 'credit', 'payment', 'shipping', 'orderStatus'] as const
+export const ASIDE_INTENT_LIST = ['location', 'company', 'social', 'credit', 'payment', 'shipping', 'orderStatus', 'returns'] as const
 export const ORDER_STATUS_CUE_LIST = ['estado', 'rastreo', 'rastrear', 'tracking'] as const
 export const SHIPPING_CUE_LIST = [
   'envio',
@@ -62,26 +64,16 @@ export const FOCUS_OK_LIST = [
   'complaint',
 ] as const
 export const LOCATION_CUE_LIST = [
-  'donde',
   'ubicacion',
   'ubicados',
   'ubicado',
-  'ciudad',
-  'encuentran',
-  'encuentra',
-  'local',
-  'sucursal',
-  'sede',
   'direccion',
-  'mapa',
-  'alpujarra',
-  'medellin',
-  'horario',
-  'horarios',
-  'abren',
-  'abre',
-  'abierto',
+  'llegar',
+  'llego',
+  'sede',
+  'sucursal',
 ] as const
+export const HOUR_CUE_LIST = ['horario', 'horarios', 'abre', 'abren', 'abierto', 'abierta', 'cierra', 'cierran'] as const
 export const BROAD_PRICE_LIST = [
   'productos',
   'catalogo',
@@ -119,6 +111,8 @@ export const PAYMENT_CUE_LIST = [
   'daviplata',
   'bancolombia',
   'medios',
+  'transferir',
+  'transferirles',
 ] as const
 export const PURCHASE_CUE_LIST = ['comprar', 'obtener', 'adquirir', 'pedido'] as const
 export const CHOOSE_CUE_LIST = [
@@ -146,10 +140,20 @@ export const COMPLAINT_CUE_LIST = [
   'pqr',
   'molestia',
   'garantia',
-  'devolucion',
   'inconforme',
   'inconformidad',
   'defectuoso',
+] as const
+
+export const RETURNS_CUE_LIST = [
+  'devolver',
+  'devolucion',
+  'devoluciones',
+  'cambios',
+  'cambiarlo',
+  'cambiarla',
+  'reembolso',
+  'reembolsar',
 ] as const
 
 const SOCIAL = new Set(['greeting', 'thanks', 'farewell', 'howAreYou', 'disambiguation'])
@@ -165,9 +169,6 @@ function asideIntents() {
 }
 function focusOkIntents() {
   return liveLexiconSet('focusOkIntents', new Set(FOCUS_OK_LIST), false)
-}
-function locationCues() {
-  return liveLexiconSet('locationCues', new Set(LOCATION_CUE_LIST))
 }
 function broadPrice() {
   return liveLexiconSet('broadPrice', new Set(BROAD_PRICE_LIST))
@@ -194,6 +195,9 @@ function orderStatusCues() {
 }
 function complaintCues() {
   return liveLexiconSet('complaintCues', new Set(COMPLAINT_CUE_LIST))
+}
+function returnsCues() {
+  return liveLexiconSet('returnsCues', new Set(RETURNS_CUE_LIST))
 }
 function socialGreet() {
   return liveLexiconListSafe('socialGreet', SOCIAL_GREET)
@@ -245,18 +249,45 @@ export function isBroadPriceAsk(tokens: readonly string[], raw = '') {
   return Boolean(price && broad && !mentionedFamily(tokens))
 }
 
-export function isComplaintAsk(tokens: readonly string[], raw = '') {
-  if (isBrandLineAsk(tokens, raw) && !tokens.some((token) => ['queja', 'reclamo', 'pqr', 'reclamar', 'quejar'].includes(token))) {
-    return false
-  }
+export function isReturnsAsk(tokens: readonly string[], raw = '') {
   const text = raw
     .trim()
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
+  if (/cambiar de tema|cambiemos de tema|otro tema/.test(text)) return false
+  if (tokens.some((token) => returnsCues().has(token))) return true
+  if (tokens.includes('cambiar') && tokens.some((token) => ['repuesto', 'repuestos', 'producto', 'productos', 'pieza', 'referencia', 'referencias'].includes(token))) {
+    return true
+  }
+  return (
+    /\b(devolver|devolucion|devoluciones|reembolso)\b/.test(text) ||
+    /\bno me sirv(io|e|ieron)\b/.test(text) ||
+    /\bse equivocaron\b/.test(text) ||
+    /\b(esta|esa|la) referencia no( era| es| sirve)?\b/.test(text) ||
+    /\breferencia (incorrecta|equivocada|mala|erronea)\b/.test(text) ||
+    /\bcambiar(lo|la)? por\b/.test(text) ||
+    /\bquiero (un )?cambio\b/.test(text)
+  )
+}
+
+export function isComplaintAsk(tokens: readonly string[], raw = '') {
+  const text = raw
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+  if (isBrandLineAsk(tokens, raw) && !tokens.some((token) => ['queja', 'reclamo', 'pqr', 'reclamar', 'quejar'].includes(token))) {
+    return false
+  }
+  const explicit =
+    tokens.some((token) => ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr'].includes(token)) ||
+    /\b(queja|reclamo|pqr|inconformidad)\b/.test(text)
+  if (explicit) return true
+  if (isReturnsAsk(tokens, raw)) return false
   return (
     tokens.some((token) => complaintCues().has(token)) ||
-    /\b(queja|reclamo|pqr|inconformidad|defectuoso)\b/.test(text)
+    /\b(defectuoso|no era la indicada|no era el indicado)\b/.test(text)
   )
 }
 
@@ -316,15 +347,209 @@ export function isOrderStatusAsk(tokens: readonly string[], raw = '') {
   return /\bmi pedidos?\b/.test(text) && !hasPartTerm(tokens)
 }
 
-export function isPaymentAsk(tokens: readonly string[], raw = '') {
-  if (isOrderStatusAsk(tokens, raw)) return false
-  if (isCreditAsk(tokens, raw)) return false
-  if (tokens.some((token) => ['vacante', 'vacantes', 'empleo', 'trabajo', 'postular'].includes(token))) return false
+export function isVacancyAsk(tokens: readonly string[], raw = '') {
   const text = raw
     .trim()
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
+  if (tokens.some((token) => (VACANCY_EXACT_WORDS as readonly string[]).includes(token))) return true
+  return /\bvacantes?\b|\bempleo\b|\bpostular\b|trabajar con (ustedes|nosotros)|oferta(s)? (de )?empleo/.test(text)
+}
+
+export function hasPaymentPhrase(raw = '') {
+  const text = foldAskText(raw)
+  return (
+    /\bmedios de pago\b/.test(text) ||
+    /\bformas? de pago\b/.test(text) ||
+    /\bque medios (de pago )?(manejan|tienen|aceptan)\b/.test(text) ||
+    /\b(manejan|tienen|aceptan) (medios de pago|transferencia|efectivo)\b/.test(text) ||
+    /\bpuedo transferir(les)?\b/.test(text) ||
+    /\btransferir(les)?\b/.test(text) ||
+    /\bnumero de cuenta\b/.test(text) ||
+    /\btipo de cuenta\b/.test(text) ||
+    /\bcuenta bancaria\b/.test(text) ||
+    /\bdatos de (la )?cuenta\b/.test(text) ||
+    /\bcuenta para (transferir|consignar)\b/.test(text) ||
+    /\bcomo (puedo )?pagar\b/.test(text) ||
+    /\baceptan (efectivo|transferencia)\b/.test(text)
+  )
+}
+
+export function isCatalogFindAsk(tokens: readonly string[], raw = '') {
+  const text = raw
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+  if (hasPaymentPhrase(raw)) return false
+  if (tokens.some((token) => ['encontrar', 'encontrarlos', 'averiguar', 'buscar', 'busco', 'buscando'].includes(token))) {
+    return true
+  }
+  return /que productos|que (productos|repuestos|piezas) tienen|catalogo|averiguar|encontrar(los)?|buscar(los)?|diversos productos|varios productos|productos de (su |el )?catalogo/.test(
+    text,
+  )
+}
+
+export function isHowToBuyAsk(tokens: readonly string[], raw = '') {
+  const text = raw
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+  if (/como (puedo )?(compro|comprar|obtengo|obtener)|como comprar/.test(text)) return true
+  return tokens.includes('comprar') && tokens.some((token) => ['como', 'puedo', 'ayuda', 'ayudan'].includes(token))
+}
+
+export function hasVehicleHint(tokens: readonly string[], raw = '') {
+  const vehicle = extractMarcaModelo(tokens, raw)
+  return Boolean(vehicle.marca || vehicle.modelo)
+}
+
+export function isProductSeekingAsk(tokens: readonly string[], raw = '') {
+  if (isReturnsAsk(tokens, raw) || isComplaintAsk(tokens, raw) || hasPaymentPhrase(raw)) return false
+  return isCatalogFindAsk(tokens, raw) || hasPartTerm(tokens) || hasVehicleHint(tokens, raw)
+}
+
+function foldAskText(raw = '') {
+  return raw
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+}
+
+const LOCATION_STOP = new Set([
+  'donde',
+  'estan',
+  'esta',
+  'quedan',
+  'queda',
+  'ubican',
+  'ubica',
+  'ubicados',
+  'ubicado',
+  'ubicacion',
+  'direccion',
+  'llegar',
+  'llego',
+  'local',
+  'fisico',
+  'fisica',
+  'sede',
+  'sucursal',
+  'tienda',
+  'mapa',
+  'maps',
+  'como',
+  'puedo',
+  'pueden',
+  'puedes',
+  'ustedes',
+  'encuentran',
+  'encuentra',
+  'encuentro',
+  'visito',
+  'visitar',
+  'visita',
+  'visitarnos',
+  'cual',
+  'cuales',
+  'dime',
+  'indicar',
+  'indican',
+  'google',
+  'abrir',
+  'premium',
+  'importadora',
+  'medellin',
+  'antioquia',
+  'colombia',
+  'centro',
+  'ciudad',
+  'punto',
+  'sitio',
+  'lugar',
+  'almacen',
+  'bodega',
+  'oficina',
+  'hola',
+  'buenas',
+  'favor',
+  'quiero',
+  'saber',
+  'conocer',
+  'tienen',
+  'queda',
+  'quedan',
+])
+
+function hasLocationPhrase(text: string) {
+  return (
+    /\bdonde (estan|esta|quedan|queda|se ubican|se ubica|ubicados|ubicado|se encuentran|se encuentra)\b/.test(text) ||
+    /\b(en )?donde (queda|esta) (el |la |su |sus )?(local|sede|sucursal|tienda|almacen|punto)\b/.test(text) ||
+    /\b(cual es |me das |dime |indican |indicar )?(su |la |tu )?(direccion|ubicacion)\b/.test(text) ||
+    /\bcomo (puedo |puedes |pueden )?(llegar|llego)\b/.test(text) ||
+    /\b(local fisico|sede fisica|punto de venta)\b/.test(text) ||
+    /\b(donde (los |las )?(encuentro|visito|quedan))\b/.test(text) ||
+    /\b(ubicados|ubicado|ubicacion)\b/.test(text) ||
+    /\b(tienen|hay) (un |una )?(sucursal|sede|local)( fisico)?\b/.test(text)
+  )
+}
+
+export function isLocationAsk(tokens: readonly string[], raw = '') {
+  if (isReturnsAsk(tokens, raw)) return false
+  if (isVacancyAsk(tokens, raw)) return false
+  if (hasPartTerm(tokens) || hasVehicleHint(tokens, raw)) return false
+  if (isHowToBuyAsk(tokens, raw)) return false
+  if (isPaymentAsk(tokens, raw) || isShippingAsk(tokens, raw) || isOrderStatusAsk(tokens, raw)) return false
+  if (tokens.some((token) => ['catalogo', 'productos', 'producto', 'inventario', 'repuestos', 'repuesto'].includes(token))) {
+    return false
+  }
+  const text = foldAskText(raw)
+  if (!text || !hasLocationPhrase(text)) return false
+  const extra = tokens.filter((token) => token.length >= 4 && !LOCATION_STOP.has(token))
+  return extra.length < 3
+}
+
+export function isAdvisorAsk(tokens: readonly string[], raw = '') {
+  void tokens
+  const text = foldAskText(raw)
+  if (!text) return false
+  return (
+    /\b(hablar|contactar|comunicarme|comunicar) (con )?(un |una )?(asesor|asesora|asesores)\b/.test(text) ||
+    /\bcomo (puedo |puedes |pueden )?(hablar|contactar|comunicarme) (con )?(un |una )?(asesor|asesora|persona)\b/.test(text) ||
+    /\b(persona real|persona humana|asesor real)\b/.test(text) ||
+    /\b(quiero |necesito )(un |una )?(asesor|asesora)\b/.test(text)
+  )
+}
+
+export function isHoursAsk(tokens: readonly string[], raw = '') {
+  if (isLocationAsk(tokens, raw)) return false
+  if (hasPartTerm(tokens) || hasVehicleHint(tokens, raw) || isReturnsAsk(tokens, raw)) return false
+  if (isCatalogFindAsk(tokens, raw) || isHowToBuyAsk(tokens, raw)) return false
+  const text = foldAskText(raw)
+  const hourCue =
+    tokens.some((token) => (HOUR_CUE_LIST as readonly string[]).includes(token)) ||
+    /\b(horario|horarios|a que hora|estan abiertos)\b/.test(text)
+  if (!hourCue) return false
+  const extra = tokens.filter(
+    (token) => token.length >= 4 && !LOCATION_STOP.has(token) && !(HOUR_CUE_LIST as readonly string[]).includes(token),
+  )
+  return extra.length < 3
+}
+
+export function isPaymentAsk(tokens: readonly string[], raw = '') {
+  if (isOrderStatusAsk(tokens, raw)) return false
+  if (isCreditAsk(tokens, raw)) return false
+  if (isVacancyAsk(tokens, raw)) return false
+  if (isComplaintAsk(tokens, raw) || isReturnsAsk(tokens, raw)) return false
+  const text = foldAskText(raw)
+  if (hasPaymentPhrase(raw)) return true
+  if (hasVehicleHint(tokens, raw) || hasPartTerm(tokens)) return false
+  if (isHowToBuyAsk(tokens, raw) && !/transferencia|efectivo|nequi|daviplata|cuenta bancaria|medios de pago/.test(text)) {
+    return false
+  }
   if (
     tokens.some((token) => paymentCues().has(token)) ||
     /medios de pago|numero de cuenta|tipo de cuenta/.test(text)
@@ -335,9 +560,16 @@ export function isPaymentAsk(tokens: readonly string[], raw = '') {
     tokens.some((token) => purchaseCues().has(token)) ||
     /como (puedo )?(compro|comprar|obtengo|obtener|pago|pagar)/.test(text)
   if (!purchase) return false
-  if (hasPartTerm(tokens)) return false
   if (isDeicticProduct(tokens)) return true
   return /como (puedo )?(compro|comprar|obtengo|obtener|pago|pagar)/.test(text)
+}
+
+export function isExecutiveAsk(tokens: readonly string[], raw = '') {
+  const text = foldAskText(raw)
+  if (/\b(gerente|gerentes|jefe|jefa|jefes|dueno|duena|duenos|propietario|propietaria)\b/.test(text)) return true
+  return tokens.some((token) =>
+    ['gerente', 'gerentes', 'jefe', 'jefa', 'jefes', 'dueno', 'duena', 'propietario'].includes(token),
+  )
 }
 
 export function isShippingAsk(tokens: readonly string[], raw = '') {
@@ -361,7 +593,7 @@ export function classifyTurn(tokens: readonly string[], raw: string, ctx: Sessio
 
   if (isBroadPriceAsk(tokens, raw)) return 'aside'
   if (!familyNow && isOrderStatusAsk(tokens, raw)) return 'aside'
-  if (!familyNow && significant.some((token) => locationCues().has(token))) return 'aside'
+  if (!familyNow && (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw))) return 'aside'
   if (!familyNow && isShippingAsk(tokens, raw)) return 'aside'
   if (familyNow && current && familyNow !== current) return 'switch'
   if (pickLastOffer(ctx, tokens, raw)) return 'continue'

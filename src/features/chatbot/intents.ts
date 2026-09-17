@@ -1,26 +1,35 @@
-import { findTerm, listPartFamilies, liveAccessoryTerms, liveCatalogParts, liveOtherParts, liveWeakLexemes, resolvePartFamily } from './motoParts'
+import { findTerm, listPartFamilies, liveAccessoryTerms, liveCatalogParts, liveOtherParts, resolvePartFamily } from './motoParts'
 import { applyBotText, defaultKeywords, getBotSettings, keywordsOf, liveContact, livePayments } from './botSettings'
 import { nextAskPhrase, nextAskSubject } from './askPhrase'
 import { advisorAskKind, groupLabel, type TeamMatch } from './teamLookup'
 import type { LandingTeamMember } from './types'
-import { chatHasAuth } from './productSource'
+import { chatHasAuth, getLastProductPlan, lastProductFetchFailed, type ProductQueryPlan } from './productSource'
 import { liveBrandNames, liveCatalogLabels, liveCatalogProducts, liveLexiconSet, livePublishedTeam, liveShipping } from './botip/liveData'
-import { isBroadPriceAsk } from './conversationThread'
+import { isBroadPriceAsk, isHowToBuyAsk, isHoursAsk, isLocationAsk } from './conversationThread'
 import type { SessionContext } from './sessionContext'
-import { formatOfferCard, inventorySummary, pickLastOffer, PRICE_DISCLAIMER, siblingSkuOptions } from './inventory'
+import { catalogOptionLabel, catalogSearchQuery, findInventoryMatches, pickLastOffer, rememberOffers } from './inventory'
+
+export type CatalogCommand =
+  | { kind: 'search'; query: string }
+  | { kind: 'filter'; brands?: string[]; categories?: string[]; models?: string[] }
 
 export type ChatAction = {
   href?: string
   label: string
   external?: boolean
-  kind?: 'catalog-download' | 'prompt' | 'login'
+  kind?: 'catalog-download' | 'prompt' | 'login' | 'catalog-search' | 'catalog-filter'
   prompt?: string
+  search?: string
+  brands?: string[]
+  categories?: string[]
+  models?: string[]
 }
 
 export type ChatReply = {
   actions: ChatAction[]
   options?: ChatAction[]
   text: string
+  catalogCommand?: CatalogCommand
 }
 
 type IntentId =
@@ -32,6 +41,7 @@ type IntentId =
   | 'product'
   | 'attention'
   | 'complaint'
+  | 'returns'
   | 'quote'
   | 'vacancy'
   | 'location'
@@ -40,6 +50,8 @@ type IntentId =
   | 'thanks'
   | 'credit'
   | 'payment'
+  | 'shipping'
+  | 'orderStatus'
 
 type Intent = {
   id: IntentId
@@ -47,7 +59,6 @@ type Intent = {
 }
 
 const CATALOG_PATH = '/'
-const VACANCY_PATH = '/'
 
 function whatsappHref(text: string) {
   const base = liveContact().whatsappUrl
@@ -79,6 +90,7 @@ const CHAT_INTENTS: readonly Intent[] = [
   { id: 'accessory', keywords: defaultKeywords('accessory') },
   { id: 'attention', keywords: defaultKeywords('attention') },
   { id: 'complaint', keywords: defaultKeywords('complaint') },
+  { id: 'returns', keywords: defaultKeywords('returns') },
   { id: 'quote', keywords: defaultKeywords('quote') },
   { id: 'vacancy', keywords: defaultKeywords('vacancy') },
   { id: 'location', keywords: defaultKeywords('location') },
@@ -166,7 +178,7 @@ export function whatsappReply(): ChatReply {
   return {
     text: applyBotText(
       'whatsapp',
-      `Claro. Nuestro WhatsApp es ${liveContact().phoneDisplay} y el correo ${liveContact().email}. La sede está en ${liveContact().address}. ${nextAskPhrase()}`,
+      `Puedes escribirnos por WhatsApp al ${liveContact().phoneDisplay}. El correo es ${liveContact().email}.`,
       completeVars(''),
     ),
     actions: contactActions(),
@@ -175,14 +187,114 @@ export function whatsappReply(): ChatReply {
 
 function catalogStepActions(): ChatAction[] {
   return [
-    { kind: 'catalog-download', label: 'Descargar el catálogo' },
+    { kind: 'catalog-download', label: 'Descargar lista de precios' },
     { href: CATALOG_PATH, label: 'Ver catálogo' },
   ]
 }
 
-const SALE_NOTE = 'Este chat informa el precio de referencia; la compra la cierra un asesor.'
+function advisorContactAction(): ChatAction {
+  return {
+    href: whatsappHref('Hola, quiero atención de un asesor de Importadora Premium.'),
+    label: 'Hablar con un asesor',
+    external: true,
+  }
+}
 
-function priceCardActions(term: string): ChatAction[] {
+function driveSearchReply(product: { codigo?: string; nombre?: string }, extraActions: ChatAction[] = []): ChatReply {
+  const query = catalogSearchQuery({
+    codigo: product.codigo || '',
+    nombre: product.nombre || '',
+  })
+  return {
+    text: 'Lo busqué en el catálogo.',
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }, ...extraActions],
+    ...(query ? { catalogCommand: { kind: 'search' as const, query } } : {}),
+  }
+}
+
+function driveFilterReply(plan: ProductQueryPlan): ChatReply {
+  const payload = plan.filterPayload || { brands: [], categories: [], models: [] }
+  const label = plan.filterLabel || (plan.uiSlot === 'marca' ? 'esa marca' : plan.uiSlot === 'modelo' ? 'ese modelo' : 'esa categoría')
+  return {
+    text: `Filtré ${label} en el catálogo.`,
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    catalogCommand: {
+      kind: 'filter',
+      brands: payload.brands,
+      categories: payload.categories,
+      models: payload.models,
+    },
+  }
+}
+
+function productOptionsReply(products: ReturnType<typeof findInventoryMatches>, familyLabel = ''): ChatReply {
+  return {
+    text: familyLabel
+      ? `Encontré varias fichas de ${labelOf(familyLabel)}. ¿Cuál buscas?`
+      : 'Encontré varias fichas. ¿Cuál buscas?',
+    actions: [],
+    options: products.map((product) => ({
+      kind: 'catalog-search' as const,
+      label: catalogOptionLabel(product, products),
+      search: catalogSearchQuery(product),
+    })),
+  }
+}
+
+function manyHitsReply(plan?: ProductQueryPlan | null): ChatReply {
+  const brands = plan?.filterPayload?.brands || []
+  const models = plan?.filterPayload?.models || []
+  const categories = plan?.filterPayload?.categories || []
+  if (brands.length || models.length || categories.length) {
+    const label = plan?.filterLabel || 'el catálogo'
+    return {
+      text: `Hay muchas coincidencias. Filtré ${label} en la tienda; afina el nombre o el modelo.`,
+      actions: catalogStepActions(),
+      catalogCommand: { kind: 'filter', brands, categories, models },
+    }
+  }
+  return {
+    text: 'Hay varias coincidencias. Afina el nombre del producto, la marca y el modelo. También puedes abrir el catálogo.',
+    actions: catalogStepActions(),
+  }
+}
+
+function catalogNarrowReply(plan?: { act?: string } | null): ChatReply {
+  if (plan?.act === 'export') {
+    return {
+      text: 'La lista completa de precios se descarga desde tu perfil. En el chat indica el nombre del producto, la marca y el modelo de la moto.',
+      actions: catalogStepActions(),
+    }
+  }
+  return {
+    text: 'Sí, te ayudo a encontrarlos. Dime el nombre del producto, la marca y el modelo de la moto. También puedes abrir el catálogo de la tienda.',
+    actions: catalogStepActions(),
+  }
+}
+
+function productApiErrorReply(): ChatReply {
+  return {
+    text: 'No pude consultar el inventario en este momento. Intenta de nuevo o escribe a un asesor.',
+    actions: [advisorContactAction(), { href: CATALOG_PATH, label: 'Ver catálogo' }],
+  }
+}
+
+function productMissReply(): ChatReply {
+  return {
+    text: 'No encontré ese producto con esos datos. Indica el nombre, la marca y el modelo de la moto. También puedes abrir el catálogo.',
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }, advisorContactAction()],
+  }
+}
+
+const BUY_HINT = ' Para comprar, eliges el producto en la tienda. Un asesor cierra el pedido si lo necesitas.'
+
+export function withHowToBuy(reply: ChatReply, tokens: readonly string[] = []): ChatReply {
+  if (!isHowToBuyAsk(tokens, tokens.join(' '))) return reply
+  if (/para comprar/i.test(reply.text)) return reply
+  return { ...reply, text: `${reply.text}${BUY_HINT}` }
+}
+
+export function priceCardActions(term: string): ChatAction[] {
   return [
     { href: CATALOG_PATH, label: 'Ver en catálogo' },
     {
@@ -210,6 +322,12 @@ export function productNamesSummary() {
 
 export function categoriesReply(): ChatReply {
   const names = categorySummary()
+  if (!names) {
+    return {
+      text: 'Las categorías vigentes están en el catálogo de la tienda. Ábrelo o dime marca, modelo o el nombre del producto.',
+      actions: catalogStepActions(),
+    }
+  }
   return {
     text: applyBotText(
       'catalog',
@@ -221,118 +339,65 @@ export function categoriesReply(): ChatReply {
 }
 
 export function productsListReply(): ChatReply {
-  const names = productNamesSummary()
-  return {
-    text: applyBotText(
-      'catalog',
-      `En el catálogo tenemos estos productos: ${names}. Dime cuál buscas o la categoría, y te ayudo a afinar.`,
-      completeVars('', { catalog: names, names }),
-    ),
-    actions: catalogStepActions(),
-  }
+  return catalogNarrowReply(getLastProductPlan())
 }
 
 export function catalogReply(tokens: readonly string[] = []): ChatReply {
+  const plan = getLastProductPlan()
+  if (plan?.act === 'export' || plan?.act === 'listado' || plan?.source === 'acote') {
+    return withHowToBuy(catalogNarrowReply(plan), tokens)
+  }
   const wantsCategories = tokens.some((token) => CATEGORY_WORDS.has(token))
   const wantsProducts = tokens.some((token) => PRODUCT_LIST_WORDS.has(token))
-  if (wantsCategories && !wantsProducts) return categoriesReply()
-  if (wantsProducts) return productsListReply()
-  return {
-    text: applyBotText(
-      'catalog',
-      'En el catálogo publicado encuentras {catalog}. Puedes verlo en línea, descargar el PDF o cotizar con un asesor al {phone}. Escribe la pieza que buscas y te oriento.',
-      completeVars(''),
-    ),
+  if (wantsCategories && !wantsProducts) return withHowToBuy(categoriesReply(), tokens)
+  if (wantsProducts) return withHowToBuy(catalogNarrowReply(plan), tokens)
+  const names = catalogSummary()
+  return withHowToBuy({
+    text: names
+      ? applyBotText(
+        'catalog',
+        'En el catálogo publicado encuentras {catalog}. Ábrelo en la tienda. Si quieres la lista de precios, descárgala desde tu perfil. Escribe el nombre del producto, la marca y el modelo y te oriento.',
+        completeVars('', { catalog: names }),
+      )
+      : 'El catálogo vigente está en la tienda. Escribe el nombre del producto, la marca y el modelo y te oriento.',
     actions: catalogStepActions(),
-  }
+  }, tokens)
 }
 
-const GENERIC_PRODUCT_TOKENS = new Set(['producto', 'productos', 'catalogo', 'catalog', 'surtido', 'linea', 'item', 'articulo'])
 export const COMPANY_NAME_TOKENS = new Set(['premium', 'importadora', 'importador', 'importacion', 'importadores'])
 
-function productWords(label: string, id: string) {
-  return `${label} ${id}`
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .split(/[^a-z0-9]+/)
-    .filter((word) => word.length > 2)
-}
-
-function tokenMatchesWord(token: string, word: string) {
-  if (liveWeakLexemes().has(token) || token.length < 3) return false
-  if (token === word) return true
-  if (token === `${word}s` || word === `${token}s`) return true
-  if (
-    token.length >= 5 &&
-    word.length >= 5 &&
-    Math.abs(token.length - word.length) <= 2 &&
-    (token.startsWith(word) || word.startsWith(token))
-  ) {
-    return true
-  }
-  return false
-}
-
 export function matchingProductsForTokens(tokens: readonly string[]) {
-  const useful = tokens.filter((token) => token.length >= 3 && !GENERIC_PRODUCT_TOKENS.has(token) && !COMPANY_NAME_TOKENS.has(token))
-  if (!useful.length) return []
-  const wanted = resolvePartFamily(useful)
-  const byId = liveCatalogProducts().filter((product) =>
-    useful.some((token) => token === product.id || token.replace(/-/g, '') === product.id.replace(/-/g, '')),
-  )
-  const byWord = liveCatalogProducts().filter((product) => {
-    const pool = [product.id, ...productWords(product.label, product.id)]
-    if (wanted && !wanted.ambiguous) {
-      const itemFamily = resolvePartFamily(
-        product.label
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/\p{M}/gu, '')
-          .split(/[^a-z0-9]+/)
-          .filter(Boolean),
-      )
-      if (itemFamily?.id !== wanted.id) return false
-    }
-    if (wanted?.ambiguous) return false
-    return useful.some((token) => pool.some((word) => tokenMatchesWord(token, word)))
-  })
-  const seen = new Set<string>()
-  return [...byId, ...byWord].filter((product) => {
-    if (seen.has(product.id)) return false
-    seen.add(product.id)
-    return true
-  })
+  return findInventoryMatches(tokens).map((product) => ({
+    id: product.id,
+    label: product.nombre,
+    description: product.descripcion,
+  }))
 }
 
 function pickedProductReply(tokens: readonly string[], ctx: SessionContext): ChatReply | null {
   const picked = pickLastOffer(ctx, tokens, ctx.lastUserText || '')
   if (!picked) return null
   ctx.entities.producto = picked.nombre
-  const term = picked.nombre
-  const offer = formatOfferCard(picked)
-  return {
-    text: applyBotText(
-      'product',
-      `En el catálogo encontré coincidencias para {term}: {names}.\n\n{offer}\n\n${SALE_NOTE}`,
-      completeVars(term, {
-        names: term,
-        offer,
-      }),
-    ),
-    actions: priceCardActions(term),
-  }
+  return driveSearchReply(picked)
 }
 
 function productAuthReply(): ChatReply {
   return {
-    text: 'Para consultar precio, stock y referencias de productos inicia sesión en la tienda.',
+    text: 'Para consultar precio, stock y productos inicia sesión en la tienda.',
     actions: [{ kind: 'login', label: 'Iniciar sesión' }],
   }
 }
 
 export function productReply(tokens: readonly string[], ctx?: SessionContext): ChatReply | null {
-  if (!chatHasAuth()) return productAuthReply()
+  const plan = getLastProductPlan()
+  if (!chatHasAuth() || plan?.source === 'login') return productAuthReply()
+  if (lastProductFetchFailed()) return productApiErrorReply()
+  if (plan?.source === 'acote' || plan?.act === 'export' || plan?.act === 'listado') {
+    return withHowToBuy(catalogNarrowReply(plan), tokens)
+  }
+  if (plan?.uiSlot === 'marca' || plan?.uiSlot === 'modelo' || plan?.uiSlot === 'categoria') {
+    return driveFilterReply(plan)
+  }
   if (ctx) {
     const picked = pickedProductReply(tokens, ctx)
     if (picked) return picked
@@ -374,40 +439,23 @@ export function productReply(tokens: readonly string[], ctx?: SessionContext): C
     const hits = matchingProductsForTokens(tokens)
     if (!hits.length) return namedPartReply(tokens, ctx)
   }
-  const hits = matchingProductsForTokens(tokens)
-  if (hits.length === 0) return null
-
-  const siblings = siblingSkuOptions(tokens, ctx)
-  if (siblings.length > 1) {
-    const familyLabel = family?.label || findTerm(tokens, liveCatalogParts()) || 'ese producto'
-    return {
-      text: `Encontré varias fichas de ${labelOf(familyLabel)}. ¿Cuál buscas?`,
-      actions: [],
-      options: siblings.map((item) => ({ kind: 'prompt' as const, label: item.label, prompt: item.prompt })),
-    }
+  const hits = findInventoryMatches(tokens)
+  if (hits.length === 0) {
+    if (plan?.source === 'api' || plan?.source === 'cache') return productMissReply()
+    return null
+  }
+  if (hits.length > 5) {
+    return manyHitsReply(plan)
   }
 
-  const term = family?.label || findTerm(tokens, liveCatalogParts()) || hits[0].label || subjectFrom(tokens, ctx)
-  const names = hits.slice(0, 2).map((item) => item.label).join(', ')
-  const offer = inventorySummary(tokens, ctx)
-  if (!offer) {
-    return {
-      text: `Vi coincidencias para ${labelOf(term || names)}. Indica la referencia exacta o el modelo.`,
-      actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
-    }
+  if (hits.length > 1) {
+    rememberOffers(ctx, hits)
+    const familyLabel = family?.label || findTerm(tokens, liveCatalogParts()) || ''
+    return productOptionsReply(hits, familyLabel)
   }
 
-  return {
-    text: applyBotText(
-      'product',
-      `Para {term}:\n\n{offer}\n\n${SALE_NOTE}`,
-      completeVars(term, {
-        names,
-        offer,
-      }),
-    ),
-    actions: priceCardActions(term),
-  }
+  rememberOffers(ctx, hits)
+  return driveSearchReply(hits[0])
 }
 
 export function hasProductTerm(tokens: readonly string[]) {
@@ -426,7 +474,7 @@ export function namedPartReply(tokens: readonly string[], ctx?: SessionContext):
   return {
     text: applyBotText(
       'namedPart',
-      `${named} no tiene ficha en este chat, así que no invento precio ni stock. ${askToNarrow(part)} Un asesor confirma la referencia al ${liveContact().phoneDisplay}.`,
+      `${named} no tiene ficha en este chat, así que no invento precio ni stock. ${askToNarrow(part)} Un asesor lo confirma al ${liveContact().phoneDisplay}.`,
       completeVars(named),
     ),
     actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
@@ -434,12 +482,15 @@ export function namedPartReply(tokens: readonly string[], ctx?: SessionContext):
 }
 
 export function partsReply(): ChatReply {
+  const names = catalogSummary()
   return {
-    text: applyBotText(
-      'parts',
-      `Estas son las líneas de repuestos publicadas: ${catalogSummary()}. ${nextAskPhrase()} Precio y stock los confirma un asesor al ${liveContact().phoneDisplay}.`,
-      completeVars(''),
-    ),
+    text: names
+      ? applyBotText(
+        'parts',
+        `Estas son las líneas de repuestos publicadas: ${names}. ${nextAskPhrase()} Precio y stock los confirma un asesor al ${liveContact().phoneDisplay}.`,
+        completeVars('', { catalog: names }),
+      )
+      : `Las líneas de repuestos vigentes están en el catálogo de la tienda. ${nextAskPhrase()} Precio y stock los confirma un asesor al ${liveContact().phoneDisplay}.`,
     actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
   }
 }
@@ -510,7 +561,7 @@ export function complaintReply(): ChatReply {
   return {
     text: applyBotText(
       'complaint',
-      `Lamentamos el inconveniente. Cuéntame qué pasó (producto, pedido o fecha si los tienes) y te ayudo a dejarlo radicado. También puedes escribir al WhatsApp ${liveContact().phoneDisplay} o a ${liveContact().email}.`,
+      `Lamentamos el inconveniente. Cuéntame qué pasó: producto, pedido y fecha, si los tienes. Te ayudo a dejarlo radicado. También puedes escribir al WhatsApp ${liveContact().phoneDisplay}. El correo es ${liveContact().email}.`,
       completeVars(''),
     ),
     actions: [
@@ -524,62 +575,71 @@ export function complaintReply(): ChatReply {
   }
 }
 
+export function returnsReply(): ChatReply {
+  const address = liveContact().address
+  return {
+    text: applyBotText(
+      'returns',
+      `Los cambios y devoluciones siguen nuestros términos y condiciones. Puedes visitarnos en ${address}. Si prefieres, un asesor te atiende.`,
+      completeVars('', { address }),
+    ),
+    actions: [
+      {
+        href: whatsappHref('Hola, necesito ayuda con un cambio o una devolución.'),
+        label: 'Hablar con un asesor',
+        external: true,
+      },
+      { href: `mailto:${liveContact().email}?subject=Cambio%20o%20devolucion`, label: 'Escribir al correo' },
+    ],
+  }
+}
+
 export function quoteReply(tokens: readonly string[] = [], ctx?: SessionContext): ChatReply {
-  if (!chatHasAuth()) return productAuthReply()
+  const plan = getLastProductPlan()
+  if (!chatHasAuth() || plan?.source === 'login') return productAuthReply()
+  if (lastProductFetchFailed()) return productApiErrorReply()
   if (isBroadPriceAsk(tokens)) {
     if (ctx) ctx.holdFocus = true
-    return {
-      text: `Indica un producto concreto y te paso el precio de referencia. Las listas amplias las confirma un asesor.`,
-      actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
-    }
+    return catalogNarrowReply({ act: 'export' })
+  }
+  if (plan?.source === 'acote' || plan?.act === 'export' || plan?.act === 'listado') {
+    if (ctx) ctx.holdFocus = true
+    return catalogNarrowReply(plan)
+  }
+  if (plan?.uiSlot === 'marca' || plan?.uiSlot === 'modelo' || plan?.uiSlot === 'categoria') {
+    return driveFilterReply(plan)
   }
   const picked = ctx ? pickLastOffer(ctx, tokens, ctx.lastUserText || '') : null
   if (picked && ctx) {
     ctx.entities.producto = picked.nombre
-    const named = picked.nombre
-    if (picked.cantidad <= 0) {
-      return {
-        text: `${named} aparece sin existencias ahora. ${PRICE_DISCLAIMER}`,
-        actions: priceCardActions(named),
-      }
-    }
-    const offer = formatOfferCard(picked)
-    return {
-      text: `Sobre ${named}:\n\n${offer}`,
-      actions: priceCardActions(named),
-    }
+    return driveSearchReply(picked)
   }
   const term = subjectFrom(tokens, ctx)
   const named = term ? labelOf(term) : ''
-  const siblings = siblingSkuOptions(tokens.length ? tokens : [], ctx)
-  if (siblings.length > 1) {
-    return {
-      text: `Hay varias fichas de ${named || 'ese producto'} con precio. ¿Cuál cotizo?`,
-      actions: [],
-      options: siblings.map((item) => ({ kind: 'prompt' as const, label: item.label, prompt: item.prompt })),
-    }
+  const hits = findInventoryMatches(tokens.length ? tokens : [term])
+  if (hits.length > 5) {
+    return manyHitsReply(plan)
   }
-  const offer = inventorySummary(tokens.length ? tokens : [term], ctx)
-  if (!offer) {
-    return {
-      text: `Aún no hay ficha de precio para ${named || 'esa consulta'}. ${PRICE_DISCLAIMER}`,
-      actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
-    }
+  if (hits.length > 1) {
+    rememberOffers(ctx, hits)
+    return productOptionsReply(hits, named)
   }
+  if (hits.length === 1) {
+    rememberOffers(ctx, hits)
+    return driveSearchReply(hits[0])
+  }
+  if (plan?.source === 'api' || plan?.source === 'cache') return productMissReply()
   return {
-    text: named ? `Sobre ${named}:\n\n${offer}` : `Referencia:\n\n${offer}`,
-    actions: priceCardActions(named),
+    text: `Aún no hay ficha para ${named || 'esa consulta'} en el catálogo. Afina el nombre, la marca y el modelo.`,
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
   }
 }
 
 export function vacancyReply(): ChatReply {
   return {
-    text: applyBotText(
-      'vacancy',
-      `Las vacantes vigentes están en Trabaja con nosotros. Ahí ves el perfil, los requisitos y puedes postularte. Si quieres orientación, escríbenos al ${liveContact().phoneDisplay}.`,
-      completeVars(''),
-    ),
-    actions: [{ href: VACANCY_PATH, label: 'Ver vacantes' }],
+    text: 'Si te referías a vacantes para trabajar con nosotros, consulta nuestro landing principal. No puedo darte más información sobre vacantes. ¿Te ayudo con algo de esto?',
+    actions: [],
+    options: UNMATCHED_TOPIC_OPTIONS,
   }
 }
 
@@ -627,43 +687,28 @@ export const OTHER_CITY_LIST = [
   'rionegro',
 ] as const
 
-function placeSummary() {
-  return `Estamos en ${liveContact().area}, ${liveContact().region} (${liveContact().country}), en ${liveContact().address}, ${liveContact().landmark}.`
+function placeAddress() {
+  return `Estamos en ${liveContact().address}.`
 }
 
-export function locationReply(tokens: readonly string[] = []): ChatReply {
-  const hoursAsk = tokens.some((token) => liveLexiconSet('hourWords', new Set(HOUR_WORD_LIST)).has(token)) && !tokens.some((token) => ['donde', 'ubicacion', 'ubicados', 'ciudad', 'local'].includes(token))
+export function locationReply(tokens: readonly string[] = [], raw = ''): ChatReply {
   const hours = liveContact().hoursDisplay
   const otherCities = liveLexiconSet('otherCities', new Set(OTHER_CITY_LIST))
   const homePlace = liveLexiconSet('homePlace', new Set(HOME_PLACE_LIST))
   const askedAway = tokens.find((token) => otherCities.has(token) && !homePlace.has(token))
-  const askedHome = tokens.some((token) => homePlace.has(token))
-  let fallback: string
+  let text: string
   if (askedAway) {
     const city = askedAway.charAt(0).toUpperCase() + askedAway.slice(1)
-    fallback = `No tenemos local en ${city}. ${placeSummary()} Horario: ${hours}.`
-  } else if (hoursAsk) {
-    fallback = `Atendemos ${hours}. ${placeSummary()}`
-  } else if (askedHome || tokens.some((token) => ['ciudad', 'ubicados', 'encuentran', 'local', 'sucursal', 'donde', 'ubicacion', 'direccion', 'sede'].includes(token))) {
-    fallback = `Sí: nuestro local está en ${liveContact().city}. ${placeSummary()} Horario: ${hours}.`
+    text = `No tenemos local en ${city}. Estamos en ${liveContact().address}.`
+  } else if (isHoursAsk(tokens, raw) && !isLocationAsk(tokens, raw)) {
+    text = `Atendemos ${hours}.`
   } else {
-    fallback = `${placeSummary()} Horario: ${hours}.`
+    text = placeAddress()
   }
-  const templated = applyBotText('location', fallback, completeVars(''))
-  const text = askedAway
-    ? `No tenemos local en ${askedAway.charAt(0).toUpperCase() + askedAway.slice(1)}. ${templated}`
-    : templated
   return {
     text,
     actions: [{ href: liveContact().mapsShareUrl, label: 'Abrir mapa', external: true }],
   }
-}
-
-function transferDetails() {
-  const number = livePayments().accountNumber.trim()
-  const base = `${livePayments().bank}, ${livePayments().accountType}, a nombre de ${livePayments().holder}`
-  if (number) return `${base}, número ${number}`
-  return `${base}. El número de cuenta vigente te lo confirma un asesor al ${liveContact().phoneDisplay}`
 }
 
 export function creditReply(): ChatReply {
@@ -684,43 +729,167 @@ export function creditReply(): ChatReply {
 }
 
 export function paymentReply(tokens: readonly string[] = [], ctx?: SessionContext): ChatReply {
-  const named = subjectFrom(tokens, ctx)
-  const about = named ? `Para ${labelOf(named)}, ` : ''
-  const body = applyBotText(
-    'payment',
-    `${about}manejamos pago inmediato con efectivo o transferencia. ${transferDetails()}.`,
-    completeVars(named),
-  )
-  const text = named && !body.toLowerCase().includes(named.toLowerCase()) ? `${about}${body}` : body
+  void tokens
+  void ctx
   return {
-    text,
-    actions: [
-      {
-        href: whatsappHref(
-          named
-            ? `Hola, quiero pagar ${named} por efectivo o transferencia. ¿Me confirmas la cuenta?`
-            : 'Hola, quiero pagar por efectivo o transferencia. ¿Me confirmas número y tipo de cuenta?',
-        ),
-        label: 'Confirmar cuenta con un asesor',
-        external: true,
-      },
-    ],
+    text: 'Tenemos diversos medios de pago: efectivo, transferencia, y crédito si eres uno de nuestros clientes Premium.',
+    actions: [],
   }
 }
 
 export function shippingReply(): ChatReply {
   const ship = liveShipping()
   return {
-    text: applyBotText(
-      'shipping',
-      `Hacemos envíos a todo el país. Envío gratis en el ${ship.cityScope} si la compra es mayor a $${ship.freeMetroFrom} COP. También hacemos envíos el mismo día y seguros hasta la puerta.`,
-      completeVars('', {
-        freeMetroFrom: ship.freeMetroFrom,
-        cityScope: ship.cityScope,
-        city: liveContact().city,
-      }),
-    ),
+    text: `Hacemos envíos a todo el país. En el ${ship.cityScope} el domicilio es gratis desde $${ship.freeMetroFrom} COP. En compras menores, el valor del domicilio depende de la ubicación.`,
     actions: [],
+  }
+}
+
+export function executiveReply(): ChatReply {
+  return {
+    text: 'Actualmente no puedo proporcionarte información sobre tu consulta. Puedo comunicarte con un asesor real.',
+    actions: [
+      {
+        href: whatsappHref('Hola, quiero hablar con un asesor de Importadora Premium.'),
+        label: 'Hablar con un asesor',
+        external: true,
+      },
+    ],
+  }
+}
+
+export function symptomGuidanceReply(label: string, candidates: readonly string[]): ChatReply {
+  const list = candidates.join(', ')
+  return {
+    text: applyBotText(
+      'symptomGuidance',
+      `Entiendo el síntoma (${label}). Lo más probable es revisar ${list}. ¿Me confirmas marca y modelo del vehículo?`,
+      completeVars('', { symptom: label, candidates: list }),
+    ),
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    options: candidates.map((item) => ({
+      kind: 'catalog-search' as const,
+      label: item,
+      search: item,
+    })),
+    catalogCommand: { kind: 'search', query: candidates[0] || '' },
+  }
+}
+
+export function compatibilityAskReply(): ChatReply {
+  return {
+    text: applyBotText(
+      'compatibilityAsk',
+      'Para confirmar compatibilidad necesito marca, modelo y año del vehículo. ¿Me los pasas?',
+      completeVars(''),
+    ),
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+  }
+}
+
+export function explainPartReply(part: string, knowledge: string): ChatReply {
+  return {
+    text: applyBotText(
+      'explainPart',
+      `${labelOf(part)} sirve para esto: ${knowledge} Si quieres, te muestro referencias; dime marca y modelo del vehículo.`,
+      completeVars(part, { part, function: knowledge }),
+    ),
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    catalogCommand: { kind: 'search', query: part },
+  }
+}
+
+function chipOptions(labels: readonly string[]): ChatAction[] {
+  return labels.filter(Boolean).slice(0, 7).map((label) => ({
+    kind: 'prompt' as const,
+    label,
+    prompt: label,
+  }))
+}
+
+export function scaffoldAskBrandReply(family: string, chips: readonly string[]): ChatReply {
+  return {
+    text: `Perfecto, manejamos ${family}. ¿Para qué marca de vehículo lo necesitas?`,
+    actions: [],
+    options: chipOptions(chips),
+  }
+}
+
+export function scaffoldAskModelReply(family: string, brand: string, chips: readonly string[]): ChatReply {
+  return {
+    text: brand
+      ? `Bien, ${family} para ${brand}. ¿Qué modelo es?`
+      : `Bien, veamos. ¿Qué modelo aproximado usas, o prefieres que te muestre las más consultadas?`,
+    actions: [],
+    options: chipOptions(chips),
+  }
+}
+
+export function scaffoldAskYearReply(brand: string, model: string, chips: readonly string[]): ChatReply {
+  const vehicle = [brand, model].filter(Boolean).join(' ')
+  return {
+    text: vehicle
+      ? `¿De qué año aproximado es tu ${vehicle}? (opcional, puedes omitirlo)`
+      : '¿De qué año aproximado es el vehículo? (opcional, puedes omitirlo)',
+    actions: [],
+    options: chipOptions(chips),
+  }
+}
+
+export function scaffoldAbortReply(family: string): ChatReply {
+  const query = family || ''
+  return {
+    text: 'Sin problema. Te dejo el buscador abierto con todo, o escríbeme un término más específico cuando quieras.',
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    ...(query ? { catalogCommand: { kind: 'search' as const, query } } : {}),
+  }
+}
+
+export function scaffoldMaxTurnsReply(family: string): ChatReply {
+  return {
+    text: `Para no hacerlo largo, te muestro las opciones más cercanas de ${family}, o te conecto con un asesor al ${liveContact().phoneDisplay} para afinar contigo.`,
+    actions: [advisorContactAction()],
+  }
+}
+
+export function scaffoldInventoryReply(
+  ctx: SessionContext,
+  tokens: readonly string[],
+  family: string,
+  limit = 3,
+): ChatReply {
+  if (!chatHasAuth() || getLastProductPlan()?.source === 'login') {
+    return {
+      text: 'Para consultar precio, stock y productos inicia sesión en la tienda.',
+      actions: [{ kind: 'login', label: 'Iniciar sesión' }],
+    }
+  }
+  if (lastProductFetchFailed()) {
+    return {
+      text: 'No pude consultar el inventario en este momento. Intenta de nuevo o escribe a un asesor.',
+      actions: [advisorContactAction(), { href: CATALOG_PATH, label: 'Ver catálogo' }],
+    }
+  }
+  const hits = findInventoryMatches(tokens).slice(0, limit)
+  const query = tokens.join(' ') || family
+  if (!hits.length) {
+    return {
+      text: `No encontré ${family} con esos datos. Afina marca o modelo, o te conecto con un asesor.`,
+      actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }, advisorContactAction()],
+      catalogCommand: { kind: 'search', query: family },
+    }
+  }
+  rememberOffers(ctx, hits)
+  if (hits.length === 1) return driveSearchReply(hits[0])
+  return {
+    text: `Encontré estas opciones para ${family}. Te muestro ${hits.length}:`,
+    actions: [],
+    options: hits.map((product) => ({
+      kind: 'catalog-search' as const,
+      label: catalogOptionLabel(product, hits),
+      search: catalogSearchQuery(product),
+    })),
+    catalogCommand: { kind: 'search', query },
   }
 }
 
@@ -776,9 +945,8 @@ export function companyReply(): ChatReply {
       completeVars('', { brands }),
     ),
     actions: [
-      { href: '/#vision', label: 'Visión' },
-      { href: '/#equipo', label: 'Equipo' },
-      { href: '/#marcas', label: 'Marcas' },
+      { href: CATALOG_PATH, label: 'Ver catálogo' },
+      advisorContactAction(),
     ],
   }
 }
@@ -894,7 +1062,7 @@ const ROLES_LINE = 'En Premium hay varios roles; los publicados son asesores y a
 function advisorGroupReply(_members: LandingTeamMember[], kind: ReturnType<typeof advisorAskKind>): ChatReply {
   const list = livePublishedTeam('asesor').filter((item) => item.fullName.trim())
   const names = joinNames(list.map((member) => member.fullName))
-  const carousel: ChatAction = { href: '/#asesores', label: 'Ver grupo de asesores' }
+  const carousel: ChatAction = advisorContactAction()
   const options = list.map((member) => ({ kind: 'prompt' as const, label: member.fullName, prompt: member.fullName }))
 
   if (list.length === 0) {
@@ -922,7 +1090,7 @@ function advisorGroupReply(_members: LandingTeamMember[], kind: ReturnType<typeo
 
   if (kind === 'call') {
     return {
-      text: `${ROLES_LINE} Puedes llamar o escribir a cualquiera de estos asesores: ${names}. También los ves en el carrusel de la página principal, en Nuestro equipo. Elige uno aquí o ábrelo en la landing.`,
+      text: `${ROLES_LINE} Puedes llamar o escribir a cualquiera de estos asesores: ${names}. Elige uno aquí y te paso el contacto.`,
       actions: [carousel],
       options,
     }
@@ -947,7 +1115,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
       : 'Por ahora no hay administrativos publicados.'
     return {
       text: `${ROLES_LINE} ${advisorLine} ${adminLine} Dime un nombre si quieres el teléfono o escribirle.`,
-      actions: [{ href: '/#equipo', label: 'Ver equipo' }],
+      actions: [advisorContactAction()],
     }
   }
 
@@ -963,7 +1131,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
       text: `${text}${more}`,
       actions: [
         { href: memberWhatsapp(listed[0]), label: `WhatsApp de ${listed[0].fullName}`, external: true },
-        { href: '/#equipo', label: 'Ver equipo' },
+        advisorContactAction(),
       ],
     }
   }
@@ -982,7 +1150,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
               names,
               term: names,
             }),
-      actions: [{ href: '/#equipo', label: 'Ver equipo' }],
+      actions: [advisorContactAction()],
     }
   }
 
@@ -1001,7 +1169,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
     ),
     actions: [
       { href: memberWhatsapp(match.member), label: `WhatsApp de ${match.member.fullName}`, external: true },
-      { href: '/#equipo', label: 'Ver equipo' },
+      advisorContactAction(),
     ],
   }
 }
@@ -1010,7 +1178,7 @@ export function personUnmatchedReply(word: string): ChatReply {
   const label = labelOf(word)
   return {
     text: applyBotText('person', `${label} no está en el equipo ni en el catálogo. Dime si es un nombre o una pieza.`, { term: label }),
-    actions: [{ href: '/#equipo', label: 'Ver equipo' }],
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }, advisorContactAction()],
   }
 }
 
@@ -1030,7 +1198,7 @@ export function companyHintReply(word: string): ChatReply {
     ),
     actions: [
       { href: CATALOG_PATH, label: 'Ver catálogo' },
-      { href: '/#equipo', label: 'Ver equipo' },
+      advisorContactAction(),
     ],
   }
 }
@@ -1049,13 +1217,12 @@ export function fallbackReply(entered = ''): ChatReply {
 }
 
 export const UNMATCHED_TOPIC_OPTIONS: ChatAction[] = [
-  { kind: 'prompt', label: 'Piezas / catálogo', prompt: 'quiero ver el catalogo' },
+  { kind: 'prompt', label: 'Catálogo', prompt: 'quiero ver el catalogo' },
   { kind: 'prompt', label: 'Precio o disponibilidad', prompt: 'quiero cotizar un producto' },
-  { kind: 'prompt', label: 'Envíos', prompt: 'informacion de envios' },
-  { kind: 'prompt', label: 'Ubicación y horario', prompt: 'donde estan ubicados' },
-  { kind: 'prompt', label: 'Sobre nosotros', prompt: 'informacion de la empresa' },
+  { kind: 'prompt', label: 'Empresa', prompt: 'informacion de la empresa' },
+  { kind: 'prompt', label: 'Equipo y roles', prompt: 'quiero conocer el equipo' },
+  { kind: 'prompt', label: 'Marca o modelo', prompt: 'busco productos para honda' },
   { kind: 'prompt', label: 'Hablar con un asesor', prompt: 'quiero hablar con un asesor' },
-  { kind: 'prompt', label: 'Vacantes', prompt: 'vacantes disponibles' },
 ]
 
 export function clarificationReply(): ChatReply {
@@ -1159,6 +1326,7 @@ export const INTENT_LABELS: Record<string, string> = {
   product: 'un producto del catálogo',
   attention: 'hablar con un asesor',
   complaint: 'una queja',
+  returns: 'un cambio o devolución',
   quote: 'precio o stock',
   vacancy: 'vacantes',
   location: 'la ubicación',

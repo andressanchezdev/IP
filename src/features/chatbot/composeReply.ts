@@ -9,6 +9,7 @@ import {
   catalogReply,
   companyReply,
   complaintReply,
+  returnsReply,
   farewellReply,
   greetingReply,
   handoffReply,
@@ -21,12 +22,14 @@ import {
   menuReply,
   namedPartReply,
   partsReply,
+  priceCardActions,
   productReply,
   quoteReply,
   socialReply,
   teamMatchReply,
   thanksReply,
   vacancyReply,
+  withHowToBuy,
   whatsappReply,
   type ChatAction,
   type ChatReply,
@@ -40,7 +43,7 @@ export type HandlerFn = (tokens: readonly string[], ctx: SessionContext) => Chat
 export const HANDLERS: Record<string, HandlerFn> = {
   greeting: (_tokens, ctx) => greetingReply(ctx),
   whatsapp: () => whatsappReply(),
-  catalog: (tokens) => catalogReply(tokens),
+  catalog: (tokens) => withHowToBuy(catalogReply(tokens), tokens),
   parts: () => partsReply(),
   accessory: (tokens, ctx) => accessoryReply(tokens, ctx),
   attention: (tokens) => {
@@ -52,9 +55,10 @@ export const HANDLERS: Record<string, HandlerFn> = {
     return attentionReply()
   },
   complaint: () => complaintReply(),
-  quote: (tokens, ctx) => quoteReply(tokens, ctx),
+  returns: () => returnsReply(),
+  quote: (tokens, ctx) => withHowToBuy(quoteReply(tokens, ctx), tokens),
   vacancy: () => vacancyReply(),
-  location: (tokens) => locationReply(tokens),
+  location: (tokens, ctx) => locationReply(tokens, ctx.lastUserText || ''),
   credit: () => creditReply(),
   payment: (tokens, ctx) => paymentReply(tokens, ctx),
   shipping: () => shippingReply(),
@@ -63,7 +67,7 @@ export const HANDLERS: Record<string, HandlerFn> = {
   social: () => socialReply(),
   thanks: () => thanksReply(),
   farewell: () => farewellReply(),
-  product: (tokens, ctx) => productReply(tokens, ctx) || catalogReply(),
+  product: (tokens, ctx) => withHowToBuy(productReply(tokens, ctx) || catalogReply(tokens), tokens),
   namedPart: (tokens, ctx) => namedPartReply(tokens, ctx) || partsReply(),
   teamMember: (tokens) => {
     const match = matchLandingTeam(tokens)
@@ -113,7 +117,7 @@ function uniqueActions(actions: ChatAction[]) {
   const seen = new Set<string>()
   const list: ChatAction[] = []
   for (const action of actions) {
-    const key = `${action.kind || ''}|${action.href || ''}|${action.label}`
+    const key = `${action.kind || ''}|${action.href || ''}|${action.search || ''}|${action.label}`
     if (seen.has(key)) continue
     seen.add(key)
     list.push(action)
@@ -126,7 +130,7 @@ function uniqueOptions(options: ChatAction[]) {
   const seen = new Set<string>()
   const list: ChatAction[] = []
   for (const action of options) {
-    const key = `${action.kind || ''}|${action.prompt || action.href || ''}|${action.label}`
+    const key = `${action.kind || ''}|${action.prompt || action.search || action.href || ''}|${action.label}`
     if (seen.has(key)) continue
     seen.add(key)
     list.push(action)
@@ -151,10 +155,12 @@ export function mergeReplies(parts: ChatReply[], intents: string[] = []): ChatRe
         .filter(Boolean)
         .join(' ')
     : parts.map((item) => item.text.trim()).filter(Boolean).join(' ')
+  const catalogCommand = parts.find((item) => item.catalogCommand)?.catalogCommand
   return {
     text: interpolate(text),
     actions,
     ...(options.length ? { options } : {}),
+    ...(catalogCommand ? { catalogCommand } : {}),
   }
 }
 
@@ -171,7 +177,7 @@ export function applyAntiRepetition(
   let variantIndex = 0
 
   if (hit || usedTexts.includes(text)) {
-    if (intent === 'disambiguation' || intent === 'howAreYou' || intent === 'teamGroup' || intent === 'teamMember' || intent === 'quote' || intent === 'product' || intent === 'location' || intent === 'credit' || intent === 'payment' || intent === 'shipping' || intent === 'orderStatus') {
+    if (intent === 'disambiguation' || intent === 'howAreYou' || intent === 'teamGroup' || intent === 'teamMember' || intent === 'quote' || intent === 'product' || intent === 'location' || intent === 'credit' || intent === 'payment' || intent === 'shipping' || intent === 'orderStatus' || intent === 'returns') {
       return { reply, variantIndex: 0 }
     }
     const socialIntent = intent === 'greeting' || intent === 'thanks' || intent === 'farewell'
@@ -243,12 +249,12 @@ export function withMenuAndHandoff(reply: ChatReply, ctx: SessionContext): ChatR
 
 export function suggestionActions(ctx: SessionContext): ChatAction[] {
   const actions: ChatAction[] = []
-  if (ctx.entities.pieza || ctx.entities.producto) {
-    actions.push({ href: '/explorar/catalogo', label: 'Ver en catálogo' })
-    actions.push({ href: '/explorar/catalogo', label: 'Pedir cotización' })
+  const term = ctx.entities.pieza || ctx.entities.producto || ''
+  if (term) {
+    actions.push(...priceCardActions(term))
   }
   if (ctx.topicStack.some((item) => item.startsWith('accessory') || item.startsWith('product'))) {
-    actions.push({ href: '/explorar/catalogo', label: 'Ver accesorios' })
+    actions.push({ href: '/', label: 'Ver catálogo' })
   }
   return uniqueActions(actions)
 }
@@ -262,19 +268,20 @@ export function combineCandidates(primary: Candidate, secundarios: Candidate[], 
   // Absorbe contactos genéricos; no mezcla whatsapp con quote/shipping.
   // Combinación rica permitida: product+quote, product+shipping, quote+shipping (máx. 2).
   const absorbed: Record<string, string[]> = {
-    catalog: ['attention', 'parts'],
-    quote: ['attention', 'catalog', 'parts', 'product'],
-    parts: ['catalog', 'attention'],
-    product: ['catalog', 'attention'],
-    namedPart: ['parts'],
+    catalog: ['attention', 'parts', 'payment', 'vacancy', 'location'],
+    quote: ['attention', 'catalog', 'parts', 'product', 'payment', 'vacancy', 'location'],
+    parts: ['catalog', 'attention', 'vacancy', 'location'],
+    product: ['catalog', 'attention', 'payment', 'vacancy', 'location'],
+    namedPart: ['parts', 'vacancy', 'location'],
     location: ['attention'],
     credit: ['attention', 'payment'],
     payment: ['attention', 'catalog', 'product', 'quote'],
     shipping: ['attention', 'catalog'],
     orderStatus: ['attention', 'catalog', 'product', 'quote', 'shipping', 'location'],
-    vacancy: ['attention', 'location'],
+    vacancy: ['attention', 'location', 'catalog', 'product', 'quote'],
     company: ['attention'],
     complaint: ['attention'],
+    returns: ['attention', 'product', 'catalog', 'quote', 'namedPart', 'complaint', 'parts', 'accessory', 'payment'],
     teamGroup: ['attention', 'company', 'location'],
     teamMember: ['attention', 'company'],
     teamSuggest: ['attention', 'company'],

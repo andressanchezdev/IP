@@ -1,6 +1,9 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import { copyTextToClipboard } from '@/shared/lib/copyTextToClipboard'
+import { useToast } from '@/app/providers/ToastProvider'
+import { isWeakDescription, productDisplayName } from '@/features/catalog/lib/catalogMatch'
 import './ProductCard.css'
 
 function formatPrice(price) {
@@ -24,6 +27,7 @@ export const ProductCard = memo(function ProductCard({
   onOrder,
   onOpenDetail,
 }) {
+  const { showToast } = useToast()
   const [quantity, setQuantity] = useState(1)
   const [imageFailed, setImageFailed] = useState(false)
 
@@ -41,7 +45,13 @@ export const ProductCard = memo(function ProductCard({
   const mediaSrc = !imageFailed && imageUrl ? imageUrl : resolvedBrandLogo
   const descriptionText = String(description || '').trim()
   const categoryText = String(category || '').trim()
-  const productName = descriptionText || categoryText || reference || 'Producto'
+  const modelText = String(model || '').trim()
+  const titleText = isWeakDescription(descriptionText)
+    ? modelText
+    : descriptionText
+  const metaText = `${String(brand || '').trim()} - ${String(model || '').trim()}`.replace(/^\s*-\s*|\s*-\s*$/g, '').trim()
+  const referenceText = String(reference || '').trim()
+  const productName = productDisplayName({ description, category, model, brand })
   const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
 
@@ -96,6 +106,31 @@ export const ProductCard = memo(function ProductCard({
     setQuantity(clampQuantity(Number(quantity)))
   }
 
+  const copyField = async (kind, value) => {
+    const text = String(value || '').trim().toUpperCase()
+    const labels = {
+      nombre: { empty: 'No hay nombre para copiar', ok: 'Nombre copiado', fail: 'No se pudo copiar el nombre' },
+      categoria: { empty: 'No hay categoría para copiar', ok: 'Categoría copiada', fail: 'No se pudo copiar la categoría' },
+      meta: { empty: 'No hay marca o modelo para copiar', ok: 'Marca y modelo copiados', fail: 'No se pudo copiar marca y modelo' },
+      referencia: { empty: 'No hay referencia para copiar', ok: 'Referencia copiada', fail: 'No se pudo copiar la referencia' },
+    }
+    const copyLabel = labels[kind]
+    if (!text) {
+      showToast(copyLabel.empty, 'error')
+      return
+    }
+    const copied = await copyTextToClipboard(text)
+    showToast(copied ? copyLabel.ok : copyLabel.fail, copied ? 'success' : 'error')
+  }
+
+  const handleCopyKey = (event, kind, value) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+    event.preventDefault()
+    copyField(kind, value)
+  }
+
   return (
     <article className="product-card">
       <div className="product-card__media">
@@ -139,22 +174,51 @@ export const ProductCard = memo(function ProductCard({
           </div>
         </div>
 
-        <div className="product-card__description">
+        <div
+          className="product-card__description"
+          role="button"
+          tabIndex={titleText || categoryText ? 0 : -1}
+          onClick={(event) => {
+            if (event.target.closest('.product-card__category')) {
+              copyField('categoria', categoryText)
+              return
+            }
+            copyField('nombre', productName)
+          }}
+          onKeyDown={(event) => handleCopyKey(event, 'nombre', productName)}
+          {...namedControl(`Copiar nombre de ${productName}`)}
+        >
           <p className="product-card__category">
             {categoryText ? categoryText.toUpperCase() : ''}
           </p>
           <span className="product-card__description-sep" aria-hidden="true"></span>
           <h3 className="product-card__description-text">
-            {descriptionText ? descriptionText.toUpperCase() : ''}
+            {titleText ? titleText.toUpperCase() : ''}
           </h3>
         </div>
 
-        <div className="product-card__meta-row">
+        <div
+          className="product-card__meta-row"
+          role="button"
+          tabIndex={metaText && metaText !== '-' ? 0 : -1}
+          onClick={() => copyField('meta', metaText)}
+          onKeyDown={(event) => handleCopyKey(event, 'meta', metaText)}
+          {...namedControl(metaText && metaText !== '-' ? `Copiar marca y modelo ${metaText}` : 'Marca y modelo')}
+        >
           <span className="product-card__meta">
-            {`${String(brand || '').toUpperCase()} - ${String(model || '').toUpperCase()}`}
+            {metaText ? metaText.toUpperCase() : ''}
           </span>
         </div>
-        <span className="product-card__reference">{String(reference || '').toUpperCase()}</span>
+        <span
+          className="product-card__reference"
+          role="button"
+          tabIndex={referenceText ? 0 : -1}
+          onClick={() => copyField('referencia', referenceText)}
+          onKeyDown={(event) => handleCopyKey(event, 'referencia', referenceText)}
+          {...namedControl(referenceText ? `Copiar referencia ${referenceText}` : 'Referencia')}
+        >
+          {referenceText ? referenceText.toUpperCase() : ''}
+        </span>
 
         <div className="product-card__footer product-card__footer--row">
           <div className="product-card__order-row product-card__order-row--row">

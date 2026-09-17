@@ -1,3 +1,4 @@
+import { expandPartSynonyms, explainPartText, isExplainPartAsk, matchSymptom, needsVehicleForCompat } from './expertise'
 import { classifyUnmatched, companyHintWord } from './unmatchedKind'
 import { findTerm, liveAccessoryTerms, liveCatalogParts, liveMotoTerms, liveOtherParts } from './motoParts'
 import { correctTokensContextual, expandStuckTokens, nearestLexiconGuess } from './matchIntent'
@@ -51,6 +52,14 @@ import {
   humanTopic,
   newTopicPromptReply,
   switchMissReply,
+  vacancyReply,
+  returnsReply,
+  paymentReply,
+  complaintReply,
+  executiveReply,
+  symptomGuidanceReply,
+  compatibilityAskReply,
+  explainPartReply,
   type ChatReply,
 } from './intents'
 import {
@@ -63,7 +72,8 @@ import { clearLastOffers } from './inventory'
 import { pushPhaseLog } from './pipelineLog'
 import { matchLandingTeam } from './teamLookup'
 import { parseUserFrame, isTeamNameLookupAllowed } from './userFrame'
-import { classifyTurn, focusLabel, isFollowUpTurn, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus } from './conversationThread'
+import { classifyTurn, focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus } from './conversationThread'
+import { isScaffoldActive, resetScaffold, resumeScaffoldQuestion, runScaffoldTurn, scaffoldAsideReply } from './scaffoldSearch'
 
 const AFFIRM = new Set(['si', 'ok', 'dale', 'claro', 'yes', 'yep', 'perfecto'])
 const NEGATE = new Set(['no', 'nope', 'nel', 'nada'])
@@ -577,6 +587,7 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
       ctx.pendingConfirmation = null
       ctx.topicStack = []
       ctx.conversationFocus = null
+      resetScaffold(ctx)
       clearLastOffers(ctx)
       return finalize(ctx, { text: 'Listo, lo dejamos. ¿En qué te ayudo ahora?', actions: [] }, 'thanks', 4, cfg)
     }
@@ -601,7 +612,56 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
       return finalize(ctx, greetingReply(ctx), 'greeting', 6, cfg)
     }
 
-    if (prepared.quality === 'VERY_SHORT') return fastLane(prepared, ctx, cfg)
+    const seekTokens = expandPartSynonyms(prepared.significant.length ? prepared.significant : prepared.allTokens, raw)
+    if (isExecutiveAsk(seekTokens, raw)) {
+      return finalize(ctx, executiveReply(), 'attention', 9, cfg)
+    }
+    if (isComplaintAsk(seekTokens, raw)) {
+      return finalize(ctx, complaintReply(), 'complaint', 9, cfg)
+    }
+    if (isReturnsAsk(seekTokens, raw)) {
+      return finalize(ctx, returnsReply(), 'returns', 6, cfg)
+    }
+    if (isPaymentAsk(seekTokens, raw)) {
+      const reply = isScaffoldActive(ctx) ? resumeScaffoldQuestion(ctx, paymentReply(seekTokens, ctx)) : paymentReply(seekTokens, ctx)
+      return finalize(ctx, reply, 'payment', 9, cfg)
+    }
+    const aside = scaffoldAsideReply(ctx, seekTokens, raw)
+    if (aside) {
+      return finalize(ctx, aside, 'shipping', 8, cfg)
+    }
+    const scaffolded = await runScaffoldTurn(ctx, seekTokens, raw)
+    if (scaffolded) {
+      return finalize(ctx, scaffolded, 'product', 8, cfg)
+    }
+    const explained = isExplainPartAsk(raw) ? explainPartText(seekTokens) : null
+    if (explained) {
+      return finalize(ctx, explainPartReply(explained.label, explained.knowledge), 'parts', 8, cfg)
+    }
+    if (needsVehicleForCompat(seekTokens, raw)) {
+      return finalize(ctx, compatibilityAskReply(), 'namedPart', 8, cfg)
+    }
+    const symptom = matchSymptom(raw)
+    if (symptom && !mentionedFamily(seekTokens)) {
+      return finalize(ctx, symptomGuidanceReply(symptom.label, symptom.candidates), 'parts', 8, cfg)
+    }
+
+    if (isVacancyAsk(seekTokens, raw) && !isProductSeekingAsk(seekTokens, raw)) {
+      return finalize(ctx, vacancyReply(), 'vacancy', 6, cfg)
+    }
+
+    if (prepared.quality === 'VERY_SHORT') {
+      const rawToken = prepared.significant[0] || prepared.allTokens[0] || ''
+      const token = correctTokensContextual([rawToken], dictionary(ctx), preferredTerms(ctx.entities))[0] || rawToken
+      const shortKind = classifyTurn([token, rawToken].filter(Boolean), prepared.text, ctx)
+      await hydrateChatProducts({
+        tokens: expandPartSynonyms([token, rawToken].filter(Boolean), prepared.text),
+        raw: prepared.text,
+        ctx,
+        kind: shortKind,
+      })
+      return fastLane(prepared, ctx, cfg)
+    }
 
     detectRepeated(ctx, cfg)
 
@@ -610,6 +670,7 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     if (kind === 'switch' && !mentionedFamily(kindHintTokens) && /(otra cosa|otro tema|cambiemos|cambiar de tema)/.test(foldText(raw))) {
       ctx.conversationFocus = null
       ctx.pendingConfirmation = null
+      resetScaffold(ctx)
       ctx.entities = { ...ctx.entities, pieza: undefined, producto: undefined, namedPart: undefined, accesorio: undefined }
       clearLastOffers(ctx)
       return finalize(ctx, newTopicPromptReply(), 'thanks', 4, cfg)
@@ -629,8 +690,9 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
       clearLastOffers(ctx)
     }
 
+    const matchTokens = expandPartSynonyms(prepared.significant.length ? prepared.significant : prepared.allTokens, raw)
     await hydrateChatProducts({
-      tokens: prepared.significant.length ? prepared.significant : prepared.allTokens,
+      tokens: matchTokens,
       raw,
       ctx,
       kind,
@@ -685,7 +747,8 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     const framed = routeClearFrame(lookup.length ? lookup : corrected, prepared, raw, ctx, cfg)
     if (framed) return framed
 
-    const candidates = runAllMatchers(lookup.length ? lookup : corrected, ctx, prepared.hasQuestion, false, cfg, raw)
+    const matcherTokens = expandPartSynonyms(lookup.length ? lookup : corrected, raw)
+    const candidates = runAllMatchers(matcherTokens, ctx, prepared.hasQuestion, false, cfg, raw)
     log(ctx, 'scoring', candidates.map((item) => `${item.intent}:${item.score}`).join(','))
     const ranked = rankIntents(candidates, cfg)
     log(ctx, 'rank', `${ranked.top1?.intent || '-'} ${ranked.delta}`)
@@ -706,7 +769,7 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
       return recoverUnmatched(ctx, raw, lookup.length ? lookup : corrected, cfg)
     }
 
-    if (shouldDisambiguate(ranked, cfg) && ranked.top2) {
+    if (shouldDisambiguate(ranked, cfg, lookup.length ? lookup : corrected, raw) && ranked.top2) {
       const left = INTENT_LABELS[ranked.top1.intent] || ranked.top1.intent
       const right = INTENT_LABELS[ranked.top2.intent] || ranked.top2.intent
       ctx.pendingConfirmation = {

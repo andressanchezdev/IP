@@ -96,6 +96,35 @@ export function useCatalogFilters() {
     setLatestProducts(null)
   }, [])
 
+  const applyFiltersDirect = useCallback((payload = {}) => {
+    const brands = [...(payload.brands || [])]
+    const categories = [...(payload.categories || [])]
+    const models = [...(payload.models || [])]
+    const nextFilters = { brands, categories, models }
+    const nextModes = {
+      brands: brands.length ? 'custom' : 'all',
+      categories: categories.length ? 'custom' : 'all',
+      models: models.length ? 'custom' : 'all',
+    }
+    setFilters(nextFilters)
+    setFilterModes(nextModes)
+    setDraftFilters({
+      brands: [...brands],
+      categories: [...categories],
+      models: [...models],
+    })
+    setDraftFilterModes({ ...nextModes })
+    setFilterNuevos(false)
+    setFilterPromociones(false)
+    setWithStock(false)
+    setDraftFilterNuevos(false)
+    setDraftFilterPromociones(false)
+    setDraftWithStock(false)
+    setSearchValue('')
+    setSearchProducts(null)
+    setLatestProducts(null)
+  }, [])
+
   const hasAppliedFilters = useCallback(() => (
     (filterModesRef.current.brands === 'custom' && (filtersRef.current.brands?.length || 0) > 0)
     || (filterModesRef.current.categories === 'custom' && (filtersRef.current.categories?.length || 0) > 0)
@@ -139,6 +168,7 @@ export function useCatalogFilters() {
     commitFilterDraft,
     clearFilters,
     resetFiltersAndSearch,
+    applyFiltersDirect,
     hasAppliedFilters,
   }), [
     filters,
@@ -158,6 +188,7 @@ export function useCatalogFilters() {
     commitFilterDraft,
     clearFilters,
     resetFiltersAndSearch,
+    applyFiltersDirect,
     hasAppliedFilters,
   ])
 }

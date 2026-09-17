@@ -6,6 +6,7 @@ import {
   searchInventoryProducts,
 } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
+import { rankCatalogProducts, searchTextFromQuery } from '@/features/catalog/lib/catalogMatch'
 import {
   buildProductsFilterBody,
   isFilterSelectionBlocked,
@@ -114,11 +115,11 @@ export function useStorePageFilters({
   const filterDrawerOpen = drawerOpen && drawerType === 'filter'
   const hasCommittedProductSearch = Boolean(committedProductSearch)
 
-  const submitProductSearch = useCallback(() => {
+  const submitProductSearch = useCallback((query) => {
     if (!isStoreView) {
       return
     }
-    const next = String(searchValue || '').trim()
+    const next = String(query != null && query !== '' ? query : searchValue || '').trim()
     setCommittedProductSearch(next)
     setProductSearchNonce((current) => current + 1)
   }, [isStoreView, searchValue])
@@ -159,17 +160,23 @@ export function useStorePageFilters({
     const controller = new AbortController()
     let cancelled = false
     const search = committedProductSearch
+    const searchQuery = searchTextFromQuery(search) || search
 
     beginCatalogSearch?.()
 
     searchInventoryProducts({
       token,
-      search,
+      search: searchQuery,
       signal: controller.signal,
     })
       .then((result) => {
         if (cancelled) return
-        const mapped = mapApiProducts(result.productos).map(normalizeProduct)
+        const mapped = rankCatalogProducts(
+          mapApiProducts(result.productos).map(normalizeProduct),
+          search,
+          undefined,
+          { keepAll: true },
+        )
         setSearchProducts?.(mapped)
       })
       .catch((error) => {

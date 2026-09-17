@@ -32,6 +32,8 @@ export const TYPO_ALIASES: Record<string, string> = {
   asesorres: 'asesores',
   llantra: 'llanta',
   llantras: 'llanta',
+  pasta: 'pastilla',
+  pastas: 'pastilla',
 }
 
 function aliases() {
@@ -73,7 +75,7 @@ function maxDistance(token: string) {
   return 2
 }
 
-export const COMPLAINT_LOCK_LIST = ['queja', 'quejar', 'reclamo', 'reclamar', 'pqr', 'garantia', 'devolucion'] as const
+export const COMPLAINT_LOCK_LIST = ['queja', 'quejar', 'reclamo', 'reclamar', 'pqr', 'garantia', 'devolucion', 'devolver'] as const
 
 export function expandStuckTokens(tokens: readonly string[], lexicon: readonly string[]): string[] {
   const terms = [...new Set(lexicon.map((item) => stripAccents(item.toLowerCase())))]

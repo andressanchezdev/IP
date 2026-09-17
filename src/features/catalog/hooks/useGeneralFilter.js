@@ -76,8 +76,8 @@ export function useGeneralFilter({ enabled = false } = {}) {
 
       setState({
         ...listsFromResult(result),
-        status: 'success',
-        error: '',
+        status: result.unavailable ? 'error' : 'success',
+        error: result.unavailable ? 'Categorías no están disponibles' : '',
       })
     } catch (error) {
       if (error?.name === 'AbortError' || signal?.aborted || requestId !== requestIdRef.current) {

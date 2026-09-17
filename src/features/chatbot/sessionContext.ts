@@ -64,6 +64,35 @@ export type OfferedProduct = {
   family: string
   marca?: string
   modelo?: string
+  cantidad?: number
+  codigo?: string
+}
+
+export type ScaffoldState =
+  | 'idle'
+  | 'awaitingBrand'
+  | 'awaitingModel'
+  | 'awaitingYear'
+  | 'readyToSearch'
+  | 'showingResults'
+  | 'completed'
+  | 'aborted'
+
+export type ScaffoldCaptured = {
+  family: string
+  brand: string
+  model: string
+  year: string
+  cilindraje: string
+  partTerm: string
+}
+
+export type ScaffoldedSearch = {
+  currentState: ScaffoldState
+  captured: ScaffoldCaptured
+  history: string[]
+  turnsInScaffold: number
+  maxTurnsBeforeFallback: number
 }
 
 export type SessionContext = {
@@ -76,6 +105,7 @@ export type SessionContext = {
   topicStack: string[]
   conversationFocus: ConversationFocus | null
   lastOffers: OfferedProduct[]
+  lastOffersAt: number
   lastUserText: string
   pendingConfirmation: PendingConfirmation | null
   userTokenHistory: string[][]
@@ -93,6 +123,7 @@ export type SessionContext = {
   holdFocus: boolean
   metrics: SessionMetrics
   phaseLog: PhaseLogEntry[]
+  scaffoldedSearch: ScaffoldedSearch
 }
 
 let activeSessionId = ''
@@ -113,6 +144,7 @@ export function emptySession(sessionId = createId()): SessionContext {
     topicStack: [],
     conversationFocus: null,
     lastOffers: [],
+    lastOffersAt: 0,
     lastUserText: '',
     pendingConfirmation: null,
     userTokenHistory: [],
@@ -130,6 +162,13 @@ export function emptySession(sessionId = createId()): SessionContext {
     holdFocus: false,
     metrics: emptyMetrics(),
     phaseLog: [],
+    scaffoldedSearch: {
+      currentState: 'idle',
+      captured: { family: '', brand: '', model: '', year: '', cilindraje: '', partTerm: '' },
+      history: [],
+      turnsInScaffold: 0,
+      maxTurnsBeforeFallback: 4,
+    },
   }
 }
 
@@ -162,7 +201,17 @@ export function loadSession(): SessionContext {
   }
   if (!ctx.holdFocus) ctx.holdFocus = false
   if (!Array.isArray(ctx.lastOffers)) ctx.lastOffers = []
+  if (typeof ctx.lastOffersAt !== 'number') ctx.lastOffersAt = 0
   if (typeof ctx.lastUserText !== 'string') ctx.lastUserText = ''
+  if (!ctx.scaffoldedSearch) {
+    ctx.scaffoldedSearch = {
+      currentState: 'idle',
+      captured: { family: '', brand: '', model: '', year: '', cilindraje: '', partTerm: '' },
+      history: [],
+      turnsInScaffold: 0,
+      maxTurnsBeforeFallback: 4,
+    }
+  }
   return ctx
 }
 

@@ -162,12 +162,20 @@ export const PART_ALIASES: Record<string, string> = {
   casci: 'casco',
   cascos: 'casco',
   casko: 'casco',
+  carena: 'carenado',
+  carenaje: 'carenado',
+  carenajes: 'carenado',
+  carenados: 'carenado',
+  carenage: 'carenado',
+  carenajez: 'carenado',
   coronas: 'corona',
   ejes: 'eje',
   filtros: 'filtro',
   frenos: 'freno',
   guantes: 'guante',
   llantas: 'llanta',
+  pasta: 'pastilla',
+  pastas: 'pastilla',
   pastiya: 'pastilla',
   pastiyas: 'pastilla',
   pinhon: 'pinon',
@@ -184,6 +192,8 @@ export const PART_ALIASES: Record<string, string> = {
   repuestos: 'repuesto',
   ripuesto: 'repuesto',
   rines: 'rin',
+  rinspa: 'rin',
+  rinaspa: 'rin',
   tambor: 'banda',
   zapatas: 'zapata',
   suspencion: 'suspension',
@@ -191,6 +201,12 @@ export const PART_ALIASES: Record<string, string> = {
   yantas: 'llanta',
   llantra: 'llanta',
   llantras: 'llanta',
+  neumatico: 'llanta',
+  caucho: 'llanta',
+  pad: 'pastilla',
+  pads: 'pastilla',
+  rotor: 'disco',
+  pinza: 'mordaza',
 }
 
 export const MOTO_TERMS = [...CATALOG_PART_TERMS, ...OTHER_PART_TERMS, ...ACCESSORY_TERMS, 'repuesto']
@@ -212,7 +228,7 @@ export function liveWeakLexemes() {
 }
 
 export function livePartAliases() {
-  return liveLexiconMap('partAliases', PART_ALIASES)
+  return { ...PART_ALIASES, ...liveLexiconMap('partAliases', PART_ALIASES) }
 }
 
 export function liveGenericTokens() {
@@ -238,7 +254,8 @@ function matchesTerm(token: string, term: string) {
 export function findTerm(tokens: readonly string[], terms: readonly string[]) {
   for (const token of tokens) {
     if (liveGenericTokens().has(token)) continue
-    const hit = terms.find((term) => matchesTerm(token, term))
+    const folded = foldWord(token)
+    const hit = terms.find((term) => matchesTerm(folded, term) || matchesTerm(token, term))
     if (hit) return hit
   }
   return ''
@@ -282,7 +299,9 @@ export function resolvePartFamily(tokens: readonly string[]): ResolvedPart | nul
   const brakeCue = has('freno')
   const tireCue = has('llanta') || has('rodadura')
 
-  if (has('pastilla')) return { id: 'pastilla_freno', label: 'pastillas de freno', ambiguous: false }
+  if (has('pastilla') || has('pasta') || has('pastas')) {
+    return { id: 'pastilla_freno', label: 'pastillas de freno', ambiguous: false }
+  }
   if (has('zapata') || has('balata') || (has('banda') && (brakeCue || !tireCue) && !has('rodadura'))) {
     return { id: 'banda_freno', label: 'bandas de freno', ambiguous: false }
   }

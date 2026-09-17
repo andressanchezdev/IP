@@ -19,6 +19,8 @@ type StoreChatWidgetProps = {
   onLogin?: () => void
   onOpenPriceList?: () => void
   onOpenStore?: () => void
+  onCatalogSearch?: (query: string) => void
+  onCatalogFilter?: (payload: { brands?: string[]; categories?: string[]; models?: string[] }) => void
 }
 
 function ChatLink({
@@ -28,6 +30,8 @@ function ChatLink({
   onLogin,
   onOpenPriceList,
   onOpenStore,
+  onCatalogSearch,
+  onCatalogFilter,
 }: {
   action: ChatAction
   index?: number
@@ -35,7 +39,35 @@ function ChatLink({
   onLogin?: () => void
   onOpenPriceList?: () => void
   onOpenStore?: () => void
+  onCatalogSearch?: (query: string) => void
+  onCatalogFilter?: (payload: { brands?: string[]; categories?: string[]; models?: string[] }) => void
 }) {
+  if (action.kind === 'catalog-search' && action.search) {
+    return (
+      <button type="button" className="landing-chat__option" onClick={() => onCatalogSearch?.(action.search || '')}>
+        {index ? <span className="landing-chat__option-index">{index}</span> : null}
+        {action.label}
+      </button>
+    )
+  }
+
+  if (action.kind === 'catalog-filter') {
+    return (
+      <button
+        type="button"
+        className="landing-chat__option"
+        onClick={() => onCatalogFilter?.({
+          brands: action.brands,
+          categories: action.categories,
+          models: action.models,
+        })}
+      >
+        {index ? <span className="landing-chat__option-index">{index}</span> : null}
+        {action.label}
+      </button>
+    )
+  }
+
   if (action.kind === 'prompt' && action.prompt) {
     return (
       <button type="button" className="landing-chat__option" onClick={() => onPrompt?.(action.prompt || '')}>
@@ -99,6 +131,8 @@ export function StoreChatWidget({
   onLogin,
   onOpenPriceList,
   onOpenStore,
+  onCatalogSearch,
+  onCatalogFilter,
 }: StoreChatWidgetProps) {
   const panelId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -137,13 +171,68 @@ export function StoreChatWidget({
 
   const lastBot = [...messages].reverse().find((message) => message.role === 'bot')
   const lastOptions = lastBot?.reply?.options ?? []
-  const awaitingChoice = lastOptions.some((item) => item.kind === 'prompt')
+  const awaitingChoice = lastOptions.some((item) => (
+    item.kind === 'prompt' || item.kind === 'catalog-search' || item.kind === 'catalog-filter'
+  ))
   const minChars = awaitingChoice ? 1 : limits.minChars
+
+  const dispatchCatalogCommand = (command?: ChatReply['catalogCommand']) => {
+    if (!command) return
+    if (command.kind === 'search' && command.query) {
+      onCatalogSearch?.(command.query)
+      return
+    }
+    if (command.kind === 'filter') {
+      onCatalogFilter?.({
+        brands: command.brands,
+        categories: command.categories,
+        models: command.models,
+      })
+    }
+  }
+
+  const applyListedOption = (action: ChatAction) => {
+    if (action.kind === 'catalog-search' && action.search) {
+      onCatalogSearch?.(action.search)
+      return true
+    }
+    if (action.kind === 'catalog-filter') {
+      onCatalogFilter?.({
+        brands: action.brands,
+        categories: action.categories,
+        models: action.models,
+      })
+      return true
+    }
+    return false
+  }
+
+  const pickListedOption = (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || !lastOptions.length) return null
+    const asIndex = Number(trimmed)
+    if (Number.isInteger(asIndex) && asIndex >= 1 && asIndex <= lastOptions.length) {
+      return lastOptions[asIndex - 1]
+    }
+    const folded = trimmed.toLowerCase()
+    return lastOptions.find((item) => (
+      (item.label || '').toLowerCase() === folded
+      || (item.prompt || '') === trimmed
+      || (item.search || '') === trimmed
+    )) || null
+  }
 
   const pushQuery = (query: string) => {
     const text = query.trim()
     if (typing) return
     if (refreshBlock()) return
+
+    const listed = pickListedOption(text)
+    if (listed && applyListedOption(listed)) {
+      setDraft('')
+      setNotice('')
+      return
+    }
 
     const matchesOption = lastOptions.some((item) => (item.prompt || item.label) === text)
     const error = chatDraftError(text, { allowShort: awaitingChoice || matchesOption })
@@ -187,6 +276,7 @@ export function StoreChatWidget({
           { id: `bot-${current.length}`, role: 'bot', text: reply.text, reply },
         ])
         setTyping(false)
+        dispatchCatalogCommand(reply.catalogCommand)
         replyTimer.current = null
       }, delay)
     })()
@@ -218,7 +308,7 @@ export function StoreChatWidget({
   }
 
   return (
-    <div className="landing-chat">
+    <div className={open ? 'landing-chat landing-chat--open' : 'landing-chat'}>
       {open ? (
         <section className="landing-chat__panel" id={panelId} aria-label="Hola soy BotIP">
           <header className="landing-chat__head">
@@ -243,6 +333,8 @@ export function StoreChatWidget({
                         onLogin={onLogin}
                         onOpenPriceList={onOpenPriceList}
                         onOpenStore={onOpenStore}
+                        onCatalogSearch={onCatalogSearch}
+                        onCatalogFilter={onCatalogFilter}
                       />
                     ))}
                   </div>
@@ -257,6 +349,8 @@ export function StoreChatWidget({
                         onLogin={onLogin}
                         onOpenPriceList={onOpenPriceList}
                         onOpenStore={onOpenStore}
+                        onCatalogSearch={onCatalogSearch}
+                        onCatalogFilter={onCatalogFilter}
                       />
                     ))}
                   </div>

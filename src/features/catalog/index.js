@@ -4,8 +4,12 @@ export { FilterDrawerContent } from './components/FilterDrawer/FilterDrawerConte
 export {
   getGeneral,
   getGeneralInitial,
+  getGeneralFilter,
   searchInventoryProducts,
   getLatestInventoryProducts,
   PRODUCTS_PAGE_SIZE,
+  extractProducts,
+  extraerProductos,
+  invalidateGeneralFilterCache,
 } from './api/generalApi'
 export { useStockWebSocket } from './ws/useStockWebSocket'

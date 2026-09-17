@@ -369,8 +369,8 @@
 }
 
 @media (max-width: 640px) {
-  /* Espacio para que el carrito flotante no tape la última fila. */
+  /* Espacio para carrito + bot apilados a la derecha. */
   .landing__content {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(16px + 10px + 12px + (2 * clamp(44px, 12vw, 52px)) + env(safe-area-inset-bottom, 0px));
   }
 }

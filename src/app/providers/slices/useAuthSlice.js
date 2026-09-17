@@ -16,6 +16,7 @@ import {
   toAuthUserSummary,
 } from '@/features/auth/utils/mapLoginUserToProfile'
 import { clearApiAuthToken, setApiAuthToken } from '@/shared/api'
+import { invalidateGeneralFilterCache } from '@/features/catalog/api/generalApi'
 import { APP_EVENTS } from '../appEvents'
 import { PROFILE_SETTINGS_TTL, sanitizeProfileSettings } from '../helpers'
 
@@ -87,6 +88,7 @@ export function useAuthSlice({ events, cartHydratingRef }) {
         password,
       })
       setApiAuthToken(tokenAccess)
+      invalidateGeneralFilterCache()
 
       const userId = client.userId
       const aboutSeedProfile = mapAboutUserToProfileSettings({}, client.email || loginEmail)
@@ -174,6 +176,7 @@ export function useAuthSlice({ events, cartHydratingRef }) {
     // El workspace se persiste de forma continua; solo hace falta el flush.
     flushPersistedState()
     clearApiAuthToken()
+    invalidateGeneralFilterCache()
     clearAuthSession()
     setAuthSession(null)
     events.emit(APP_EVENTS.AUTH_LOGGED_OUT)

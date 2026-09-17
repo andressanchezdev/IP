@@ -1,5 +1,5 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
-import { parseImageArray, parseStock } from './parseUbicacionStock'
+import { parseImageArray, stockTotal } from './parseUbicacionStock'
 
 const PLACEHOLDER_IMAGE_HINTS = [
   'blanco.png',
@@ -77,7 +77,7 @@ export function mapApiProduct(product) {
     brand,
     model: String(product.modelo ?? '').trim(),
     reference: String(product.codigo ?? '').trim(),
-    stock: parseStock(product.stock),
+    stock: stockTotal(product.stock),
     searching: String(product.searching ?? '').trim(),
     imageUrl,
     imageUrls,

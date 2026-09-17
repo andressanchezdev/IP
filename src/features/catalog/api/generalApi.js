@@ -40,6 +40,8 @@ function extractProducts(payload) {
   return []
 }
 
+export { extractProducts, extractProducts as extraerProductos }
+
 /** Query `last_id`: número si es id numérico; si no, el valor tal cual. */
 function toLastIdQuery(lastId) {
   if (lastId == null || lastId === '') {
@@ -325,6 +327,7 @@ const EMPTY_FILTER_MEMORY = {
 }
 
 let generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
+let lastGoodFilterMemory = null
 /** Una sola petición en vuelo (evita doble GET por Strict Mode). */
 let generalFilterInFlight = null
 
@@ -336,10 +339,17 @@ function writeGeneralFilterMemory(raw, lists) {
     modelos: lists.modelos,
     savedAt: Date.now(),
   }
+  lastGoodFilterMemory = { ...generalFilterMemory }
 }
 
 function clearGeneralFilterMemory() {
   generalFilterMemory = { ...EMPTY_FILTER_MEMORY }
+}
+
+export function invalidateGeneralFilterCache() {
+  clearGeneralFilterMemory()
+  lastGoodFilterMemory = null
+  generalFilterInFlight = null
 }
 
 function resultFromMemory(memory) {
@@ -363,6 +373,11 @@ export function readGeneralFilterMemory(now = Date.now()) {
   }
 
   return generalFilterMemory
+}
+
+/** Última lista válida, incluso si el TTL de 3 min ya venció (fallo de red). */
+export function peekGeneralFilterMemory() {
+  return readGeneralFilterMemory() || lastGoodFilterMemory || null
 }
 
 async function awaitUnlessAborted(promise, signal) {
@@ -443,7 +458,14 @@ export async function getGeneralFilter({
           emptyBy404: true,
         }
       }
-      throw error
+      if (lastGoodFilterMemory?.raw) {
+        return resultFromMemory(lastGoodFilterMemory)
+      }
+      return {
+        ...EMPTY_FILTER_LISTS,
+        raw: null,
+        unavailable: true,
+      }
     } finally {
       generalFilterInFlight = null
     }

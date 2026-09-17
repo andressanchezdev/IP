@@ -49,6 +49,7 @@ export const BOT_REPLY_FIELDS: Array<{ id: string; label: string }> = [
   { id: 'accessory', label: 'Accesorio' },
   { id: 'attention', label: 'Atención / asesor / ayuda' },
   { id: 'complaint', label: 'Queja' },
+  { id: 'returns', label: 'Cambios y devoluciones' },
   { id: 'quote', label: 'Precio / stock' },
   { id: 'vacancy', label: 'Vacantes' },
   { id: 'location', label: 'Ubicación' },
@@ -107,42 +108,42 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
   },
   catalog: {
     keywords: 'catalogo, productos, surtido, linea, producto, products, catalog, catalogs, catalogos, listado, portafolio, pdf, referencias, inventario, categorias, categoria, lineas',
-    text: 'Veras nuestro catalogo cuenta con productos como: {catalog}. Puedes verlo completo en línea, descargarlo o cotizar con un asesor real al la linea {phone}. Escribe la pieza que buscas y te oriento.',
+    text: 'En el catálogo publicado encuentras {catalog}. Ábrelo en la tienda. Si quieres la lista de precios, descárgala desde tu perfil. Escribe el producto que buscas y te oriento.',
     texts: [
-      'Estas son las líneas del catálogo: {catalog}. Elige si lo ves en línea, lo descargas o hablas con un asesor al {phone}. Dime la pieza para afinar.',
-      'El catálogo incluye {catalog}. Puedes abrirlo, descargarlo o pedir cotización por WhatsApp {phone}. ¿Qué pieza necesitas?',
+      'Estas son las líneas del catálogo: {catalog}. Ábrelo en la tienda. Dime la pieza para afinar.',
+      'El catálogo incluye {catalog}. Ábrelo en la tienda. ¿Qué pieza necesitas?',
     ],
   },
   whatsapp: {
     keywords: 'whatsapp, contacto, telefono, celular, correo, email, llamar, escribir, wsp, wa, numero, cel, mail, mensajear, contactanos, comunicarme',
-    text: 'Puedes escribirnos por WhatsApp al {phone} o al correo {email}. {ask}',
+    text: 'Puedes escribirnos por WhatsApp al {phone}. El correo es {email}.',
     texts: [
-      'WhatsApp {phone} y correo {email} están disponibles. Si ya sabes el producto, indícame marca y modelo para pasar una consulta completa.',
-      'Escríbenos al {phone}',
+      'WhatsApp {phone}. Correo {email}. Si ya sabes el producto, indícame marca y modelo.',
+      'Escríbenos al {phone}.',
     ],
   },
   product: {
     keywords: 'referencia, ficha, sku, codigo, item, articulo, coincidencia, coincidencias, oem',
-    text: 'Encontré {term} en inventario:\n\n{offer}\n\nSi quieres, Validamos la informacion con un asesor real',
+    text: 'Encontré {term} en inventario. Si quieres, un asesor valida la información.',
     texts: [
-      'Para {term} el precio de lista es este:\n\n{offer}\n\nDime marca y modelo si necesitas otra referencia, o escribe al {phone}.',
-      '{term} coincide con {names}.\n\n{offer}\n\nUn asesor real confirma que siga vigente.',
+      'Para {term} te oriento con el catálogo. Dime marca y modelo si buscas otro producto.',
+      '{term} coincide con {names}. Un asesor confirma el dato vigente.',
     ],
   },
   parts: {
     keywords: 'repuesto, repuestos, pieza, piezas, componente, componentes, recambio, recambios, refaccion, refacciones',
     text: 'Estas son las líneas de repuestos publicadas: {catalog}. {ask} Precio y stock los confirma un asesor al {phone}.',
     texts: [
-      'En el catálogo están {catalog}. Escribe la pieza que buscas y el vehículo para orientarte, o cotiza con un asesor al {phone}.',
-      'Publicamos {catalog}. Indícame pieza, marca y modelo o elige una de las opciones a continuación.',
+      'En el catálogo están {catalog}. Escribe la pieza que buscas y el vehículo para orientarte.',
+      'Publicamos {catalog}. Indícame pieza, marca y modelo.',
     ],
   },
   namedPart: {
     keywords: 'ficha, equivalencia, generico, original, compatible, consulta, consultar',
-    text: '{term} no tiene ficha en este chat, así que no invento datos inprecisos. {ask} .',
+    text: '{term} no tiene ficha en este chat, así que no invento datos. {ask}',
     texts: [
-      'No ubico una ficha publicada para {term}. {ask} También puedes consultar con un asesor al {phone}.',
-      '{term} no está en el catálogo de este chat. Pásame marca y modelo del vehículo o escríbenos al {phone} para validar la referencia.',
+      'No ubico una ficha publicada para {term}. {ask} Un asesor lo confirma al {phone}.',
+      '{term} no está en el catálogo de este chat. Pásame marca y modelo del vehículo.',
     ],
   },
   accessory: {
@@ -150,47 +151,55 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
     text: '{term} se consulta con un asesor porque aquí no confirmo ficha, precio ni stock. {ask} WhatsApp {phone}.',
     texts: [
       'No tengo ficha de {term} en este chat. {ask} Un asesor te confirma disponibilidad al {phone}.',
-      '{term} no está detallado aquí. Indica marca y modelo del vehículo o escribe al {phone}.',
+      '{term} no está detallado aquí. Indica marca y modelo del vehículo.',
     ],
   },
   attention: {
-    keywords: 'asesor, asesoria, comprar, obtener, atencion, ayuda, servicio, asesores, soporte, humano, orientacion',
-    text: 'te ayudo con eso, contacta a un asesor al {phone}. el te ayudara a obtener la informacion que necesitas.',
+    keywords: 'asesor, asesores, asesora, asesoria',
+    text: 'Te ayudo con eso. Contacta a un asesor al {phone}; te da la información que necesitas.',
     texts: [
-      'Con gusto te ayudo. {ask} O habla con un asesor al {phone}.',
-      'Puedo orientarte aquí o pasarte con alguien del equipo al {phone}. {ask}',
+      'Con gusto te ayudo. {ask} Un asesor te atiende al {phone}.',
+      'Puedo orientarte aquí. Si quieres a alguien del equipo, escribe al {phone}. {ask}',
     ],
   },
   complaint: {
-    keywords: 'queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, devolucion, inconforme, inconformidad, falla, defectuoso',
-    text: 'Lamentamos el inconveniente. Cuéntame qué pasó (producto, pedido o fecha si los tienes) y te ayudo a dejarlo radicado. También puedes escribir al WhatsApp {phone} o a {email}.',
+    keywords: 'queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, inconforme, inconformidad, falla, defectuoso',
+    text: 'Lamentamos el inconveniente. Cuéntame qué pasó: producto, pedido y fecha, si los tienes. Te ayudo a dejarlo radicado. También puedes escribir al WhatsApp {phone}. El correo es {email}.',
     texts: [
-      'Registramos tu molestia. Describe el caso con el mayor detalle que tengas, o envíalo al {phone} / {email} para que un asesor lo atienda.',
-      'Vamos a ayudarte. Cuéntame el problema o contacta {phone} y {email} para dejar constancia.',
+      'Registramos tu molestia. Describe el caso con el mayor detalle que tengas. Un asesor lo atiende al {phone}. Correo {email}.',
+      'Vamos a ayudarte. Cuéntame el problema. También puedes escribir a {phone}. Correo {email}.',
+    ],
+  },
+  returns: {
+    keywords: 'devolver, devolucion, devoluciones, cambios, cambiarlo, cambiarla, reembolso, reembolsar',
+    text: 'Los cambios y devoluciones siguen nuestros términos y condiciones. Puedes visitarnos en {address}. Si prefieres, un asesor te atiende.',
+    texts: [
+      'Los cambios y devoluciones se rigen por nuestros términos y condiciones. Puedes visitarnos en {address}. Un asesor real también te guía.',
+      'Para un cambio o una devolución aplica lo indicado en términos y condiciones. Visítanos en {address}. Si quieres, te paso con un asesor.',
     ],
   },
   quote: {
     keywords: 'precio, precios, stock, cotizar, cotizacion, vale, cuesta, disponibilidad, valor, costo, cuanto, tarifa, existencias, cotice',
-    text: 'Referencia de {term}: precio y stock publicados (pueden estar desactualizados; un asesor real debe confirmarlos). {ask} WhatsApp {phone}. Catálogo: {catalog}.',
+    text: 'Sobre {term}: te paso el precio de lista publicado (puede estar desactualizado; un asesor debe confirmarlo). {ask} WhatsApp {phone}. Catálogo: {catalog}.',
     texts: [
-      'Sobre {term}: te paso el valor de referencia del inventario. Puede estar desactualizado; valídalo con un asesor al {phone}.',
-      'Hay ficha de {term} con precio y existencias de referencia. Un asesor real confirma el dato vigente al {phone}.',
+      'Sobre {term}: te paso el precio de lista del inventario. Puede estar desactualizado; valídalo con un asesor al {phone}.',
+      'Hay ficha de {term} con precio y existencias. Un asesor real confirma el dato vigente al {phone}.',
     ],
   },
   vacancy: {
     keywords: VACANCY_EXACT_WORDS.join(', '),
-    text: 'Las vacantes vigentes están en Trabaja con nosotros. Ahí ves el perfil, los requisitos y puedes postularte. Si quieres orientación, escríbenos al {phone}.',
+    text: 'Si te referías a vacantes para trabajar con nosotros, consulta nuestro landing principal. No puedo darte más información sobre vacantes. ¿Te ayudo con el catálogo, la empresa o el equipo?',
     texts: [
-      'Revisa las ofertas publicadas en Trabaja con nosotros y postula desde esa sección. También te oriento por WhatsApp {phone}.',
-      'El proceso de empleo está en Trabaja con nosotros. Entra a ver vacantes o escribe al {phone} si tienes una duda puntual.',
+      'Si te referías a vacantes para trabajar con nosotros, consulta nuestro landing principal. No puedo darte más información sobre vacantes.',
+      'Este chat no informa vacantes. Consulta el landing principal. ¿Te ayudo con productos, empresa o el equipo?',
     ],
   },
   location: {
-    keywords: 'direccion, ubicacion, ubicados, donde, sede, local, sucursal, mapa, maps, google, llegar, llego, horario, horarios, visita, visitarnos, medellin, antioquia, colombia, ciudad, encuentran, alpujarra, hora, horas, abre, abren, abierto, abierta, cierra, cierran',
-    text: 'Estamos en {area}, {region} ({country}), en {address}, {landmark}. Atendemos {hours}.',
+    keywords: 'direccion, ubicacion, ubicados, ubicado, llegar, llego, sede, sucursal, local',
+    text: 'Estamos en {address}.',
     texts: [
-      'Nuestro local está en {city}, {region} ({country}). Dirección {address}, {landmark}. Horario: {hours}.',
-      'Nos encuentras en {city}, {region}. {address}. {landmark}. Horario {hours}. WhatsApp {phone}.',
+      'Estamos en {address}.',
+      'Nuestra dirección es {address}.',
     ],
   },
   credit: {
@@ -202,19 +211,43 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
     ],
   },
   payment: {
-    keywords: 'pago, pagos, pagar, efectivo, transferencia, consignar, consignacion, comprar, obtener, adquirir, medios, nequi, daviplata, bancolombia, cuenta',
-    text: 'Manejamos pago inmediato con efectivo o transferencia. {bank}, {accountType}, a nombre de {holder}. {accountNumber}.',
+    keywords: 'pago, pagos, pagar, efectivo, transferencia, consignar, consignacion, medios, nequi, daviplata, bancolombia, cuenta',
+    text: 'Tenemos diversos medios de pago: efectivo, transferencia, y crédito si eres uno de nuestros clientes Premium.',
     texts: [
-      'Puedes pagar de inmediato en efectivo o por transferencia. Datos: {bank} · {accountType} · {holder}.',
-      'Para comprar: efectivo o transferencia inmediata. Banco {bank}, {accountType}, titular {holder}.',
+      'Tenemos diversos medios de pago: efectivo, transferencia, y crédito si eres uno de nuestros clientes Premium.',
+      'Puedes pagar en efectivo, por transferencia, o a crédito si ya eres cliente Premium.',
     ],
   },
   shipping: {
     keywords: 'envio, envios, enviar, domicilio, domicilios, despacho, contraentrega',
-    text: 'Hacemos envíos a todo el país. Envío gratis en el {cityScope} si la compra es mayor a ${freeMetroFrom} COP. También hacemos envíos el mismo día y seguros hasta la puerta.',
+    text: 'Hacemos envíos a todo el país. En el {cityScope} el domicilio es gratis desde ${freeMetroFrom} COP. En compras menores, el valor del domicilio depende de la ubicación.',
     texts: [
-      'Enviamos a todo el país. En el {cityScope} el envío es gratis en compras mayores a ${freeMetroFrom} COP. Hay envíos el mismo día y seguros hasta la puerta.',
-      'Domicilios a nivel nacional. Gratis en el {cityScope} desde ${freeMetroFrom} COP. Mismo día y entrega segura en la puerta.',
+      'Enviamos a todo el país. En el {cityScope} el domicilio es gratis desde ${freeMetroFrom} COP. En montos menores, el valor depende de la ubicación.',
+      'Domicilios a nivel nacional. Gratis en el {cityScope} desde ${freeMetroFrom} COP. Si la compra es menor, el valor se calcula según la ubicación.',
+    ],
+  },
+  symptomGuidance: {
+    keywords: 'no frena, hace ruido, no arranca, se apaga, pierde fuerza, vibra, se calienta, patina, pierde aceite',
+    text: 'Entiendo el síntoma. Para {symptom}, lo más probable es que necesites revisar {candidates}. ¿Me confirmas marca y modelo del vehículo para filtrar el inventario?',
+    texts: [
+      'Con {symptom} suelen estar involucrados: {candidates}. Pásame marca + modelo y te muestro opciones.',
+      'Por lo que describes ({symptom}), revisa primero: {candidates}. Dime marca y modelo para consultar.',
+    ],
+  },
+  compatibilityAsk: {
+    keywords: 'sirve para, es compatible, le queda, funciona en',
+    text: 'Para confirmar compatibilidad necesito marca, modelo y año del vehículo. ¿Me los pasas?',
+    texts: [
+      'Antes de afirmar compatibilidad, dime marca + modelo + año.',
+      'Necesito marca, modelo y año para verificar que la pieza sea compatible.',
+    ],
+  },
+  explainPart: {
+    keywords: 'para que sirve, que hace, que es',
+    text: '{part} sirve para {function}. Si quieres, te muestro referencias disponibles; dime marca y modelo del vehículo.',
+    texts: [
+      '{part}: {function}. Puedo mostrarte fichas si me das marca y modelo.',
+      'Te explico: {part} cumple la función de {function}. ¿Buscas una referencia concreta?',
     ],
   },
   orderStatus: {
@@ -240,16 +273,16 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
     text: 'Si me pasas la pieza y el vehículo, te oriento mejor.',
     texts: [
       '¿Qué repuesto buscas y para qué moto es?',
-      'Con el nombre de la pieza y la referencia del vehículo te afino la respuesta.',
-      'Cuéntame qué componente necesitas y de qué marca o modelo.',
+      'Con el nombre del producto y la marca de la moto te afino la respuesta.',
+      'Cuéntame qué componente necesitas y de qué marca es.',
     ],
   },
   company: {
     keywords: 'vision, mision, nosotros, marca, marcas, empresa, quienes, somos, historia, aliados, aliadas, acerca',
-    text: 'Importadora Premium: puedes conocer la visión, el equipo y marcas aliadas como {brands}. Dime si buscas empresa, una persona del equipo o un producto.',
+    text: 'Importadora Premium: puedes conocer la visión, el equipo y marcas aliadas como {brands}. Dime si buscas empresa, una persona del equipo, un producto.',
     texts: [
       'Somos Importadora Premium. En el sitio están visión, equipo y marcas ({brands}). ¿Quieres datos de la empresa o de un repuesto?',
-      'Te oriento: visión, misión, equipo o marcas aliadas ({brands}) están en la página. También puedo ayudarte con una pieza si me das marca y modelo.',
+      'Te oriento: visión, misión, equipo y marcas aliadas ({brands}) están en la página. También puedo ayudarte con una pieza si me das marca y modelo.',
     ],
   },
   social: {
@@ -316,7 +349,7 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
   },
   vehicle: {
     keywords: 'vehiculo, vehiculos, automotor, rodante',
-    text: '{term} es un vehículo, en nuestro catalogo encontraras miles de referencias que te ayudan con el cuidado y mantenimiento de las piesas de tu vehiculo. Dime la marca, el modelo y la pieza.',
+    text: '{term} es un vehículo. En el catálogo encuentras productos para el cuidado y mantenimiento de tu moto. Dime la marca, el modelo y el producto que buscas.',
     texts: [
       '{term} es un vehiculo, no un producto. Dime la marca, el modelo y la pieza.',
       'Para un {term} necesito la pieza concreta y el modelo.',
@@ -539,7 +572,7 @@ const LEGACY_REPLY_TEXT = new Set([
   'Repuestos publicados: {catalog}. Dime la pieza.',
   '{term} no tiene ficha aquí. Indica marca o modelo. Precio y stock los confirma un asesor.',
   '{term} no tiene ficha aquí. Indica marca o modelo.',
-  'Te atiendo. Dime el producto o la referencia. WhatsApp {phone}.',
+  'Te atiendo. Dime el producto, la marca o el modelo. WhatsApp {phone}.',
   'Lamentamos el inconveniente. Cuéntame qué pasó. WhatsApp {phone} o {email}.',
   'Precio y stock{term} no los confirmo aquí. Indica marca o modelo.',
   'Visión, equipo y marcas ({brands}).',
@@ -570,8 +603,9 @@ const LEGACY_KEYWORDS: Record<string, string[]> = {
   parts: ['repuesto, repuestos, pieza, piezas, componente'],
   namedPart: [''],
   accessory: ['accesorio, accesorios'],
-  attention: ['asesor, asesoria, pedido, comprar, obtener, atencion, ayuda, servicio'],
+  attention: ['asesor, asesores, asesora, asesoria'],
   complaint: ['queja, reclamo, reclamar, quejar, molestia, problema, garantia'],
+  returns: ['devolver, devolucion, devoluciones, cambios, cambiarlo, cambiarla, reembolso'],
   quote: ['precio, precios, stock, cotizar, cotizacion, vale, cuesta, disponibilidad'],
   vacancy: [
     'vacante, vacantes, empleo, trabajo, postular, hoja',
@@ -666,6 +700,7 @@ export function liveContact(): LiveContact {
       ...base,
       ...raw,
       social: Array.isArray(raw.social) && raw.social.length ? raw.social : base.social,
+      address: LANDING_CONTACT.address,
     }
     if (raw.phoneDisplay && !raw.whatsappUrl) {
       const digits = digitsFromPhone(raw.phoneDisplay)
@@ -704,7 +739,7 @@ export function liveIdentity() {
 }
 
 function liveCatalog() {
-  return liveCatalogLabels() || 'el catálogo publicado'
+  return liveCatalogLabels() || 'el catálogo de la tienda'
 }
 
 function liveBrands() {
@@ -856,6 +891,10 @@ export const TEXTS_EN: Record<string, string[]> = {
   complaint: [
     'Sorry about that. Tell me what happened (product, order or date if you have them), or write {phone} / {email}.',
     'We will help. Describe the issue or contact {phone} and {email} to log it.',
+  ],
+  returns: [
+    'Returns and exchanges follow our terms and conditions. You can visit us at {address} or I can connect you with a real advisor.',
+    'For a change or a return, our terms and conditions apply. Visit us at {address} or talk to an advisor.',
   ],
   quote: [
     'Reference for {term}: published price and stock may be outdated; a real advisor must confirm. {ask} WhatsApp {phone}. Catalog: {catalog}.',

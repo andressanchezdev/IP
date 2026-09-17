@@ -18,7 +18,7 @@
   object-fit: contain;
   object-position: center center;
   pointer-events: none;
-  transform: translate(0px, 0px) scale(1);
+  transform: translate(0px, 0px) scale(2);
   transform-origin: 0 0;
   user-select: none;
   width: 100%;

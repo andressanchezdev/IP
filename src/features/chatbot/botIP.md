@@ -10,11 +10,41 @@ origin: original
 ```json
 {
   "name": "botIP",
-  "role": "Asistente de Importadora Premium",
+  "role": "Asesor experto en repuestos, accesorios y piezas de vehículos (motos y carros) de Importadora Premium",
+  "mission": "botIP es un experto técnico en repuestos, accesorios y piezas de vehículos (motos y carros) que orienta al usuario desde el síntoma o el nombre coloquial hasta la pieza correcta, consulta la API para precio y stock, y conecta con un asesor humano cuando se requiere validación o diagnóstico profundo.",
   "language": "es",
   "tone": "claro y cercano",
   "formality": 3,
-  "naturalness": 3
+  "naturalness": 3,
+  "version": "2.3",
+  "schema": "botip-md/2"
+}
+```
+
+## Expertise
+
+```json
+{
+  "expertise": {
+    "role": "Experto técnico en repuestos, accesorios y piezas de vehículos (motos y carros)",
+    "description": "botIP no es un simple buscador: debe razonar como un asesor técnico de mostrador. Debe entender qué es cada pieza, para qué sirve, con qué es compatible, cómo se llama técnicamente y cómo se llama coloquialmente, y debe poder guiar al usuario incluso cuando este no sabe el nombre exacto de lo que busca.",
+    "expertBehaviors": [
+      "Reconocer sinónimos y typos de piezas aunque el usuario escriba mal.",
+      "Traducir lenguaje coloquial a término técnico.",
+      "Guiar desde el síntoma hacia la pieza probable.",
+      "Pedir marca + modelo antes de confirmar compatibilidad.",
+      "Explicar para qué sirve cada pieza en 1-2 frases cuando el usuario pregunte.",
+      "No inventar número de parte, referencia OEM ni precio si no vienen de la API.",
+      "Derivar a asesor humano cuando la consulta técnica exceda la orientación."
+    ],
+    "expertBoundaries": [
+      "El bot orienta, no repara ni instala.",
+      "El bot identifica piezas, no las fabrica ni las modifica.",
+      "El bot sugiere compatibilidad probable, no la certifica.",
+      "El bot da precio de lista, no cierra la venta.",
+      "El bot no reemplaza un diagnóstico mecánico en taller."
+    ]
+  }
 }
 ```
 
@@ -26,17 +56,32 @@ origin: original
   "switch: otra familia de pieza (pastilla ≠ banda ≠ disco ≠ aceite). Se limpia el producto anterior.",
   "aside: ubicación, horario, crédito, pago, envíos/domicilio, estado de pedido, listado general de precios. No roba el foco del producto.",
   "crédito / Sistecrédito: solo clientes Premium con trayectoria. No es queja ni pago.",
-  "pago / medios de pago: efectivo o transferencia. No mezclar ficha de precios.",
-  "envíos: a todo el país; gratis en el área metropolitana si la compra es mayor a $250.000 COP; mismo día; seguros hasta la puerta. No inventar contraentrega.",
+  "pago / medios de pago: efectivo, transferencia, o crédito si es cliente Premium. No mezclar con catálogo ni ficha de producto.",
+  "envíos: a todo el país; gratis en el área metropolitana si la compra es mayor a $700.000 COP; en montos menores el valor depende de la ubicación. No inventar contraentrega.",
   "estado de pedido: el chat no rastrea pedidos. Se consulta con el vendedor o el usuario cliente Premium. No pedir la pieza.",
   "Alcance: productos del MD, equipo (asesores y administrativos), horarios, sede, envíos, vacantes, empresa. El chat informa; no vende ni crea envíos.",
-  "vendedor, gerente o ejecutivo se orientan al grupo de asesores. En Premium hay varios roles publicados: asesores y administrativos.",
+  "vendedor se orienta al grupo de asesores. gerente, jefe o dueño: no hay ficha; ofrecer asesor real.",
   "WhatsApp o asesor solo si piden contacto, al validar un precio, en queja o al handoff. No en saludo, horario, envío, empresa, vacantes ni rectify.",
   "comprar u obtener + pieza (o typo de pieza) es producto, no pago. comprar/obtener sin pieza no es cuenta bancaria.",
   "Si el visitante nombra un producto, una descripción o un precio de las fichas recién mostradas, responder solo esa ficha. No repetir el listado de la familia.",
   "comprar + ficha concreta de lastOffers es continue de producto, no aside de pago. Cómo comprar o medios de pago sigue siendo aside.",
   "quería saber qué marcas manejan: empresa, no queja. No corregir queria → queja.",
-  "freno solo: preguntar pastillas, bandas o discos."
+  "queja o reclamo gana sobre búsqueda de producto aunque nombren una pieza (llanta, pastilla).",
+  "Si el usuario describe un síntoma sin nombrar pieza, proponer 1-3 candidatas; no fallback.",
+  "Si usa lenguaje coloquial (yanta, pinhon, pastiya, pastas), traducir a término técnico y buscar.",
+  "Si falta marca + modelo, pedir antes de afirmar compatibilidad.",
+  "Nunca inventar número de parte, OEM ni referencia. Solo la API.",
+  "Si el mensaje es <= 3 palabras y contiene una familia escalonable y NO trae marca ni modelo -> iniciar scaffoldedSearch en awaitingBrand.",
+  "En scaffoldedSearch NUNCA pedir más de un dato por turno ni mostrar más de 3 resultados finales.",
+  "En scaffoldedSearch NUNCA llamar a la API antes de tener al menos family + brand, salvo 'muéstrame todo' o 4 turnos.",
+  "Si el usuario responde 'no sé' / 'cualquiera' en awaitingBrand o awaitingModel -> saltar al siguiente estado sin bloquear.",
+  "Si el usuario abandona ('déjalo', 'otra cosa', 'no importa') -> scaffoldAbort + buscador con prefill family.",
+  "freno solo: preguntar pastillas, bandas o discos.",
+  "pastas = pastillas. 'pastas de freno' y 'pasta de freno' son pastillas de freno, no otra pieza.",
+  "Categorías oficiales solo de GET /api/v1/general/filter. Nunca inventar ni hardcodear listas.",
+  "Búsqueda de productos: modelo y marca primero. descripcion es último recurso y no decide sola (p. ej. DEL no ancla).",
+  "Consultas libres: GET /api/v1/inventory/products/search. 404 = lista vacía, no error.",
+  "pastas/pastillas/balatas se resuelven contra la categoría real del filter (p. ej. PASTILLA DE FRENO), no contra un diccionario propio."
 ]
 ```
 
@@ -46,7 +91,9 @@ origin: original
 [
   "prepare (normalizar, idioma, calidad)",
   "classifyTurn (continue / switch / aside / fresh / social)",
-  "extractEntities (familias, sin mezclar en switch)",
+  "extractEntities: familia, marca, modelo, año, síntoma. En switch se limpia producto y lastOffers.",
+  "expertReasoning: sinónimos, síntoma → piezas, compatibilidad pide marca/modelo, para qué sirve → explicación corta.",
+  "scaffoldCheck: input genérico de familia sin marca/modelo -> awaitingBrand. Un dato por turno. API al tener family+brand o al abortar con límite 3.",
   "matchers + rank",
   "composeReply + anti-repetición"
 ]
@@ -69,7 +116,7 @@ origin: original
     "paused": ""
   },
   "product": {
-    "keywords": "referencia, ficha, sku, codigo, item, articulo, coincidencia, coincidencias, oem",
+    "keywords": "referencia, sku, codigo, item, articulo, coincidencia, coincidencias, oem",
     "paused": ""
   },
   "parts": {
@@ -77,7 +124,7 @@ origin: original
     "paused": ""
   },
   "namedPart": {
-    "keywords": "ficha, equivalencia, generico, original, compatible, consulta, consultar",
+    "keywords": "equivalencia, generico, original, compatible, consulta, consultar",
     "paused": ""
   },
   "accessory": {
@@ -85,7 +132,7 @@ origin: original
     "paused": ""
   },
   "attention": {
-    "keywords": "asesor, asesoria, comprar, obtener, atencion, ayuda, servicio, asesores, soporte, humano, orientacion",
+    "keywords": "asesor, asesores, asesora, asesoria",
     "paused": ""
   },
   "complaint": {
@@ -101,7 +148,7 @@ origin: original
     "paused": ""
   },
   "location": {
-    "keywords": "direccion, ubicacion, ubicados, donde, sede, local, sucursal, mapa, maps, google, llegar, llego, horario, horarios, visita, visitarnos, medellin, antioquia, colombia, ciudad, encuentran, alpujarra, hora, horas, abre, abren, abierto, abierta, cierra, cierran, atencion",
+    "keywords": "direccion, ubicacion, ubicados, ubicado, llegar, llego, sede, sucursal, local",
     "paused": ""
   },
   "credit": {
@@ -109,7 +156,7 @@ origin: original
     "paused": ""
   },
   "payment": {
-    "keywords": "pago, pagos, pagar, efectivo, transferencia, consignar, consignacion, comprar, obtener, adquirir, medios, nequi, daviplata, bancolombia, cuenta",
+    "keywords": "pago, pagos, pagar, efectivo, transferencia, transferir, consignar, consignacion, medios, nequi, daviplata, bancolombia, cuenta",
     "paused": ""
   },
   "shipping": {
@@ -277,10 +324,10 @@ origin: original
   },
   "catalog": {
     "keywords": "catalogo, productos, surtido, linea, producto, products, catalog, catalogs, catalogos, listado, portafolio, pdf, referencias, inventario, categorias, categoria, lineas",
-    "text": "Veras nuestro catalogo cuenta con productos como: {catalog}. Puedes verlo completo en línea, descargarlo o cotizar con un asesor real al la linea {phone}. Escribe la pieza que buscas y te oriento.",
+    "text": "En el catálogo publicado encuentras {catalog}. Ábrelo en la tienda. Si quieres la lista de precios, descárgala desde tu perfil. Escribe la pieza que buscas y te oriento.",
     "texts": [
-      "Estas son las líneas del catálogo: {catalog}. Elige si lo ves en línea, lo descargas o hablas con un asesor al {phone}. Dime la pieza para afinar.",
-      "El catálogo incluye {catalog}. Puedes abrirlo, descargarlo o pedir cotización por WhatsApp {phone}. ¿Qué pieza necesitas?"
+      "Estas son las líneas del catálogo: {catalog}. Ábrelo en la tienda. Dime la pieza para afinar.",
+      "El catálogo incluye {catalog}. Ábrelo en la tienda. ¿Qué pieza necesitas?"
     ],
     "textsEn": [
       "The published catalog includes {catalog}. You can view it, download the PDF or quote with an advisor at {phone}. Tell me the part you need.",
@@ -290,10 +337,10 @@ origin: original
   },
   "whatsapp": {
     "keywords": "whatsapp, contacto, telefono, celular, correo, email, llamar, escribir, wsp, wa, numero, cel, mail, mensajear, contactanos, comunicarme",
-    "text": "Puedes escribirnos por WhatsApp al {phone} o al correo {email}. {ask}",
+    "text": "Puedes escribirnos por WhatsApp al {phone}. El correo es {email}.",
     "texts": [
-      "WhatsApp {phone} y correo {email} están disponibles. Si ya sabes el producto, indícame marca y modelo para pasar una consulta completa.",
-      "Escríbenos al {phone}"
+      "WhatsApp {phone}. Correo {email}. Si ya sabes el producto, indícame marca y modelo.",
+      "Escríbenos al {phone}."
     ],
     "textsEn": [
       "WhatsApp {phone} and email {email} are available. If you already know the product, send brand and model so the quote is complete.",
@@ -302,10 +349,10 @@ origin: original
     "paused": ""
   },
   "product": {
-    "keywords": "referencia, ficha, sku, codigo, item, articulo, coincidencia, coincidencias, oem",
+    "keywords": "referencia, sku, codigo, item, articulo, coincidencia, coincidencias, oem",
     "text": "Encontré {term} en inventario:\n\n{offer}\n\nSi quieres, Validamos la informacion con un asesor real",
     "texts": [
-      "Para {term} el precio de lista es este:\n\n{offer}\n\nDime marca y modelo si necesitas otra referencia, o escribe al {phone}.",
+      "Para {term} el precio de lista es este:\n\n{offer}\n\nDime marca y modelo si buscas otro producto, o escribe al {phone}.",
       "{term} coincide con {names}.\n\n{offer}\n\nUn asesor real confirma que siga vigente."
     ],
     "textsEn": [
@@ -318,8 +365,8 @@ origin: original
     "keywords": "repuesto, repuestos, pieza, piezas, componente, componentes, recambio, recambios, refaccion, refacciones",
     "text": "Estas son las líneas de repuestos publicadas: {catalog}. {ask} Precio y stock los confirma un asesor al {phone}.",
     "texts": [
-      "En el catálogo están {catalog}. Escribe la pieza que buscas y el vehículo para orientarte, o cotiza con un asesor al {phone}.",
-      "Publicamos {catalog}. Indícame pieza, marca y modelo o elige una de las opciones a continuación."
+      "En el catálogo están {catalog}. Escribe la pieza que buscas y el vehículo para orientarte.",
+      "Publicamos {catalog}. Indícame pieza, marca y modelo."
     ],
     "textsEn": [
       "Published parts lines: {catalog}. Tell me the exact part, brand and model. Price is confirmed at {phone}.",
@@ -328,11 +375,11 @@ origin: original
     "paused": ""
   },
   "namedPart": {
-    "keywords": "ficha, equivalencia, generico, original, compatible, consulta, consultar",
-    "text": "{term} no tiene ficha en este chat, así que no invento datos inprecisos. {ask} .",
+    "keywords": " equivalencia, generico, original, compatible, consulta, consultar",
+    "text": "{term} no tiene referencia en este chat, así que no invento datos. {ask}",
     "texts": [
-      "No ubico una ficha publicada para {term}. {ask} También puedes consultar con un asesor al {phone}.",
-      "{term} no está en el catálogo de este chat. Pásame marca y modelo del vehículo o escríbenos al {phone} para validar la referencia."
+      "No ubico una coincidencia publicada para {term}. {ask} solo un asesor lo puede confirmar via whatsapp {phone}.",
+      "{term} no está en el catálogo de este chat. Pásame marca y modelo del vehículo."
     ],
     "textsEn": [
       "{term} has no card here, so I do not invent price or stock. {ask} An advisor confirms the reference at {phone}.",
@@ -345,7 +392,7 @@ origin: original
     "text": "{term} se consulta con un asesor porque aquí no confirmo ficha, precio ni stock. {ask} WhatsApp {phone}.",
     "texts": [
       "No tengo ficha de {term} en este chat. {ask} Un asesor te confirma disponibilidad al {phone}.",
-      "{term} no está detallado aquí. Indica marca y modelo del vehículo o escribe al {phone}."
+      "{term} no está detallado aquí. Indica marca y modelo del vehículo."
     ],
     "textsEn": [
       "{term} is checked with an advisor. I do not confirm a card, price or stock here. {ask} WhatsApp {phone}.",
@@ -354,11 +401,11 @@ origin: original
     "paused": ""
   },
   "attention": {
-    "keywords": "asesor, asesoria, comprar, obtener, atencion, ayuda, servicio, asesores, soporte, humano, orientacion",
-    "text": "te ayudo con eso, contacta a un asesor al {phone}. el te ayudara a obtener la informacion que necesitas.",
+    "keywords": "asesor, asesores, asesora, asesoria",
+    "text": "Te ayudo con eso. Contacta a un asesor al {phone}; te da la información que necesitas.",
     "texts": [
-      "Con gusto te ayudo. {ask} O habla con un asesor al {phone}.",
-      "Puedo orientarte aquí o pasarte con alguien del equipo al {phone}. {ask}"
+      "Con gusto te ayudo. {ask} Un asesor te atiende al {phone}.",
+      "Puedo orientarte aquí. Si quieres a alguien del equipo, escribe al {phone}. {ask}"
     ],
     "textsEn": [
       "I can help. Tell me the part, brand and model, or write an advisor at {phone}.",
@@ -368,10 +415,10 @@ origin: original
   },
   "complaint": {
     "keywords": "queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, devolucion, inconforme, inconformidad, falla, defectuoso",
-    "text": "Lamentamos el inconveniente. Cuéntame qué pasó (producto, pedido o fecha si los tienes) y te ayudo a dejarlo radicado. También puedes escribir al WhatsApp {phone} o a {email}.",
+    "text": "Lamentamos el inconveniente. Cuéntame qué pasó: producto, pedido y fecha, si los tienes. Te ayudo a dejarlo radicado. También puedes escribir al WhatsApp {phone}. El correo es {email}.",
     "texts": [
-      "Registramos tu molestia. Describe el caso con el mayor detalle que tengas, o envíalo al {phone} / {email} para que un asesor lo atienda.",
-      "Vamos a ayudarte. Cuéntame el problema o contacta {phone} y {email} para dejar constancia."
+      "Registramos tu molestia. Describe el caso con el mayor detalle que tengas. Un asesor lo atiende al {phone}. Correo {email}.",
+      "Vamos a ayudarte. Cuéntame el problema. También puedes escribir a {phone}. Correo {email}."
     ],
     "textsEn": [
       "Sorry about that. Tell me what happened (product, order or date if you have them), or write {phone} / {email}.",
@@ -383,8 +430,8 @@ origin: original
     "keywords": "precio, precios, stock, cotizar, cotizacion, vale, cuesta, disponibilidad, valor, costo, cuanto, tarifa, existencias, cotice",
     "text": "Referencia de {term}: precio y stock publicados (pueden estar desactualizados; un asesor real debe confirmarlos). {ask} WhatsApp {phone}. Catálogo: {catalog}.",
     "texts": [
-      "Sobre {term}: te paso el valor de referencia del inventario. Puede estar desactualizado; valídalo con un asesor al {phone}.",
-      "Hay ficha de {term} con precio y existencias de referencia. Un asesor real confirma el dato vigente al {phone}."
+      "Sobre {term}: te paso el precio de lista del inventario. Puede estar desactualizado; valídalo con un asesor al {phone}.",
+      "Hay ficha de {term} con precio y existencias. Un asesor real confirma el dato vigente al {phone}."
     ],
     "textsEn": [
       "Reference for {term}: published price and stock may be outdated; a real advisor must confirm. {ask} WhatsApp {phone}. Catalog: {catalog}.",
@@ -394,23 +441,23 @@ origin: original
   },
   "vacancy": {
     "keywords": "vacantes, vacante, trabajos, trabajar, empleo, postular, curriculum, hoja",
-    "text": "Las vacantes vigentes están en Trabaja con nosotros. Ahí ves el perfil, los requisitos y puedes postularte. Si quieres orientación, escríbenos al {phone}.",
+    "text": "Si te referías a vacantes para trabajar con nosotros, consulta nuestro landing principal. No puedo darte más información sobre vacantes. ¿Te ayudo con el catálogo, la empresa o el equipo?",
     "texts": [
-      "Revisa las ofertas publicadas en Trabaja con nosotros y postula desde esa sección. También te oriento por WhatsApp {phone}.",
-      "El proceso de empleo está en Trabaja con nosotros. Entra a ver vacantes o escribe al {phone} si tienes una duda puntual."
+      "Si te referías a vacantes para trabajar con nosotros, consulta nuestro landing principal. No puedo darte más información sobre vacantes.",
+      "Este chat no informa vacantes. Consulta el landing principal. ¿Te ayudo con productos, empresa o el equipo?"
     ],
     "textsEn": [
-      "Open roles are in Work with us, with profile and how to apply. I can also help at {phone}.",
-      "Check published offers in Work with us, or write {phone} with a specific question."
+      "For job openings, check the main landing page. I cannot share more vacancy info here.",
+      "This chat does not cover vacancies. See the main landing. I can help with products, the company or the team."
     ],
     "paused": ""
   },
   "location": {
-    "keywords": "direccion, ubicacion, ubicados, donde, sede, local, sucursal, mapa, maps, google, llegar, llego, horario, horarios, visita, visitarnos, medellin, antioquia, colombia, ciudad, encuentran, alpujarra, hora, horas, abre, abren, abierto, abierta, cierra, cierran, atencion",
-    "text": "Estamos en {area}, {region} ({country}), en {address}, {landmark}. Atendemos {hours}.",
+    "keywords": "direccion, ubicacion, ubicados, ubicado, llegar, llego, sede, sucursal, local",
+    "text": "Estamos en {address}.",
     "texts": [
-      "Nuestro local está en {city}, {region} ({country}). Dirección {address}, {landmark}. Horario: {hours}.",
-      "Nos encuentras en {city}, {region}. {address}. {landmark}. Horario {hours}. WhatsApp {phone}."
+      "Estamos en {address}.",
+      "Nuestra dirección es {address}."
     ],
     "textsEn": [
       "Hours are {hours}. We are at {address}. Open the map or ask for directions on WhatsApp {phone}.",
@@ -428,24 +475,85 @@ origin: original
     "paused": ""
   },
   "payment": {
-    "keywords": "pago, pagos, pagar, efectivo, transferencia, consignar, consignacion, comprar, obtener, adquirir, medios, nequi, daviplata, bancolombia, cuenta",
-    "text": "Manejamos pago inmediato con efectivo o transferencia. {bank}, {accountType}, a nombre de {holder}. {accountNumber}.",
+    "keywords": "pago, pagos, pagar, efectivo, transferencia, transferir, consignar, consignacion, medios, nequi, daviplata, bancolombia, cuenta",
+    "text": "Tenemos diversos medios de pago: efectivo, transferencia, y crédito si eres uno de nuestros clientes Premium.",
     "texts": [
-      "Puedes pagar de inmediato en efectivo o por transferencia. Datos: {bank} · {accountType} · {holder}.",
-      "Para comprar: efectivo o transferencia inmediata. Banco {bank}, {accountType}, titular {holder}."
+      "Tenemos diversos medios de pago: efectivo, transferencia, y crédito si eres uno de nuestros clientes Premium.",
+      "Puedes pagar en efectivo, por transferencia, o a crédito si ya eres cliente Premium."
     ],
     "paused": ""
   },
   "shipping": {
     "keywords": "envio, envios, enviar, domicilio, domicilios, despacho, contraentrega",
-    "text": "Hacemos envíos a todo el país. Envío gratis en el {cityScope} si la compra es mayor a ${freeMetroFrom} COP. También hacemos envíos el mismo día y seguros hasta la puerta.",
+    "text": "Hacemos envíos a todo el país. En el {cityScope} el domicilio es gratis desde ${freeMetroFrom} COP. En compras menores, el valor del domicilio depende de la ubicación.",
     "texts": [
-      "Enviamos a todo el país. En el {cityScope} el envío es gratis en compras mayores a ${freeMetroFrom} COP. Hay envíos el mismo día y seguros hasta la puerta.",
-      "Domicilios a nivel nacional. Gratis en el {cityScope} desde ${freeMetroFrom} COP. Mismo día y entrega segura en la puerta."
+      "Enviamos a todo el país. En el {cityScope} el domicilio es gratis desde ${freeMetroFrom} COP. En montos menores, el valor depende de la ubicación.",
+      "Domicilios a nivel nacional. Gratis en el {cityScope} desde ${freeMetroFrom} COP. Si la compra es menor, el valor se calcula según la ubicación."
     ],
     "textsEn": [
-      "We ship nationwide. Free shipping in the {cityScope} on purchases over ${freeMetroFrom} COP. Same-day and door-safe delivery.",
-      "Nationwide delivery. Free in the {cityScope} from ${freeMetroFrom} COP. Same day to your door."
+      "We ship nationwide. Free shipping in the {cityScope} on purchases over ${freeMetroFrom} COP. Below that, the fee depends on location.",
+      "Nationwide delivery. Free in the {cityScope} from ${freeMetroFrom} COP. Smaller purchases: shipping depends on location."
+    ],
+    "paused": ""
+  },
+  "symptomGuidance": {
+    "keywords": "no frena, hace ruido, no arranca, se apaga, pierde fuerza, vibra, se calienta, patina, pierde aceite",
+    "text": "Entiendo el síntoma. Para {symptom}, lo más probable es que necesites revisar {candidates}. ¿Me confirmas marca y modelo del vehículo para filtrar el inventario?",
+    "texts": [
+      "Con {symptom} suelen estar involucrados: {candidates}. Pásame marca + modelo y te muestro opciones.",
+      "Por lo que describes ({symptom}), revisa primero: {candidates}. Dime marca y modelo para consultar."
+    ],
+    "paused": ""
+  },
+  "compatibilityAsk": {
+    "keywords": "sirve para, es compatible, le queda, funciona en",
+    "text": "Para confirmar compatibilidad necesito marca, modelo y año del vehículo. ¿Me los pasas?",
+    "texts": [
+      "Antes de afirmar compatibilidad, dime marca + modelo + año.",
+      "Necesito marca, modelo y año para verificar que la pieza sea compatible."
+    ],
+    "paused": ""
+  },
+  "explainPart": {
+    "keywords": "para que sirve, que hace, que es",
+    "text": "{part} sirve para {function}. Si quieres, te muestro referencias disponibles; dime marca y modelo del vehículo.",
+    "texts": [
+      "{part}: {function}. Puedo mostrarte fichas si me das marca y modelo.",
+      "Te explico: {part} cumple la función de {function}. ¿Buscas una referencia concreta?"
+    ],
+    "paused": ""
+  },
+  "scaffoldAskBrand": {
+    "keywords": "",
+    "text": "Perfecto, manejamos {family}. ¿Para qué marca de vehículo lo necesitas?",
+    "texts": [
+      "Claro, tenemos {family}. ¿De qué marca es tu vehículo?",
+      "{family}: buen dato. ¿Para qué marca lo buscas?"
+    ],
+    "paused": ""
+  },
+  "scaffoldAskModel": {
+    "keywords": "",
+    "text": "Bien, {family} para {brand}. ¿Qué modelo es?",
+    "texts": [
+      "{family} para {brand}: ¿qué modelo?",
+      "Perfecto. ¿Qué modelo de {brand} tienes?"
+    ],
+    "paused": ""
+  },
+  "scaffoldAskYear": {
+    "keywords": "",
+    "text": "¿De qué año aproximado es tu {brand} {model}? (opcional, puedes omitirlo)",
+    "texts": [
+      "¿Año del {brand} {model}? Si no sabes, seguimos."
+    ],
+    "paused": ""
+  },
+  "scaffoldAbort": {
+    "keywords": "",
+    "text": "Sin problema. Te dejo el buscador abierto con todo, o escríbeme un término más específico cuando quieras.",
+    "texts": [
+      "Ok, lo dejamos abierto. Aquí sigo si quieres afinar."
     ],
     "paused": ""
   },
@@ -1013,6 +1121,8 @@ origin: original
     "frenos",
     "guantes",
     "llantas",
+    "pasta",
+    "pastas",
     "pastiya",
     "pastiyas",
     "pinhon",
@@ -1061,6 +1171,8 @@ origin: original
     "frenos": "freno",
     "guantes": "guante",
     "llantas": "llanta",
+    "pasta": "pastilla",
+    "pastas": "pastilla",
     "pastiya": "pastilla",
     "pastiyas": "pastilla",
     "pinhon": "pinon",
@@ -1112,7 +1224,9 @@ origin: original
     "aseror": "asesor",
     "asesorres": "asesores",
     "llantra": "llanta",
-    "llantras": "llanta"
+    "llantras": "llanta",
+    "pasta": "pastilla",
+    "pastas": "pastilla"
   },
   "complaintLock": [
     "queja",
@@ -1272,25 +1386,14 @@ origin: original
     "complaint"
   ],
   "locationCues": [
-    "donde",
     "ubicacion",
     "ubicados",
     "ubicado",
-    "ciudad",
-    "encuentran",
-    "encuentra",
-    "local",
-    "sucursal",
-    "sede",
     "direccion",
-    "mapa",
-    "alpujarra",
-    "medellin",
-    "horario",
-    "horarios",
-    "abren",
-    "abre",
-    "abierto"
+    "llegar",
+    "llego",
+    "sede",
+    "sucursal"
   ],
   "hourWords": [
     "hora",
@@ -1792,12 +1895,12 @@ origin: original
     "phoneDisplay": "+57 312 614 95527",
     "email": "comercial@importadorapremium.com",
     "addressLabel": "Dirección",
-    "address": "Carrera 51 # 40 - 22",
+    "address": "Calle 41 # 51 - 11 local 115, 116",
     "city": "Medellín",
     "region": "Antioquia",
     "country": "Colombia",
     "area": "el centro de Medellín",
-    "landmark": "a media cuadra de la estación Alpujarra del Metro de Medellín",
+    "landmark": "locales 115 y 116",
     "hoursWeekdays": "Lunes a viernes: 8:00 a. m. a 6:00 p. m.",
     "hoursSaturday": "Sábados: 8:00 a. m. a 3:00 p. m.",
     "hoursDisplay": "Lunes a viernes de 8:00 a. m. a 6:00 p. m. y sábados de 8:00 a. m. a 3:00 p. m.",
@@ -1834,10 +1937,29 @@ origin: original
   },
   "shipping": {
     "nationwide": true,
-    "freeMetroFrom": "250.000",
+    "freeMetroFrom": "700.000",
     "sameDay": true,
     "doorSafe": true,
     "cityScope": "área metropolitana"
+  },
+  "partKnowledge": {
+    "pastillas": "Elemento de fricción que presiona el disco o tambor para detener la rueda. Se desgasta con el uso.",
+    "disco": "Superficie metálica que gira con la rueda y es frenada por las pastillas.",
+    "mordaza": "Pinza hidráulica que empuja las pastillas contra el disco.",
+    "llanta": "Neumático que hace contacto con el suelo y brinda agarre, amortiguación y tracción.",
+    "rin": "Estructura metálica que sostiene la llanta y se fija al eje.",
+    "cadena": "Elemento que transmite la fuerza del motor a la rueda trasera en motos.",
+    "corona": "Piñón trasero que recibe la cadena y transmite el movimiento a la rueda.",
+    "pinon": "Piñón delantero que sale de la caja y empuja la cadena.",
+    "aceite": "Lubricante que reduce fricción, refrigera y limpia internamente el motor.",
+    "amortiguador": "Elemento que controla el rebote de la suspensión y mejora la estabilidad.",
+    "barras": "Tubos telescópicos de la horquilla delantera que absorben impactos.",
+    "eje": "Barra que centra la rueda y transmite torque.",
+    "ramal": "Arnés de cables que conecta los componentes eléctricos.",
+    "bateria": "Acumulador que suministra energía eléctrica al vehículo.",
+    "bujia": "Elemento que genera la chispa para encender la mezcla en el motor.",
+    "filtro": "Elemento que retiene impurezas del aceite, aire o combustible.",
+    "clutch": "Sistema que conecta y desconecta el motor de la transmisión."
   },
   "catalogLines": [
     {

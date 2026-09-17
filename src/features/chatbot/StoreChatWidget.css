@@ -5,7 +5,12 @@
   flex-direction: column;
   position: fixed;
   right: 18px;
+  transition: right 0.25s ease;
   z-index: 40;
+}
+
+.landing--drawer-open .landing-chat {
+  right: calc(min(410px, 100vw) + 18px);
 }
 
 .landing-chat__launcher,
@@ -279,12 +284,28 @@
   text-align: right;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .landing-chat {
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    right: 12px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: 21px;
+    z-index: 16;
   }
 
+  .landing-chat--open {
+    z-index: 40;
+  }
+
+  .landing--drawer-open .landing-chat {
+    right: calc(min(410px, 100vw) + 21px);
+  }
+
+  .landing-chat__launcher-mark {
+    height: clamp(44px, 12vw, 52px);
+    width: clamp(44px, 12vw, 52px);
+  }
+}
+
+@media (max-width: 520px) {
   .landing-chat__form {
     flex-wrap: wrap;
   }
@@ -296,10 +317,5 @@
 
   .landing-chat__panel {
     width: min(360px, calc(100vw - 16px));
-  }
-
-  .landing-chat__launcher-mark {
-    height: 72px;
-    width: 72px;
   }
 }

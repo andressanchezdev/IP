@@ -6,7 +6,7 @@ import { scoreMatch } from './matchIntent'
 import type { EntityMap, SessionContext } from './sessionContext'
 import type { PipelineConfig } from './pipelineConfig'
 import { isTeamNameLookupAllowed, parseUserFrame } from './userFrame'
-import { isBroadPriceAsk, isCreditAsk, isPaymentAsk, isShippingAsk, isOrderStatusAsk, isComplaintAsk, isBrandLineAsk } from './conversationThread'
+import { isBroadPriceAsk, isCreditAsk, isPaymentAsk, isShippingAsk, isOrderStatusAsk, isComplaintAsk, isReturnsAsk, isBrandLineAsk, isCatalogFindAsk, isVacancyAsk, isProductSeekingAsk, hasVehicleHint, isLocationAsk, isHoursAsk, isAdvisorAsk, isExecutiveAsk } from './conversationThread'
 import { pickLastOffer } from './inventory'
 
 export type Candidate = {
@@ -80,6 +80,7 @@ export function runAllMatchers(
   const teamTokens = frame.lookupTokens.length ? frame.lookupTokens : tokens
 
   const team = runSafe('teamMember', () => {
+    if (isExecutiveAsk(tokens, raw)) return null
     const match = matchLandingTeam(allowNames ? tokens : teamTokens, {
       allowNameLookup: allowNames,
       excludeNames: frame.introducingSelf ? [frame.userName] : [],
@@ -94,6 +95,7 @@ export function runAllMatchers(
   const picking = Boolean(pickLastOffer(ctx, tokens, raw))
 
   const product = runSafe('product', () => {
+    if (isReturnsAsk(tokens, raw) || isComplaintAsk(tokens, raw) || isExecutiveAsk(tokens, raw)) return null
     if (picking) {
       return {
         intent: 'product',
@@ -115,16 +117,26 @@ export function runAllMatchers(
         matchedTokens: ['freno'],
       }
     }
+    const vehicle = hasVehicleHint(tokens, raw)
     const hits = matchingProductsForTokens(tokens)
     const term = findTerm(tokens, liveCatalogParts()) || findTerm(tokens, keywordsOf('product'))
-    if (!hits.length && !hasProductTerm(tokens) && !term) return null
-    if (!hits.length) return null
+    if (!hits.length && !hasProductTerm(tokens) && !term && !vehicle) return null
+    if (!hits.length && !vehicle) return null
+    if (!hits.length && vehicle) {
+      return {
+        intent: 'product',
+        score: applyModifiers(8, 'product', [...tokens.slice(0, 4)], ctx, hasQuestion, veryShort, cfg),
+        entities: ctx.entities,
+        matchedTokens: [...tokens.slice(0, 4)],
+      }
+    }
     const scored = scoreMatch(tokens, [...liveCatalogParts(), ...keywordsOf('product')])
     const score = applyModifiers(Math.max(scored.score, hits.length ? 5 : 0), 'product', scored.matched, ctx, hasQuestion, veryShort, cfg)
     return { intent: 'product', score, entities: ctx.entities, matchedTokens: scored.matched }
   })
 
   const accessory = runSafe('accessory', () => {
+    if (isReturnsAsk(tokens, raw) || isComplaintAsk(tokens, raw)) return null
     if (isCreditAsk(tokens, raw) || isPaymentAsk(tokens, raw)) return null
     const term = findTerm(tokens, liveAccessoryTerms())
     if (!term) return null
@@ -138,7 +150,9 @@ export function runAllMatchers(
   })
 
   const namedPart = runSafe('namedPart', () => {
+    if (isReturnsAsk(tokens, raw) || isComplaintAsk(tokens, raw)) return null
     if (isCreditAsk(tokens, raw) || isPaymentAsk(tokens, raw)) return null
+    if (isCatalogFindAsk(tokens, raw) || hasVehicleHint(tokens, raw)) return null
     if (matchingProductsForTokens(tokens).length) return null
     const term = findTerm(tokens, liveOtherParts()) || findTerm(tokens, keywordsOf('namedPart'))
     if (!term) return null
@@ -151,20 +165,61 @@ export function runAllMatchers(
     }
   })
 
+  const returns = runSafe('returns', () => {
+    if (isComplaintAsk(tokens, raw)) return null
+    if (!isReturnsAsk(tokens, raw)) return null
+    const matched = tokens.filter((token) =>
+      ['devolver', 'devolucion', 'devoluciones', 'cambios', 'cambiarlo', 'cambiarla', 'cambiar', 'reembolso', 'sirvio', 'equivocaron', 'referencia'].includes(token),
+    )
+    return {
+      intent: 'returns',
+      score: applyModifiers(Math.max(9, matched.length ? 9 : 7), 'returns', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
+      entities: ctx.entities,
+      matchedTokens: matched.length ? matched : [...tokens.slice(0, 2)],
+    }
+  })
+
+  const location = runSafe('location', () => {
+    if (!isLocationAsk(tokens, raw) && !isHoursAsk(tokens, raw)) return null
+    const matched = tokens.filter((token) =>
+      ['donde', 'ubicacion', 'ubicados', 'ubicado', 'direccion', 'llegar', 'llego', 'local', 'sede', 'sucursal', 'horario', 'horarios', 'abren', 'cierran'].includes(token),
+    )
+    return {
+      intent: 'location',
+      score: applyModifiers(9, 'location', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
+      entities: ctx.entities,
+      matchedTokens: matched.length ? matched : [...tokens.slice(0, 2)],
+    }
+  })
+
+  const attention = runSafe('attention', () => {
+    if (!isAdvisorAsk(tokens, raw)) return null
+    const matched = tokens.filter((token) =>
+      ['asesor', 'asesora', 'asesores', 'asesoria', 'hablar', 'persona', 'humano', 'real', 'contactar'].includes(token),
+    )
+    return {
+      intent: 'attention',
+      score: applyModifiers(9, 'attention', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
+      entities: ctx.entities,
+      matchedTokens: matched.length ? matched : [...tokens.slice(0, 2)],
+    }
+  })
+
   const complaint = runSafe('complaint', () => {
     if (!isComplaintAsk(tokens, raw)) return null
     const matched = tokens.filter((token) =>
-      ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr', 'molestia', 'garantia', 'devolucion', 'inconforme', 'inconformidad', 'defectuoso'].includes(token),
+      ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr', 'molestia', 'garantia', 'devolucion', 'inconforme', 'inconformidad', 'defectuoso', 'llanta', 'indicada'].includes(token),
     )
     return {
       intent: 'complaint',
-      score: applyModifiers(Math.max(8, matched.length ? 8 : 5), 'complaint', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
+      score: applyModifiers(9, 'complaint', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
       entities: ctx.entities,
       matchedTokens: matched.length ? matched : [...tokens.slice(0, 2)],
     }
   })
 
   const quote = runSafe('quote', () => {
+    if (isReturnsAsk(tokens, raw) || isComplaintAsk(tokens, raw)) return null
     if (isCreditAsk(tokens, raw) || isPaymentAsk(tokens, raw) || isOrderStatusAsk(tokens, raw)) return null
     const scored = scoreMatch(tokens, keywordsOf('quote', defaultKeywords('quote')))
     if (!scored.score) return null
@@ -229,13 +284,15 @@ export function runAllMatchers(
   })
 
   const vacancy = runSafe('vacancy', () => {
+    if (isProductSeekingAsk(tokens, raw)) return null
     const matched = tokens.filter((token) => (VACANCY_EXACT_WORDS as readonly string[]).includes(token))
-    if (!matched.length) return null
+    if (!matched.length && !isVacancyAsk(tokens, raw)) return null
+    if (!isVacancyAsk(tokens, raw)) return null
     return {
       intent: 'vacancy',
-      score: applyModifiers(8, 'vacancy', matched, ctx, hasQuestion, veryShort, cfg),
+      score: applyModifiers(8, 'vacancy', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
       entities: ctx.entities,
-      matchedTokens: matched,
+      matchedTokens: matched.length ? matched : [...tokens.slice(0, 2)],
     }
   })
 
@@ -243,15 +300,7 @@ export function runAllMatchers(
     .filter((intent) => intent.id !== 'greeting' && intent.id !== 'vacancy')
     .map((intent) =>
       runSafe(intent.id, () => {
-        if (['complaint', 'quote', 'accessory', 'credit', 'payment', 'shipping', 'orderStatus'].includes(intent.id)) return null
-        if (intent.id === 'attention' && (isCreditAsk(tokens, raw) || isPaymentAsk(tokens, raw) || isShippingAsk(tokens, raw) || isOrderStatusAsk(tokens, raw))) return null
-        if (
-          intent.id === 'location' &&
-          (isOrderStatusAsk(tokens, raw) ||
-            tokens.some((token) => (VACANCY_EXACT_WORDS as readonly string[]).includes(token)))
-        ) {
-          return null
-        }
+        if (['complaint', 'returns', 'quote', 'accessory', 'credit', 'payment', 'shipping', 'orderStatus', 'location', 'attention'].includes(intent.id)) return null
         if (intent.id === 'company' && isBrandLineAsk(tokens, raw)) {
           return {
             intent: 'company',
@@ -260,6 +309,9 @@ export function runAllMatchers(
             matchedTokens: ['marcas'],
           }
         }
+        if (intent.id === 'whatsapp' && isPaymentAsk(tokens, raw)) return null
+        if (intent.id === 'catalog' && isPaymentAsk(tokens, raw)) return null
+        if (intent.id === 'person' && isExecutiveAsk(tokens, raw)) return null
         if (
           intent.id === 'whatsapp' &&
           wantsAdvisorContact(tokens) &&
@@ -267,15 +319,16 @@ export function runAllMatchers(
         ) {
           return null
         }
-        if (
-          intent.id === 'location' &&
-          wantsAdvisorContact(tokens) &&
-          !tokens.some((token) =>
-            ['direccion', 'ubicacion', 'ubicados', 'sede', 'local', 'sucursal', 'mapa', 'maps', 'horario', 'horarios', 'hora', 'horas', 'abre', 'abren', 'abierto', 'cierra', 'cierran', 'medellin', 'ciudad', 'encuentran', 'alpujarra', 'llegar'].includes(token),
-          )
-        ) {
-          return null
+        if (intent.id === 'catalog' && isCatalogFindAsk(tokens, raw) && !hasVehicleHint(tokens, raw)) {
+          const scored = scoreMatch(tokens, intent.keywords)
+          return {
+            intent: 'catalog',
+            score: applyModifiers(Math.max(scored.score, 8), 'catalog', scored.matched.length ? scored.matched : ['productos'], ctx, hasQuestion, veryShort, cfg),
+            entities: ctx.entities,
+            matchedTokens: scored.matched.length ? scored.matched : ['productos'],
+          }
         }
+        if (intent.id === 'catalog' && hasVehicleHint(tokens, raw)) return null
         const scored = scoreMatch(tokens, intent.keywords)
         if (!scored.score) return null
         return {
@@ -298,7 +351,7 @@ export function runAllMatchers(
     }
   })
 
-  return [team, product, accessory, namedPart, complaint, quote, credit, payment, shipping, orderStatus, vacancy, ...chatOnes, greeting].filter(
+  return [team, returns, location, attention, product, accessory, namedPart, complaint, quote, credit, payment, shipping, orderStatus, vacancy, ...chatOnes, greeting].filter(
     (item): item is Candidate => Boolean(item && item.score > 0),
   )
 }
@@ -363,8 +416,14 @@ export function areCompatible(left: string, right: string) {
   return isSecondaryIntent(left) || isSecondaryIntent(right) || COMPATIBLE.has(`${left}+${right}`)
 }
 
-export function shouldDisambiguate(ranked: RankedIntents, cfg: PipelineConfig) {
+export function shouldDisambiguate(ranked: RankedIntents, cfg: PipelineConfig, tokens: readonly string[] = [], raw = '') {
   if (!ranked.top1 || !ranked.top2) return false
   if (areCompatible(ranked.top1.intent, ranked.top2.intent)) return false
+  if (
+    (ranked.top1.intent === 'attention' || ranked.top2.intent === 'attention') &&
+    !isAdvisorAsk(tokens, raw)
+  ) {
+    return false
+  }
   return ranked.delta < cfg.DELTA_EMPATE
 }

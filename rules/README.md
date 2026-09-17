@@ -1,7 +1,7 @@
-# Guía de Reglas de Cursor
+# Guía de Reglas de Cursor""
 @agent/agent-token-efficiency.mdc
 @agent/agent-scope.mdc
-@react/react-state-management.mdc
+@react/react-state-management.mdc""
 
 Este directorio contiene reglas que el agente de Cursor seguirá automáticamente para trabajar de forma más eficiente y sin perder el enfoque.
 
