@@ -22,6 +22,7 @@ export function useStorePageActions({
   clearCommittedProductSearch,
   setSearchValue,
   clearFilters,
+  clearBotFiltersOnSearch,
   hasActiveFilters,
   isAuthenticated,
   openAuthModal,
@@ -37,8 +38,8 @@ export function useStorePageActions({
   }, [openOrderDrawer])
 
   const handleOrderProduct = useCallback(async (productId, quantity) => {
-    const product = products.find((item) => item.id === productId)
-    const result = await addToCart(productId, quantity)
+    const product = products.find((item) => String(item.id) === String(productId))
+    const result = await addToCart(productId, quantity, product)
 
     if (!result?.success) {
       showToast(result?.error || 'No se pudo agregar al carrito', 'error')
@@ -71,8 +72,10 @@ export function useStorePageActions({
     if (!isStoreView) {
       return
     }
+    // Filtro del bot: se limpia al buscar en la barra. Filtro manual del usuario: se conserva.
+    clearBotFiltersOnSearch?.()
     submitProductSearch()
-  }, [isStoreView, submitProductSearch])
+  }, [isStoreView, clearBotFiltersOnSearch, submitProductSearch])
 
   const handleClearSearch = useCallback(() => {
     if (!isStoreView) {

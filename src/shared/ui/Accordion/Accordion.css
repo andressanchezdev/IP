@@ -2,7 +2,10 @@
   background: var(--color-bg-surface);
   border-radius: 10px;
   border: 1px solid var(--color-border);
+  box-sizing: border-box;
+  max-width: 100%;
   overflow: hidden;
+  width: 100%;
 }
 
 .accordion__icon {
@@ -15,16 +18,26 @@
   height: 22px;
   justify-content: center;
   line-height: 1;
+  pointer-events: none;
   width: 22px;
 }
 
 .accordion__panel {
-  font-weight: 600;
-  margin-top: 1px;
   display: flex;
   flex-direction: column;
+  font-weight: 600;
   gap: 0px;
+  margin-top: 1px;
+  min-width: 0;
+  overflow: visible;
   padding: 0 12px 12px;
+  position: relative;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+}
+
+.accordion--open .accordion__trigger {
+  border-bottom: 1px solid var(--color-border);
 }
 
 .accordion__title {
@@ -36,6 +49,7 @@
   align-items: center;
   background: transparent;
   border: none;
+  box-sizing: border-box;
   color: var(--drawer-color, var(--color-text-primary));
   cursor: pointer;
   display: flex;
@@ -43,8 +57,13 @@
   font-weight: var(--drawer-fw, 600);
   gap: 8px;
   justify-content: space-between;
+  margin: 0;
+  max-width: 100%;
+  min-height: 44px;
   padding: 10px 12px;
   text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   width: 100%;
 }
 
@@ -52,6 +71,82 @@
   background: var(--color-bg-page);
 }
 
-.accordion--open .accordion__trigger {
-  border-bottom: 1px solid var(--color-border);
+@media (max-width: 768px) {
+  .accordion {
+    align-self: stretch;
+    box-sizing: border-box;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .accordion.accordion--open {
+    overflow: visible;
+  }
+
+  .accordion__trigger {
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    width: 100%;
+  }
+
+  .accordion__icon {
+    font-size: 18px;
+    height: 28px;
+    width: 28px;
+  }
+
+  .accordion__panel {
+    padding: 0 10px 10px;
+    pointer-events: auto;
+  }
+
+  .accordion__panel .accordion {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 480px) {
+  .accordion__trigger {
+    font-size: 12px;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .accordion__icon {
+    font-size: 16px;
+    height: 26px;
+    width: 26px;
+  }
+
+  .accordion__panel {
+    gap: 8px;
+    padding: 4px 10px 12px;
+  }  
+
+  .accordion__panel label,
+  .accordion__panel input,
+  .accordion__panel button,
+  .accordion__panel select,
+  .accordion__panel textarea {
+    max-width: 100%;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 360px) {
+  .accordion__trigger {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  .accordion__panel {
+    padding: 4px 8px 14px;
+  }
 }

@@ -12,7 +12,7 @@ import { CatalogView } from './views/CatalogView'
 import { HistoryView } from './views/HistoryView'
 import { PendingOrdersView } from './views/PendingOrdersView'
 import { ProductDetailModal } from '@/features/catalog/components/ProductDetailModal/ProductDetailModal'
-import { StoreChatWidget } from '@/features/chatbot'
+import { StoreChatWidget, takePendingChatBulk } from '@/features/chatbot'
 import './StorePage.css'
 
 export function StorePage() {
@@ -33,7 +33,7 @@ export function StorePage() {
     pendingCheckout,
     pendingEsperaView,
   } = useAuth()
-  const { cartItems, addToCart } = useCart()
+  const { cartItems, addToCart, refreshCartFromApi } = useCart()
   const {
     pendingOrders,
     historyOrders,
@@ -49,6 +49,7 @@ export function StorePage() {
     filters,
     filterModes,
     clearFilters,
+    clearBotFiltersOnSearch,
     filterNuevos,
     setFilterNuevos,
     filterPromociones,
@@ -74,6 +75,9 @@ export function StorePage() {
   const { showToast } = useToast()
   const [historyPaymentFilter, setHistoryPaymentFilter] = useState('')
   const [historyStatusFilter, setHistoryStatusFilter] = useState('')
+  const [profileLaunchView, setProfileLaunchView] = useState(null)
+  const [viewCue, setViewCue] = useState({ search: 0, catalog: 0 })
+  const catalogViewRef = useRef(null)
 
   const {
     isStoreView,
@@ -138,6 +142,7 @@ export function StorePage() {
     clearCommittedProductSearch,
     setSearchValue,
     clearFilters,
+    clearBotFiltersOnSearch,
     hasActiveFilters,
     isAuthenticated,
     openAuthModal,
@@ -191,6 +196,7 @@ export function StorePage() {
   const handleCatalogSearch = useCallback((query) => {
     const next = String(query || '').trim()
     if (!next) return
+    setViewCue((current) => ({ ...current, search: Date.now() }))
     if (activeView !== 'tienda') {
       pendingCatalogDriveRef.current = { type: 'search', query: next }
       navigateToView('tienda')
@@ -218,6 +224,113 @@ export function StorePage() {
     applyFiltersDirect(next)
     clearCommittedProductSearch()
   }, [activeView, navigateToView, applyFiltersDirect, clearCommittedProductSearch])
+
+  const handleOpenBulkUpload = useCallback(() => {
+    setProfileLaunchView('bulk-upload')
+    openDrawer('profile')
+  }, [openDrawer])
+
+  const handleDownloadTemplate = useCallback(async () => {
+    try {
+      const { downloadOfficialExcelTemplate } = await import('@/features/profile/lib/productExcel')
+      await downloadOfficialExcelTemplate()
+      showToast('Plantilla descargada', 'success')
+    } catch (error) {
+      showToast(error?.message || 'No se pudo descargar la plantilla', 'error')
+    }
+  }, [showToast])
+
+  const handleChatAddToCart = useCallback(async (row) => {
+    const productId = row?.id
+    const quantity = Number(row?.cantidad) || 1
+    const result = await addToCart(productId, quantity, {
+      id: productId,
+      stock: row?.stock,
+      precio: row?.precio,
+      price: row?.precio,
+    })
+    if (!result?.success) {
+      if (result?.needsAuth) {
+        openAuthModal()
+      }
+      showToast(result?.error || 'No se pudo agregar al carrito', 'error')
+      return
+    }
+    showToast('Producto agregado al carrito', 'success')
+  }, [addToCart, openAuthModal, showToast])
+
+  const handleChatBulkCommit = useCallback(async () => {
+    const token = tokenAccess
+    if (!token) {
+      openAuthModal()
+      showToast('Inicia sesión para enviar al carrito', 'error')
+      return
+    }
+    try {
+      const pending = takePendingChatBulk()
+      if (!pending?.comparison) {
+        showToast('No hay un Excel pendiente para enviar', 'error')
+        return
+      }
+      const { submitBulkOrderSelection } = await import('@/features/profile/api/bulkContinue')
+      const result = await submitBulkOrderSelection({
+        results: pending.comparison.results || [],
+        onlyOk: false,
+        token,
+        getExistingQty: (productId) => {
+          const existing = cartItems.find((item) => String(item.id) === String(productId))
+          return existing ? Number(existing.quantity) || 0 : 0
+        },
+      })
+      if (result.emptySelection || result.posted.length === 0) {
+        showToast('No se pudo agregar ningún producto al carrito', 'error')
+        return
+      }
+      await refreshCartFromApi()
+      showToast(`${result.posted.length} producto(s) al carrito`, 'success')
+    } catch (error) {
+      showToast(error?.message || 'No se pudo agregar al carrito', 'error')
+    }
+  }, [tokenAccess, openAuthModal, showToast, cartItems, refreshCartFromApi])
+
+  const handleChatFocusSearch = useCallback(() => {
+    if (isStoreView) {
+      showToast('Ya se encuentra viendo el catálogo', 'success')
+    }
+    setViewCue((current) => ({ ...current, search: Date.now() }))
+  }, [isStoreView, showToast])
+
+  const handleChatOpenStore = useCallback(() => {
+    const already = isStoreView
+    handleOpenCatalog()
+    if (filterDrawerOpen) {
+      closeDrawer()
+    }
+    if (already) {
+      setViewCue((current) => ({ ...current, catalog: Date.now() }))
+    }
+    return already
+  }, [isStoreView, handleOpenCatalog, filterDrawerOpen, closeDrawer])
+
+  useEffect(() => {
+    if (!viewCue.catalog) {
+      return undefined
+    }
+    const node = catalogViewRef.current
+    if (!node) {
+      return undefined
+    }
+    node.classList.remove('landing__view--cue')
+    void node.offsetWidth
+    node.classList.add('landing__view--cue')
+    const timer = window.setTimeout(() => {
+      node.classList.remove('landing__view--cue')
+    }, 600)
+    return () => {
+      window.clearTimeout(timer)
+      node.classList.remove('landing__view--cue')
+    }
+  }, [viewCue.catalog])
 
   useEffect(() => {
     const pending = pendingCatalogDriveRef.current
@@ -309,6 +422,7 @@ export function StorePage() {
           searchAriaLabel={headerSearch.ariaLabel}
           onClearSearch={handleClearSearch}
           canClearSearch={isStoreView ? hasSearchValue || hasActiveFilters : hasSearchValue}
+          searchCue={viewCue.search}
           onFilter={() => {
             openDrawer('filter')
           }}
@@ -341,7 +455,7 @@ export function StorePage() {
         />
 
         <main className="landing__content">
-          <div className="landing__view">
+          <div className="landing__view" ref={catalogViewRef}>
             {renderContent()}
           </div>
         </main>
@@ -351,14 +465,21 @@ export function StorePage() {
       <StoreChatWidget
         onLogin={() => openAuthModal()}
         onOpenPriceList={() => openDrawer('profile')}
-        onOpenStore={() => {
-          handleOpenCatalog()
-          if (filterDrawerOpen) closeDrawer()
-        }}
+        onOpenStore={handleChatOpenStore}
+        onFocusSearch={handleChatFocusSearch}
         onCatalogSearch={handleCatalogSearch}
         onCatalogFilter={handleCatalogFilter}
+        onOpenBulkUpload={handleOpenBulkUpload}
+        onOpenCart={() => openDrawer('cart')}
+        onDownloadTemplate={handleDownloadTemplate}
+        onChatAddToCart={handleChatAddToCart}
+        onChatBulkCommit={handleChatBulkCommit}
+        onRefreshCart={() => { void refreshCartFromApi() }}
       />
-      <AppDrawer />
+      <AppDrawer
+        profileLaunchView={profileLaunchView}
+        onProfileLaunchConsumed={() => setProfileLaunchView(null)}
+      />
 
       <AuthModal
         isOpen={authModalOpen}

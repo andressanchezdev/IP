@@ -37,14 +37,36 @@ function mapPrecio(product) {
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0
 }
 
-/** id de inventario: `id` | `id_producto` (cursor `last_id` y cards). */
-export function getCatalogProductId(product) {
-  const value = product?.id ?? product?.id_producto ?? product?.idProducto
+/** Descarta sentinels (vacío, 0, -1) que algunos listados mandan en `id`. */
+export function isUsableProductId(value) {
   if (value == null || value === '') {
-    return null
+    return false
   }
   const text = String(value).trim()
-  return text && text !== 'undefined' && text !== 'null' ? text : null
+  if (!text || text === 'undefined' || text === 'null' || text === '-1') {
+    return false
+  }
+  const numeric = Number(text)
+  if (Number.isFinite(numeric) && numeric <= 0) {
+    return false
+  }
+  return true
+}
+
+/** id de inventario usable: `id_producto` / `id` (ignora -1 y 0). */
+export function getCatalogProductId(product) {
+  const candidates = [
+    product?.id_producto,
+    product?.idProducto,
+    product?.id,
+  ]
+  for (const value of candidates) {
+    if (!isUsableProductId(value)) {
+      continue
+    }
+    return String(value).trim()
+  }
+  return null
 }
 
 /**

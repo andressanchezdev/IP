@@ -160,7 +160,10 @@ export function useStorePageFilters({
     const controller = new AbortController()
     let cancelled = false
     const search = committedProductSearch
-    const searchQuery = searchTextFromQuery(search) || search
+    const exactCode = !search.includes(' ')
+      && /^[A-Za-z0-9\-_]+$/.test(search)
+      && /[0-9]/.test(search)
+    const searchQuery = exactCode ? search : (searchTextFromQuery(search) || search)
 
     beginCatalogSearch?.()
 

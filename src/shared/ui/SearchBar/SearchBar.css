@@ -20,13 +20,13 @@
   display: inline-flex;
   flex-shrink: 0;
   font-size: 18px;
-  height: 28px;
+  height: 50px;
   justify-content: center;
   line-height: 1;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease, background 0.15s ease;
-  width: 28px;
+  width: 50px;
 }
 
 .search-bar__clear:not(:disabled) {

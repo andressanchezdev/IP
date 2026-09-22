@@ -3,15 +3,7 @@ import { useAuth, useCart } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { getApiAuthToken } from '@/shared/api'
 import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
-import {
-  MIN_PRODUCT_CODES,
-  parseAndValidateProductExcelFile,
-} from '@/features/profile/lib/productExcel'
-import {
-  compareOrderWithStock,
-  fetchStockByCodes,
-} from '@/features/profile/api/bulkOrderApi'
-import { submitBulkOrderSelection } from '@/features/profile/api/bulkContinue'
+import { MIN_PRODUCT_CODES } from '@/features/profile/lib/excelCore'
 import { useExcelTemplate } from './useExcelTemplate'
 
 /**
@@ -75,6 +67,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     })
 
     try {
+      const { parseAndValidateProductExcelFile } = await import('@/features/profile/lib/productExcel')
       const result = await parseAndValidateProductExcelFile(file)
       if (!result.valid) {
         showToast(result.error || 'Archivo inválido', 'error')
@@ -120,6 +113,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     })
 
     try {
+      const { compareOrderWithStock, fetchStockByCodes } = await import('@/features/profile/api/bulkOrderApi')
       const stockByCode = await fetchStockByCodes(
         items.map((item) => item.codigo),
         {
@@ -159,6 +153,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     setProcessState((current) => ({ ...current, isSending: true }))
 
     try {
+      const { submitBulkOrderSelection } = await import('@/features/profile/api/bulkContinue')
       const { emptySelection, posted, failed, excluded } = await submitBulkOrderSelection({
         results: processState.comparison.results || [],
         onlyOk,

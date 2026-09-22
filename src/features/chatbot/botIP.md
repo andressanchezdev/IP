@@ -16,7 +16,7 @@ origin: original
   "tone": "claro y cercano",
   "formality": 3,
   "naturalness": 3,
-  "version": "2.3",
+  "version": "3.1",
   "schema": "botip-md/2"
 }
 ```
@@ -70,7 +70,16 @@ origin: original
   "Si el usuario describe un síntoma sin nombrar pieza, proponer 1-3 candidatas; no fallback.",
   "Si usa lenguaje coloquial (yanta, pinhon, pastiya, pastas), traducir a término técnico y buscar.",
   "Si falta marca + modelo, pedir antes de afirmar compatibilidad.",
+  "Pieza/categoría ≠ marca ≠ modelo: un token de familia (llanta, carburador, pastilla…) nunca cuenta como marca salvo 'marca llanta'. Modelo conocido puede inferir marca (boxer→bajaj) sin quitar el scaffold.",
+  "Si el mismo mensaje ya trae familia + marca + modelo (consulta completa), no pedir más datos: buscar inventario de una vez (GET search) y responder con fichas/precio.",
   "Nunca inventar número de parte, OEM ni referencia. Solo la API.",
+  "2.8 estilo: máximo 5 pasos y 8 líneas en explicaciones. Título con emoji, una acción por paso, confirmaciones [ Sí ] [ No ]. Si piden más detalle, una idea por mensaje.",
+  "3.1: experto en repuestos sin inventar; jerga colombiana y typos (Levenshtein ≤2 en tokens ≥5); responde solo lo preguntado; mantiene el hilo y lo libera con mejor/otra cosa/cancelar/reiniciar sin perder el carrito; coincidencias numeradas categoria · modelo · marca · codigo · precio (máx. 5).",
+  "llanta: si el token es llanta/llantas, no puntuar marca (salvo 'llanta marca …'); categoría de llantas +20; descripción 30.",
+  "Carrito single: POST /api/v1/inventory/carts JSON { id_producto, cantidad, precio_unitario } + Bearer. Un producto por llamada (Sí de agregar, código pegado, flujo uno a uno).",
+  "Carga masiva: NO hay POST de archivo. Se parsea el Excel en cliente (CODIGO|CANTIDAD), GET /search por código y POST /inventory/carts por cada fila válida.",
+  "Nunca enviar un ítem suelto como si fuera Excel. Nunca enviar un archivo a POST /carts. Nunca usar /products/filter ni /products/list para el carrito.",
+  "Si no está claro si es archivo o un producto, preguntar. No inventar endpoints ni bodies.",
   "Si el mensaje es <= 3 palabras y contiene una familia escalonable y NO trae marca ni modelo -> iniciar scaffoldedSearch en awaitingBrand.",
   "En scaffoldedSearch NUNCA pedir más de un dato por turno ni mostrar más de 3 resultados finales.",
   "En scaffoldedSearch NUNCA llamar a la API antes de tener al menos family + brand, salvo 'muéstrame todo' o 4 turnos.",
@@ -81,9 +90,29 @@ origin: original
   "Categorías oficiales solo de GET /api/v1/general/filter. Nunca inventar ni hardcodear listas.",
   "Búsqueda de productos: modelo y marca primero. descripcion es último recurso y no decide sola (p. ej. DEL no ancla).",
   "Consultas libres: GET /api/v1/inventory/products/search. 404 = lista vacía, no error.",
-  "pastas/pastillas/balatas se resuelven contra la categoría real del filter (p. ej. PASTILLA DE FRENO), no contra un diccionario propio."
+  "pastas/pastillas/balatas se resuelven contra la categoría real del filter (p. ej. PASTILLA DE FRENO), no contra un diccionario propio.",
+  "crear_pedido (subir/crear/hacer/armar pedido, excel, carga masiva) tiene prioridad sobre catálogo y precios. Ofrece ruta pequeña (≤10) o masiva (>20).",
+  "Ni la búsqueda simple ni el Excel crean el pedido: solo llenan el carrito. El pedido se crea tras finalizar → entrega → pago → confirmar.",
+  "Excel de pedido: columnas CODIGO y CANTIDAD. Reutilizar la subida masiva existente. Si más de la mitad de filas fallan, no enviar al carrito.",
+  "Nunca agregar al carrito sin confirmación explícita del usuario.",
+  "Si no hay coincidencias: guiar a la barra de búsqueda, copiar el CÓDIGO y pegarlo en el chat. Nunca un 'no encontré' seco.",
+  "Código pegado (2DP-F5805-00TA, EAN): buscar exacto, confirmar nombre, agregar al carrito y preguntar si quiere uno más. Al no, encadenar finalización de pedido."
 ]
 ```
+
+## Endpoints 3.1 (desambiguación)
+
+Base: `VITE_API_BASE_URL`. Headers de API: `Authorization: Bearer <token>`, `Accept: application/json`. POST JSON también envía `Content-Type: application/json`.
+
+GET (lectura): `/api/v1/general` · `/inventory/products` · `/inventory/products/search?search=` (404=[]) · `/inventory/products/latest` (404=[]) · `/general/filter` (cache 3 min) · `/inventory/carts` · `/managment/sales`.
+
+POST que NO tocan el carrito: `/inventory/products/filter` (drawer) · `/inventory/products/list` (PDF/Excel de precios).
+
+Agregar al carrito (un ítem): `POST /api/v1/inventory/carts` body `{ "id_producto": 7704790200048, "cantidad": 1, "precio_unitario": 28000 }`. Chat: comando `add-cart` tras [ Sí ].
+
+Carga masiva: no existe un endpoint de archivo. Excel (CODIGO|CANTIDAD) se lee en el cliente; cada código se busca con GET `/search`; cada fila válida se agrega con el mismo `POST /inventory/carts`. Chat: comando `bulk-commit`. Drawer "Subir nuevo archivo" usa el mismo flujo.
+
+Comparativa: archivo Excel → parse + search + N× POST carts. Confirmación de un producto → 1× POST carts. Filtro o listado de precios → nunca carrito. Si la acción no encaja, no llamar POST.
 
 ## Pipeline / fases
 
@@ -136,7 +165,11 @@ origin: original
     "paused": ""
   },
   "complaint": {
-    "keywords": "queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, devolucion, inconforme, inconformidad, falla, defectuoso",
+    "keywords": "queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, inconforme, inconformidad, falla, defectuoso",
+    "paused": ""
+  },
+  "returns": {
+    "keywords": "devolver, devolucion, devoluciones, cambios, cambiarlo, cambiarla, reembolso, reembolsar",
     "paused": ""
   },
   "quote": {
@@ -414,15 +447,28 @@ origin: original
     "paused": ""
   },
   "complaint": {
-    "keywords": "queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, devolucion, inconforme, inconformidad, falla, defectuoso",
-    "text": "Lamentamos el inconveniente. Cuéntame qué pasó: producto, pedido y fecha, si los tienes. Te ayudo a dejarlo radicado. También puedes escribir al WhatsApp {phone}. El correo es {email}.",
+    "keywords": "queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, inconforme, inconformidad, falla, defectuoso",
+    "text": "Lamentamos el inconveniente. Ten en cuenta: la devolución está sujeta a términos y condiciones; los productos eléctricos no están sujetos a cambios ni cuentan con garantía; toda devolución o garantía se revisa previamente (plazo máximo 10 días con factura y empaque en buen estado). Cuéntame qué pasó: producto, pedido y fecha, si los tienes. También puedes escribir al WhatsApp {phone}. El correo es {email}.",
     "texts": [
-      "Registramos tu molestia. Describe el caso con el mayor detalle que tengas. Un asesor lo atiende al {phone}. Correo {email}.",
-      "Vamos a ayudarte. Cuéntame el problema. También puedes escribir a {phone}. Correo {email}."
+      "Registramos tu molestia. Recuerda que las devoluciones y garantías pasan por revisión, que los productos eléctricos no tienen garantía y que el plazo máximo es de 10 días con factura y empaque en buen estado. Describe el caso. Un asesor lo atiende al {phone}. Correo {email}.",
+      "Vamos a ayudarte. Para devoluciones o garantías aplica revisión previa, productos eléctricos sin garantía y plazo de 10 días con factura. Cuéntame el problema. También puedes escribir a {phone}. Correo {email}."
     ],
     "textsEn": [
-      "Sorry about that. Tell me what happened (product, order or date if you have them), or write {phone} / {email}.",
+      "Sorry about that. Returns and warranties are reviewed; electrical products have no warranty; max 10 days with invoice and packaging. Tell me what happened, or write {phone} / {email}.",
       "We will help. Describe the issue or contact {phone} and {email} to log it."
+    ],
+    "paused": ""
+  },
+  "returns": {
+    "keywords": "devolver, devolucion, devoluciones, cambios, cambiarlo, cambiarla, reembolso, reembolsar",
+    "text": "La devolución de productos está sujeta a términos y condiciones. Los productos eléctricos no cuentan con garantía ni están sujetos a cambios. Para solicitar una devolución, el producto y su empaque deben conservarse en buen estado y debe presentarse la factura física y/o digital dentro de los 10 días posteriores a la compra. Toda devolución o garantía pasa por un proceso de revisión. Puedes visitarnos en {address} o te paso con un asesor.",
+    "texts": [
+      "Las devoluciones y garantías están sujetas a revisión. Los productos eléctricos no cuentan con garantía. Para solicitar una devolución, el producto y su empaque deben estar en buen estado y debe presentarse la factura física dentro de los 10 días posteriores a la compra. Visítanos en {address} o habla con un asesor.",
+      "Política de devoluciones: los productos eléctricos no tienen garantía. Las devoluciones y garantías pasan por un proceso de revisión. El producto debe conservarse en buen estado y presentarse con su empaque y factura física. El plazo máximo para solicitar una devolución es de 10 días. Dirección: {address}."
+    ],
+    "textsEn": [
+      "Returns follow our terms. Electrical products have no warranty. Product and packaging must be in good condition with invoice within 10 days. All returns are reviewed. Visit us at {address} or talk to an advisor.",
+      "For a change or a return, our terms apply: electrical products have no warranty, 10-day window with invoice and packaging. Visit us at {address} or talk to an advisor."
     ],
     "paused": ""
   },
@@ -784,7 +830,7 @@ origin: original
     "keywords": "colaborador, colaboradora, integrante, funcionario",
     "text": "claro que si! {name} pertenece a nuestro grupo {role}. su linea de contacto es {phone}.",
     "texts": [
-      "{name} es {role}. Puedes escribirle al {phone}.",
+      "{name} es {role}. Contacto: {phone}.",
       "En el equipo esta {name} ({role}). Contacto: {phone}.",
       "{name} atiende como {role}. Su telefono es {phone}."
     ],
@@ -864,15 +910,15 @@ origin: original
   },
   "humanHandoff": {
     "keywords": "",
-    "text": "¿Quieres que te conecte con un asesor humano?",
+    "text": "Entiendo. Puedo pasarte con un asesor real del equipo Premium. Dime el nombre de quien prefieres o elige una opción.",
     "texts": [
-      "Puedo pasarte con una persona del equipo. ¿Te parece?",
-      "Si prefieres, te derivo con un humano. ¿Lo hago?"
+      "Sin problema. Te oriento con un asesor humano. Indica el nombre o elige en la lista.",
+      "Prefieres persona real: dime el asesor o elige uno de los publicados."
     ],
     "textsEn": [
-      "Want me to connect you with a human advisor?",
-      "I can pass you to the team. Sound good?",
-      "Prefer a person? I can hand you off."
+      "Understood. I can connect you with a real Premium advisor. Tell me a name or pick one.",
+      "Prefer a person? Tell me the advisor or choose from the list.",
+      "I can hand you off to a human advisor. Name one or pick from the options."
     ],
     "paused": ""
   },
@@ -1226,7 +1272,13 @@ origin: original
     "llantra": "llanta",
     "llantras": "llanta",
     "pasta": "pastilla",
-    "pastas": "pastilla"
+    "pastas": "pastilla",
+    "kiero": "quiero",
+    "queiro": "quiero",
+    "qeuiro": "quiero",
+    "quero": "quiero",
+    "compar": "comprar",
+    "comprra": "comprar"
   },
   "complaintLock": [
     "queja",
@@ -1879,11 +1931,76 @@ origin: original
     "pqr",
     "molestia",
     "garantia",
-    "devolucion",
     "inconforme",
     "inconformidad",
     "defectuoso"
-  ]
+  ],
+  "returnsCues": [
+    "devolver",
+    "devolucion",
+    "devoluciones",
+    "cambios",
+    "cambiarlo",
+    "cambiarla",
+    "reembolso",
+    "reembolsar"
+  ],
+  "neverBrandTokens": [
+    "llanta",
+    "llantas",
+    "llantica",
+    "llanticas",
+    "yanta",
+    "yantas",
+    "neumatico",
+    "neumaticos",
+    "caucho",
+    "aceite",
+    "amortiguador",
+    "pastilla",
+    "pastillas",
+    "disco",
+    "discos",
+    "banda",
+    "bandas",
+    "correa",
+    "carburador",
+    "carburadores",
+    "chiclero",
+    "freno",
+    "rin",
+    "rines",
+    "filtro",
+    "filtros",
+    "cadena",
+    "bateria",
+    "bujia",
+    "casco"
+  ],
+  "modelToBrand": {
+    "boxer": "bajaj",
+    "pulsar": "bajaj",
+    "platina": "bajaj",
+    "discover": "bajaj",
+    "avenger": "bajaj",
+    "ybr": "yamaha",
+    "fz": "yamaha",
+    "nmax": "yamaha",
+    "crypton": "yamaha",
+    "xtz": "yamaha",
+    "cg125": "honda",
+    "cb190r": "honda",
+    "xr150": "honda",
+    "xre300": "honda",
+    "invicta": "honda",
+    "ak125": "akt",
+    "nkd": "akt",
+    "dynamic": "akt",
+    "crux": "akt",
+    "gn125": "suzuki",
+    "gixxer": "suzuki",
+    "ax4": "suzuki"
+  }
 }
 ```
 
@@ -2368,224 +2485,194 @@ origin: original
   ],
   "team": [
     {
+      "id": "asesor_01",
+      "fullName": "Anderson Soto Betancur",
+      "role": "Asesor Comercial",
+      "phoneDisplay": "+57 310 2927158",
+      "whatsappDigits": "573102927158",
+      "group": "asesor",
+      "status": "publicado",
+      "sortOrder": 1
+    },
+    {
+      "id": "asesor_02",
+      "fullName": "Diana Yadira Granada Orrrego",
+      "role": "Asesor Comercial",
+      "phoneDisplay": "+57 310 4648569",
+      "whatsappDigits": "573104648569",
+      "group": "asesor",
+      "status": "publicado",
+      "sortOrder": 2
+    },
+    {
       "id": "asesor_03",
-      "fullName": "Mónica",
-      "role": "Asesora",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Elias Narvaez Lopez",
+      "role": "Asesor Comercial",
+      "phoneDisplay": "+57 310 8803566",
+      "whatsappDigits": "573108803566",
       "group": "asesor",
       "status": "publicado",
       "sortOrder": 3
     },
     {
       "id": "asesor_04",
-      "fullName": "Naya",
-      "role": "Asesora",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Lina Patricia Velasquez Muñoz",
+      "role": "Asesor Comercial",
+      "phoneDisplay": "+57 310 4649824",
+      "whatsappDigits": "573104649824",
       "group": "asesor",
       "status": "publicado",
       "sortOrder": 4
     },
     {
       "id": "asesor_05",
-      "fullName": "Rafa",
-      "role": "Asesor",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Nick Felipe Uribe Jaramillo",
+      "role": "Asesor Comercial",
+      "phoneDisplay": "+57 310 4634502",
+      "whatsappDigits": "573104634502",
       "group": "asesor",
       "status": "publicado",
       "sortOrder": 5
     },
     {
       "id": "asesor_06",
-      "fullName": "Rocío",
-      "role": "Asesora",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Santiago Zuluaga Grisales",
+      "role": "Asesor Comercial",
+      "phoneDisplay": "+57 310 4649590",
+      "whatsappDigits": "573104649590",
       "group": "asesor",
       "status": "publicado",
       "sortOrder": 6
     },
     {
       "id": "asesor_07",
-      "fullName": "Santiago",
-      "role": "Asesor",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Rafael Dario Gallo Ramirez",
+      "role": "Asesor Comercial Externo",
+      "phoneDisplay": "+57 320 5023499",
+      "whatsappDigits": "573205023499",
       "group": "asesor",
-      "status": "publicado",
+      "status": "archivado",
       "sortOrder": 7
     },
     {
       "id": "asesor_08",
-      "fullName": "Camila",
-      "role": "Asesora",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Wilyer Eudaldo Toro Jimenez",
+      "role": "Asesor Comercial Externo",
+      "phoneDisplay": "+57 310 2905725",
+      "whatsappDigits": "573102905725",
       "group": "asesor",
       "status": "publicado",
       "sortOrder": 8
     },
     {
-      "id": "asesor_09",
-      "fullName": "Valentina",
-      "role": "Asesora",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
-      "group": "asesor",
-      "status": "publicado",
-      "sortOrder": 9
-    },
-    {
-      "id": "asesor_10",
-      "fullName": "Daniela",
-      "role": "Asesora",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
-      "group": "asesor",
-      "status": "publicado",
-      "sortOrder": 10
-    },
-    {
-      "id": "asesor_11",
-      "fullName": "Andrés",
-      "role": "Asesor",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
-      "group": "asesor",
-      "status": "publicado",
-      "sortOrder": 11
-    },
-    {
-      "id": "asesor_12",
-      "fullName": "Julián",
-      "role": "Asesor",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
-      "group": "asesor",
-      "status": "publicado",
-      "sortOrder": 12
-    },
-    {
       "id": "admin_01",
-      "fullName": "Edinson",
-      "role": "Administrativo",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Leslie Arboleda Zapata",
+      "role": "Auxiliar Contable",
+      "phoneDisplay": "+57 314 5731796",
+      "whatsappDigits": "573145731796",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 1
     },
     {
       "id": "admin_02",
-      "fullName": "Wilyer Toro",
-      "role": "Administrativo",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Melissa Acevedo Colorado",
+      "role": "Administradora Punto De Venta",
+      "phoneDisplay": "+57 323 3342515",
+      "whatsappDigits": "573233342515",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 2
     },
     {
       "id": "admin_03",
-      "fullName": "Laura Gómez",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Maria Rocio Gomez Sepúlveda",
+      "role": "Cajera - Gestión Cartera",
+      "phoneDisplay": "+57 305 3211464",
+      "whatsappDigits": "573053211464",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 3
     },
     {
       "id": "admin_04",
-      "fullName": "Carolina Ruiz",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Jorge Isaat Bautista Perez",
+      "role": "Auxiliar De Bodega - Conductor",
+      "phoneDisplay": "+57 301 5201064",
+      "whatsappDigits": "573015201064",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 4
     },
     {
       "id": "admin_05",
-      "fullName": "Paula Méndez",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Wilder Emil Posada Cañas",
+      "role": "Conductor",
+      "phoneDisplay": "+57 310 4646792",
+      "whatsappDigits": "573104646792",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 5
     },
     {
       "id": "admin_06",
-      "fullName": "Natalia Pérez",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Nayarith Posada Cano",
+      "role": "Coordinadora Administrativa Y Cartera",
+      "phoneDisplay": "+57 310 4643603",
+      "whatsappDigits": "573104643603",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 6
     },
     {
       "id": "admin_07",
-      "fullName": "Diego Vargas",
-      "role": "Administrativo",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Alejandra Centeno Pastrana",
+      "role": "Coordinadora De Gestión Humana",
+      "phoneDisplay": "+57 310 4641311",
+      "whatsappDigits": "573104641311",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 7
     },
     {
       "id": "admin_08",
-      "fullName": "Sofía Castro",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Yahir Figueroa Lazaro",
+      "role": "Creador De Contenido Y Marketing Digital",
+      "phoneDisplay": "+57 333 2274388",
+      "whatsappDigits": "573332274388",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 8
     },
     {
       "id": "admin_09",
-      "fullName": "Felipe Ortiz",
-      "role": "Administrativo",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Andres Santiago Sanchez Jalvin",
+      "role": "Programador",
+      "phoneDisplay": "",
+      "whatsappDigits": "",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 9
     },
     {
       "id": "admin_10",
-      "fullName": "María Fernanda",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Fray Durney Zora Ramirez",
+      "role": "Programador",
+      "phoneDisplay": "",
+      "whatsappDigits": "",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 10
     },
     {
       "id": "admin_11",
-      "fullName": "Sebastián López",
-      "role": "Administrativo",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
+      "fullName": "Edison Alexander Narvaez",
+      "role": "Supervisor",
+      "phoneDisplay": "+57 333 2274384",
+      "whatsappDigits": "573332274384",
       "group": "administrativo",
       "status": "publicado",
       "sortOrder": 11
-    },
-    {
-      "id": "admin_12",
-      "fullName": "Andrea Morales",
-      "role": "Administrativa",
-      "phoneDisplay": "+57 312 614 95527",
-      "whatsappDigits": "5731261495527",
-      "group": "administrativo",
-      "status": "publicado",
-      "sortOrder": 12
     }
   ],
   "brands": [
@@ -2666,7 +2753,7 @@ origin: original
 
 ```json
 {
-  "welcome": "Hola, soy BotIP, tu asistente Premium. Puedes indicarme cuál es tu duda en un solo mensaje. Puedo ayudarte a encontrar piezas o productos por marca o modelo, o si necesitas consultar el precio de un repuesto o accesorio, información sobre nosotros o hablar con un asesor.",
+  "welcome": "Hola, soy BotIP, tu asistente Premium. Puedes indicarme cuál es tu duda en un solo mensaje. Puedo ayudarte a encontrar cualquier repuesto, producto, pieza, puedes decirme la marca o modelo y te ayudo",
   "notes": [
     "Bienvenida, despedida, menú y handoff salen de las plantillas.",
     "El archivo botIP.md es la fuente de las respuestas, el catálogo, el inventario, el equipo y el léxico.",

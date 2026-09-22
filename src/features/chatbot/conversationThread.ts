@@ -36,8 +36,37 @@ export const FOLLOW_CUE_LIST = [
   'sigue',
 ] as const
 
-export const SWITCH_CUE_LIST = ['cambiemos', 'olvidalo', 'olvidar', 'cancelar'] as const
-export const SOCIAL_GREET = ['hola', 'buenas', 'hey', 'hello', 'hi', 'buenos', 'buen'] as const
+export const SWITCH_CUE_LIST = [
+  'cambiemos',
+  'olvidalo',
+  'olvidar',
+  'cancelar',
+  'reiniciar',
+  'salir',
+] as const
+export const SOCIAL_GREET = [
+  'hola',
+  'holas',
+  'holaa',
+  'holi',
+  'holis',
+  'holiwis',
+  'ola',
+  'buenas',
+  'hey',
+  'hello',
+  'hi',
+  'buenos',
+  'buen',
+  'saludos',
+  'epa',
+  'epale',
+  'quiubo',
+  'quihubo',
+  'quiubole',
+  'alo',
+  'habla',
+] as const
 export const SOCIAL_THANKS = ['gracias', 'grax', 'thanks', 'ty'] as const
 export const ASIDE_INTENT_LIST = ['location', 'company', 'social', 'credit', 'payment', 'shipping', 'orderStatus', 'returns'] as const
 export const ORDER_STATUS_CUE_LIST = ['estado', 'rastreo', 'rastrear', 'tracking'] as const
@@ -230,9 +259,32 @@ function isSocialTurn(tokens: readonly string[]) {
 }
 
 function wantsNewTopic(raw: string, tokens: readonly string[]) {
+  if (isThreadReleaseAsk(raw)) return true
   const text = raw.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
-  if (/(otra cosa|otro tema|cambiemos|cambiar de tema|en vez|en lugar)/.test(text)) return true
+  if (/(otra cosa|otro tema|cambiemos|cambiar de tema|en vez|en lugar|cambiando de tema|en cambio|dejemos eso|empecemos de nuevo|mejor quiero|ahora quiero|tema nuevo)/.test(text)) return true
   return tokens.some((token) => switchCues().has(token))
+}
+
+export function isThreadReleaseAsk(raw = '') {
+  const text = foldAskText(raw)
+  if (!text) return false
+  return /\b(otra cosa|cambiando de tema|cambiar de tema|en cambio|dejemos eso|olvidalo|olvidar|empecemos de nuevo|reiniciar|cancelar|salir|mejor quiero|ahora quiero|dejalo|tema nuevo)\b/.test(text)
+}
+
+export function releaseRemainder(raw = '') {
+  return foldAskText(raw)
+    .replace(/\b(mejor quiero|ahora quiero|cambiando de tema|cambiar de tema|en cambio|dejemos eso|otra cosa|olvidalo|olvidar|empecemos de nuevo|reiniciar|cancelar|salir|dejalo|tema nuevo)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function isOrderProcessAsk(tokens: readonly string[], raw = '') {
+  if (isCreateOrderAsk(tokens, raw)) return false
+  const text = foldAskText(raw)
+  if (!text) return false
+  if (isProductSeekingAsk(tokens, raw) && !/\b(como|como puedo)\b/.test(text)) return false
+  return /\bcomo (puedo )?(pido|pedir|hago (el |mi |un )?pedido|hacer (el |mi |un )?pedido)\b/.test(text)
+    || /\b(como pido|como pedir)\b/.test(text)
 }
 
 export function isBroadPriceAsk(tokens: readonly string[], raw = '') {
@@ -340,6 +392,7 @@ export function isOrderStatusAsk(tokens: readonly string[], raw = '') {
     .replace(/\p{M}/gu, '')
   const hasPedido = tokens.some((token) => token === 'pedido' || token === 'pedidos') || /\bpedidos?\b/.test(text)
   if (!hasPedido) return false
+  if (/\b(crear|subir|hacer|hago|armar|armo|cargar|cargo|generar|genero)\b/.test(text)) return false
   if (orderStatusCues().has('estado') && tokens.some((token) => orderStatusCues().has(token))) return true
   if (/estado (de )?(mi |el )?pedidos?|donde (esta|quedo|anda|va) (mi |el )?pedidos?|rastre(o|ar) (mi |el )?pedidos?/.test(text)) {
     return true
@@ -417,6 +470,30 @@ function foldAskText(raw = '') {
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
+}
+
+export function pareceCodigo(raw = '') {
+  const t = String(raw || '').trim()
+  if (t.includes(' ')) return false
+  if (t.length < 6 || t.length > 24) return false
+  if (!/^[A-Za-z0-9\-_]+$/.test(t)) return false
+  if (!/[0-9]/.test(t)) return false
+  return true
+}
+
+export function searchMissGuideText() {
+  return [
+    '🔍 Sin coincidencias',
+    '',
+    'Prueba así:',
+    '',
+    '1. Abre la barra de búsqueda',
+    '2. Escribe modelo, marca o categoría',
+    '3. Copia el CÓDIGO del producto',
+    '4. Pégalo aquí',
+    '',
+    '> Yo lo agrego al carrito por ti.',
+  ].join('\n')
 }
 
 const LOCATION_STOP = new Set([
@@ -520,7 +597,11 @@ export function isAdvisorAsk(tokens: readonly string[], raw = '') {
     /\b(hablar|contactar|comunicarme|comunicar) (con )?(un |una )?(asesor|asesora|asesores)\b/.test(text) ||
     /\bcomo (puedo |puedes |pueden )?(hablar|contactar|comunicarme) (con )?(un |una )?(asesor|asesora|persona)\b/.test(text) ||
     /\b(persona real|persona humana|asesor real)\b/.test(text) ||
-    /\b(quiero |necesito )(un |una )?(asesor|asesora)\b/.test(text)
+    /\b(quiero |necesito )(un |una )?(asesor|asesora)\b/.test(text) ||
+    /\bno (quiero|deseo|necesito) (hablar|chatear|seguir) (mas )?(contigo|con (el |la )?(bot|chat|asistente|ia))\b/.test(text) ||
+    /\bno (quiero|deseo) hablar (con )?(el |la )?(bot|chat|asistente)\b/.test(text) ||
+    /\b(prefiero|quiero) (hablar con )?(un |una )?(asesor|asesora|persona) (real|humana)?\b/.test(text) ||
+    /\bpasa(me)? (con |a )?(un |una )?(asesor|humano|persona)\b/.test(text)
   )
 }
 
@@ -539,7 +620,74 @@ export function isHoursAsk(tokens: readonly string[], raw = '') {
   return extra.length < 3
 }
 
+export function isCreateOrderAsk(tokens: readonly string[], raw = '') {
+  if (isComplaintAsk(tokens, raw) || isReturnsAsk(tokens, raw)) return false
+  const text = foldAskText(raw)
+  if (!text) return false
+  if (hasPaymentPhrase(raw) && !/\b(subir|cargar|excel|archivo|masivo)\b/.test(text)) return false
+  if (/estado (de )?(mi |el )?pedidos?|donde (esta|quedo|anda|va) (mi |el )?pedidos?|rastre(o|ar)/.test(text)) {
+    return false
+  }
+  if (/\b(confirmar|finalizar|terminar) (el |mi |un )?pedido\b/.test(text)) {
+    return false
+  }
+  if (
+    /\b((quiero |necesito |como (puedo )?)?(subir|crear|hacer|armar|cargar|generar) (mi |un |el )?(pedido|orden)\b)/.test(text)
+    || /\b(subir|cargar) (el |un |mi )?(pedido|orden|archivo|excel)\b/.test(text)
+    || /\bpedido masivo\b/.test(text)
+    || /\b(tengo|traer) (un )?(excel|archivo) (de )?(pedido|orden)\b/.test(text)
+    || /\bhacer un pedido nuevo\b/.test(text)
+    || /\b(armar|crear) (un |mi )?pedido\b/.test(text)
+    || /\b(armar|crear|llenar|cargar) (el |mi )?carrito\b/.test(text)
+  ) {
+    return true
+  }
+  const verb = tokens.some((token) => (
+    ['crear', 'subir', 'hacer', 'hago', 'armar', 'armo', 'cargar', 'cargo', 'generar', 'genero'].includes(token)
+  ))
+  const noun = tokens.some((token) => (
+    token === 'pedido'
+    || token === 'pedidos'
+    || token === 'orden'
+    || token === 'ordenes'
+    || token === 'carrito'
+    || looksLikePedidoToken(token)
+  ))
+  const cue = tokens.some((token) => (
+    ['mi', 'nuevo', 'masivo', 'excel', 'archivo', 'plantilla'].includes(token)
+  )) || /\b(mi|nuevo|masivo|excel|archivo|plantilla)\b/.test(text)
+  return verb && noun && cue
+}
+
+function looksLikePedidoToken(token: string) {
+  if (token === 'pedido' || token === 'pedidos') return true
+  if (token.length < 5 || token.length > 8) return false
+  const target = 'pedido'
+  if (Math.abs(token.length - target.length) > 2) return false
+  let distance = 0
+  const a = token
+  const b = target
+  const rows = a.length + 1
+  const cols = b.length + 1
+  const matrix = Array.from({ length: rows }, () => Array<number>(cols).fill(0))
+  for (let i = 0; i < rows; i += 1) matrix[i][0] = i
+  for (let j = 0; j < cols; j += 1) matrix[0][j] = j
+  for (let i = 1; i < rows; i += 1) {
+    for (let j = 1; j < cols; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      )
+    }
+  }
+  distance = matrix[a.length][b.length]
+  return distance > 0 && distance <= 2
+}
+
 export function isPaymentAsk(tokens: readonly string[], raw = '') {
+  if (isCreateOrderAsk(tokens, raw)) return false
   if (isOrderStatusAsk(tokens, raw)) return false
   if (isCreditAsk(tokens, raw)) return false
   if (isVacancyAsk(tokens, raw)) return false

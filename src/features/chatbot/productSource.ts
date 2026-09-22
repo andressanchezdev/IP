@@ -14,6 +14,7 @@ import {
   searchTextFromQuery,
 } from '@/features/catalog/lib/catalogMatch'
 import { stockTotal } from '@/features/catalog/mappers/parseUbicacionStock'
+import { getCatalogProductId } from '@/features/catalog/mappers/mapProduct'
 
 const GENERIC = new Set([
   'producto',
@@ -204,7 +205,7 @@ function pickProductDisplayName(product: Record<string, unknown>, codigo: string
 }
 
 export function mapApiProductToRecord(product: Record<string, unknown>): ProductRecord | null {
-  const id = String(product?.id ?? product?.id_producto ?? '').trim()
+  const id = getCatalogProductId(product) || ''
   const codigo = String(product?.codigo ?? product?.reference ?? '').trim()
   const descripcion = String(product?.descripcion ?? product?.description ?? '').trim()
   const nombre = pickProductDisplayName(product, codigo)
@@ -748,6 +749,8 @@ export async function hydrateChatProducts({
           signal: controller.signal,
         })),
         raw,
+        undefined,
+        { keepAll: true },
       )
       if (controller.signal.aborted) return
       lastSignature = plan.signature

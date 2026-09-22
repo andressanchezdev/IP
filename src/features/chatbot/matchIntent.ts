@@ -34,7 +34,22 @@ export const TYPO_ALIASES: Record<string, string> = {
   llantras: 'llanta',
   pasta: 'pastilla',
   pastas: 'pastilla',
+  pasitllas: 'pastilla',
+  kiero: 'quiero',
+  queiro: 'quiero',
+  qeuiro: 'quiero',
+  quero: 'quiero',
+  compar: 'comprar',
+  comprra: 'comprar',
+  nesecito: 'necesito',
+  amortiguadro: 'amortiguador',
+  bacheadro: 'bacheador',
+  yamha: 'yamaha',
+  mootul: 'motul',
+  pulsra: 'pulsar',
 }
+
+const PURCHASE_LOCK = new Set(['pedir', 'pido', 'pide'])
 
 function aliases() {
   return { ...liveLexiconMap('typoAliases', TYPO_ALIASES), ...livePartAliases() }
@@ -71,7 +86,7 @@ export function editDistance(left: string, right: string) {
 }
 
 function maxDistance(token: string) {
-  if (token.length < 6) return 1
+  if (token.length < 5) return 1
   return 2
 }
 
@@ -121,11 +136,13 @@ export function nearestLexiconGuess(tokens: readonly string[], lexicon: readonly
   for (const token of tokens) {
     const plain = stripAccents(token.toLowerCase())
     if (plain.length < 4 || isStopToken(plain) || pool.includes(plain)) continue
+    if (PURCHASE_LOCK.has(plain)) continue
     for (const word of pool) {
       if (Math.abs(word.length - plain.length) > maxDistance(plain)) continue
       const distance = editDistance(plain, word)
       if (distance <= 0 || distance > maxDistance(plain) || distance >= bestDistance) continue
       if (complaintLock().has(word) && !complaintLock().has(plain) && !aliases()[plain]) continue
+      if (word === 'pedido' && PURCHASE_LOCK.has(plain)) continue
       best = word
       bestDistance = distance
     }
@@ -217,6 +234,7 @@ export function correctTokensContextual(
   return tokens.map((token) => {
     const plain = stripAccents(token.toLowerCase())
   if (aliases()[plain]) return aliases()[plain]
+  if (PURCHASE_LOCK.has(plain)) return plain
   if (liveProtectedTokens().has(plain) || liveWeakLexemes().has(plain) || plain.length < 4) return plain
 
   const hits: Array<{ word: string; distance: number }> = []

@@ -1,9 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useToast } from '@/app/providers/ToastProvider'
-import {
-  downloadOfficialExcelTemplate,
-  loadTemplateSheetMatrix,
-} from '@/features/profile/lib/productExcel'
 
 /** Carga la vista previa de la plantilla oficial y gestiona su descarga. */
 export function useExcelTemplate() {
@@ -15,7 +11,8 @@ export function useExcelTemplate() {
   useEffect(() => {
     let cancelled = false
 
-    loadTemplateSheetMatrix()
+    import('@/features/profile/lib/productExcel')
+      .then((mod) => mod.loadTemplateSheetMatrix())
       .then((matrix) => {
         if (!cancelled) {
           setTemplateMatrix(matrix)
@@ -37,6 +34,7 @@ export function useExcelTemplate() {
   const handleDownloadTemplate = async () => {
     setIsDownloading(true)
     try {
+      const { downloadOfficialExcelTemplate } = await import('@/features/profile/lib/productExcel')
       await downloadOfficialExcelTemplate()
       showToast('Plantilla descargada', 'success')
     } catch (error) {

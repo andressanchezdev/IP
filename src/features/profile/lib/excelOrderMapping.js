@@ -192,6 +192,7 @@ export function mapExcelRowsToOrderJson(matrix, { codigoIndex = 0, cantidadIndex
     items.push({
       codigo,
       cantidad: cantidadParsed.value,
+      line: excelLine,
     })
   }
 

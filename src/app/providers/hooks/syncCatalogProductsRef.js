@@ -1,17 +1,27 @@
 /**
- * Mantiene productsRef alineado con catálogo (+ latest) para el carrito.
+ * productsRef alimenta addToCart: catálogo paginado + últimos + búsqueda.
+ * Los resultados de filtro se pasan como sourceProduct desde la card.
  */
 export function syncCatalogProductsRef(productsRef, catalog) {
-  productsRef.current = catalog.products
+  const seen = new Set()
+  const merged = []
 
-  const latest = catalog.value?.latestProducts
-  if (!Array.isArray(latest) || latest.length === 0) {
-    return
+  const append = (list) => {
+    if (!Array.isArray(list)) {
+      return
+    }
+    list.forEach((product) => {
+      const id = String(product?.id ?? '')
+      if (!id || seen.has(id)) {
+        return
+      }
+      seen.add(id)
+      merged.push(product)
+    })
   }
 
-  const seen = new Set(catalog.products.map((product) => String(product.id)))
-  productsRef.current = [
-    ...catalog.products,
-    ...latest.filter((product) => !seen.has(String(product.id))),
-  ]
+  append(catalog.products)
+  append(catalog.value?.latestProducts)
+  append(catalog.value?.searchProducts)
+  productsRef.current = merged
 }

@@ -56,6 +56,14 @@ function getRawProductId(product) {
   if (value == null || value === '') {
     return null
   }
+  const text = String(value).trim()
+  if (!text || text === '-1' || text === '0') {
+    const fallback = product?.id_producto ?? product?.idProducto
+    if (fallback == null || String(fallback).trim() === '' || String(fallback).trim() === '-1') {
+      return null
+    }
+    return toLastIdQuery(fallback)
+  }
   return toLastIdQuery(value)
 }
 

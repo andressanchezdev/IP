@@ -1,4 +1,5 @@
 import { apiRequest } from '@/shared/api'
+import { buildCartPostBody } from './cartPostBody'
 
 const CART_PAGE_SIZE = 50
 const CARTS_PATH = '/api/v1/inventory/carts'
@@ -48,22 +49,6 @@ function extractCarts(payload) {
   return []
 }
 
-function toPositiveCartQuantity(value, fallback = 1) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return fallback
-  }
-  return Math.floor(numeric)
-}
-
-function toMoneyNumber(value) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return 0
-  }
-  return numeric
-}
-
 /**
  * GET /api/v1/inventory/carts
  * Carrito del usuario autenticado (ítems con datos de producto embebidos).
@@ -100,11 +85,11 @@ export async function getCart({
  * POST /api/v1/inventory/carts
  * Upsert de ítem en carrito del usuario autenticado.
  *
- * Body:
+ * Body (único contrato, todas las vistas):
  * {
- *   "id_producto": 9,
- *   "cantidad": 10,
- *   "precio_unitario": 15000
+ *   "id_producto": 7704790200048,
+ *   "cantidad": 1,
+ *   "precio_unitario": 28000
  * }
  */
 export async function postCartItem({
@@ -113,15 +98,7 @@ export async function postCartItem({
   cantidad,
   precioUnitario,
 } = {}) {
-  const body = {
-    id_producto: Number(idProducto),
-    cantidad: toPositiveCartQuantity(cantidad, 1),
-    precio_unitario: toMoneyNumber(precioUnitario),
-  }
-
-  if (!Number.isFinite(body.id_producto)) {
-    throw new Error('id_producto inválido')
-  }
+  const body = buildCartPostBody({ idProducto, cantidad, precioUnitario })
 
   const payload = await apiRequest(CARTS_PATH, {
     method: 'POST',

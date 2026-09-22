@@ -1,6 +1,7 @@
-import { liveBrandNames, liveCatalogProducts, liveModelNames } from './botip/liveData'
-import { findTerm, liveAccessoryTerms, liveCatalogParts, liveOtherParts, liveWeakLexemes, listPartFamilies, resolvePartFamily } from './motoParts'
+import { liveBrandNames, liveCatalogProducts, liveModelNames, liveModelToBrandMap, liveNeverBrandTokens } from './botip/liveData'
+import { findTerm, liveAccessoryTerms, liveCatalogParts, liveOtherParts, liveWeakLexemes, listPartFamilies, resolvePartFamily, familyNeedsPosition, isModelBlockToken, isPositionToken, isPurchaseVerbToken, oppositePositionPair, positionForFamily } from './motoParts'
 import { keywordsOf } from './botSettings'
+import { inferBrandFromModelName } from './inventory'
 import { matchLandingTeam } from './teamLookup'
 import type { EntityMap } from './sessionContext'
 import { parseUserFrame } from './userFrame'
@@ -38,17 +39,56 @@ export function isModelYear(token: string) {
 export function extractMarcaModelo(tokens: readonly string[], raw: string) {
   const brands = liveBrandTokens()
   const models = liveModelTokens()
-  const marca = tokens.find((token) => brands.has(token))
+  const neverBrand = liveNeverBrandTokens()
+  const modelToBrand = liveModelToBrandMap()
+
+  const isBlockedBrandToken = (token: string) =>
+    neverBrand.has(token) || Boolean(resolvePartFamily([token]))
+
+  const marcaToken = tokens.find(
+    (token) =>
+      brands.has(token) &&
+      !isBlockedBrandToken(token) &&
+      !isPositionToken(token) &&
+      !isPurchaseVerbToken(token),
+  )
   const modeloToken = tokens.find((token) => {
-    if (isModelYear(token)) return false
+    if (isModelYear(token) || isPositionToken(token) || isPurchaseVerbToken(token) || isModelBlockToken(token)) return false
+    if (isBlockedBrandToken(token)) return false
     if (models.has(token)) return true
     return /^[a-z]+\d+[a-z0-9]*$/i.test(token) && token.length >= 3
   })
   const modeloFromRaw = raw.match(/\b([A-Za-z]{1,8}\s?\d{2,4}[A-Za-z]?)\b/)?.[1]
-  const modeloRaw = modeloFromRaw ? modeloFromRaw.toLowerCase().replace(/\s+/g, '') : ''
-  const modelo = modeloToken || (modeloRaw && !isModelYear(modeloRaw) ? modeloRaw : undefined)
+  const modeloRaw = modeloFromRaw && !isModelYear(modeloFromRaw.replace(/\s+/g, ''))
+    ? modeloFromRaw.toLowerCase().replace(/\s+/g, ' ').trim()
+    : ''
+  const leftover = tokens.find((token) => {
+    if (token.length < 3) return false
+    if (isModelYear(token) || isPositionToken(token) || isPurchaseVerbToken(token) || isModelBlockToken(token)) return false
+    if (brands.has(token) || models.has(token)) return false
+    if (isBlockedBrandToken(token)) return false
+    return /^[a-z]{3,}$/i.test(token)
+  })
+  const modelo = modeloToken || modeloRaw || leftover || undefined
+
+  let marca = marcaToken || undefined
+  if (modelo && !marca) {
+    const stem = foldToken(modelo).split(/\s+/)[0] || ''
+    const compact = foldToken(modelo).replace(/\s+/g, '')
+    const mapped = modelToBrand[stem] || modelToBrand[compact]
+    if (mapped && !isBlockedBrandToken(mapped)) {
+      marca = mapped
+    } else {
+      const inferred = inferBrandFromModelName(modelo)
+      if (inferred) {
+        const folded = foldToken(inferred).split(/[^a-z0-9]+/).find((part) => part.length >= 3)
+        if (folded && !isBlockedBrandToken(folded)) marca = folded
+      }
+    }
+  }
+
   return {
-    marca: marca || undefined,
+    marca,
     modelo,
   }
 }
@@ -147,6 +187,9 @@ export function extractEntities(tokens: readonly string[], raw: string, previous
         producto: productoNow || undefined,
         queja,
         compra,
+        marca: previous.marca,
+        modelo: previous.modelo,
+        posicion: previous.posicion,
       }
     : {
         ...previous,
@@ -163,13 +206,27 @@ export function extractEntities(tokens: readonly string[], raw: string, previous
   if (price) next.precioMencionado = price
   const { marca, modelo } = extractMarcaModelo(lookup, raw)
   if (marca) next.marca = marca
-  else if (!switched && previous.marca) next.marca = previous.marca
+  else if (previous.marca) next.marca = previous.marca
   if (modelo) next.modelo = modelo
-  else if (!switched && previous.modelo) next.modelo = previous.modelo
+  else if (previous.modelo) next.modelo = previous.modelo
+  const piezaLabel = next.pieza || familyNow?.label || ''
+  const posicion = piezaLabel ? positionForFamily(raw, piezaLabel) : ''
+  if (posicion) next.posicion = posicion
+  else if (previous.posicion) next.posicion = previous.posicion
 
   const mentioned = listPartFamilies(lookup)
   if (mentioned.length > 1) {
     const conflict = { field: 'producto', previous: mentioned[0].label, next: mentioned[1].label }
+    next.conflict = conflict
+    return { next, conflict }
+  }
+  const pair = oppositePositionPair(raw)
+  if (pair && familyNow && familyNeedsPosition(familyNow)) {
+    const conflict = {
+      field: 'producto',
+      previous: `${familyNow.label} ${pair.left}`,
+      next: `${familyNow.label} ${pair.right}`,
+    }
     next.conflict = conflict
     return { next, conflict }
   }

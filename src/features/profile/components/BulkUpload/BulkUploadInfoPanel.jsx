@@ -1,5 +1,10 @@
-import { STOCK_STATUS } from '@/features/profile/api/bulkOrderApi'
 import { namedControl } from '@/shared/lib/namedControl'
+
+const STOCK_STATUS = {
+  OK: 'Ok',
+  SHORT: 'con novedad',
+  OUT: 'agotado',
+}
 
 const STATUS_MODIFIER = {
   [STOCK_STATUS.OK]: 'ok',

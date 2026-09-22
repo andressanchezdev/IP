@@ -33,14 +33,18 @@ export const OTHER_PART_TERMS = [
   'bandas',
   'bateria',
   'biela',
+  'bieleta',
   'bobina',
   'bomba',
+  'botella',
   'bujia',
   'cable',
   'cadena',
+  'campana',
   'carburador',
   'carenado',
   'cdi',
+  'chiclero',
   'chicote',
   'ciguenal',
   'cilindro',
@@ -51,6 +55,7 @@ export const OTHER_PART_TERMS = [
   'empaque',
   'escape',
   'espejo',
+  'espiral',
   'estribo',
   'estator',
   'faro',
@@ -62,6 +67,7 @@ export const OTHER_PART_TERMS = [
   'junta',
   'leva',
   'liquido',
+  'manguera',
   'manillar',
   'motor',
   'pedal',
@@ -70,6 +76,7 @@ export const OTHER_PART_TERMS = [
   'refrigerante',
   'regulador',
   'relay',
+  'resorte',
   'reten',
   'rodamiento',
   'silenciador',
@@ -150,12 +157,33 @@ export const PART_ALIASES: Record<string, string> = {
   accesorios: 'accesorio',
   acsesorio: 'accesorio',
   amortiguadores: 'amortiguador',
+  amortiguacion: 'amortiguador',
+  amortiguadro: 'amortiguador',
+  aceitico: 'aceite',
+  bacheador: 'amortiguador',
+  bacheadores: 'amortiguador',
+  bacheadro: 'amortiguador',
+  monoshock: 'amortiguador',
+  shocks: 'amortiguador',
+  shock: 'amortiguador',
   balatas: 'balata',
   banda: 'banda',
   bandas: 'banda',
   baterias: 'bateria',
+  cachucha: 'casco',
+  chiclero: 'carburador',
+  chicleros: 'carburador',
   caliper: 'mordaza',
   calipers: 'mordaza',
+  campanas: 'campana',
+  campana: 'campana',
+  tambores: 'banda',
+  resortes: 'resorte',
+  espirales: 'espiral',
+  botellas: 'botella',
+  bieletas: 'bieleta',
+  mangueras: 'manguera',
+  retenes: 'reten',
   bujias: 'bujia',
   cadenas: 'cadena',
   candados: 'candado',
@@ -174,6 +202,10 @@ export const PART_ALIASES: Record<string, string> = {
   frenos: 'freno',
   guantes: 'guante',
   llantas: 'llanta',
+  llantica: 'llanta',
+  llanticas: 'llanta',
+  guaya: 'banda',
+  guayas: 'banda',
   pasta: 'pastilla',
   pastas: 'pastilla',
   pastiya: 'pastilla',
@@ -188,6 +220,8 @@ export const PART_ALIASES: Record<string, string> = {
   barrrs: 'barras',
   barrs: 'barras',
   barrra: 'barras',
+  tijeras: 'barras',
+  tijera: 'barras',
   repuesto: 'repuesto',
   repuestos: 'repuesto',
   ripuesto: 'repuesto',
@@ -197,12 +231,16 @@ export const PART_ALIASES: Record<string, string> = {
   tambor: 'banda',
   zapatas: 'zapata',
   suspencion: 'suspension',
+  suspencionn: 'suspension',
   yanta: 'llanta',
   yantas: 'llanta',
   llantra: 'llanta',
   llantras: 'llanta',
   neumatico: 'llanta',
   caucho: 'llanta',
+  pila: 'bateria',
+  suiche: 'switch',
+  suiches: 'switch',
   pad: 'pastilla',
   pads: 'pastilla',
   rotor: 'disco',
@@ -290,6 +328,244 @@ function hasWord(tokens: readonly string[], term: string) {
   return tokens.some((token) => matchesTerm(foldWord(token), term) || foldWord(token) === term)
 }
 
+export const POSITION_WORDS = new Set([
+  'trasero',
+  'trasera',
+  'traseros',
+  'traseras',
+  'delantero',
+  'delantera',
+  'delanteros',
+  'delanteras',
+  'izquierdo',
+  'izquierda',
+  'derecho',
+  'derecha',
+  'superior',
+  'inferior',
+  'adelante',
+  'atras',
+  'arriba',
+  'abajo',
+])
+
+const FRONT_POSITION = new Set(['delantero', 'delantera', 'delanteros', 'delanteras', 'adelante'])
+const REAR_POSITION = new Set(['trasero', 'trasera', 'traseros', 'traseras', 'atras'])
+const LEFT_POSITION = new Set(['izquierdo', 'izquierda'])
+const RIGHT_POSITION = new Set(['derecho', 'derecha'])
+
+const POSITION_VARIANT_STEMS = new Set([
+  'campana',
+  'amortiguador',
+  'pastilla',
+  'banda',
+  'disco',
+  'faro',
+  'direccional',
+  'espejo',
+  'mordaza',
+  'pinza',
+  'manguera',
+  'guaya',
+  'reten',
+  'llanta',
+  'rin',
+  'guardafango',
+  'bomba',
+  'barra',
+  'botella',
+])
+
+const LATERAL_POSITION_STEMS = new Set(['espejo', 'direccional'])
+
+export const PURCHASE_VERBS = new Set([
+  'comprar',
+  'compra',
+  'compro',
+  'compramos',
+  'pedir',
+  'pido',
+  'pide',
+  'pedimos',
+  'necesito',
+  'necesita',
+  'necesitamos',
+  'busco',
+  'busca',
+  'buscar',
+  'buscando',
+  'tienen',
+  'venden',
+  'vendo',
+  'manejan',
+  'consigo',
+  'consigues',
+  'consigue',
+  'conseguir',
+  'quiero',
+  'queremos',
+  'quisiera',
+  'adquirir',
+  'adquiero',
+  'cotizar',
+  'cotizo',
+  'cotizas',
+  'interesa',
+  'interesado',
+  'interesada',
+  'gustaria',
+  'muestras',
+  'mostrar',
+  'muestrame',
+])
+
+const MODEL_BLOCK = new Set([
+  'mono',
+  'shock',
+  'shocks',
+  'moto',
+  'motos',
+  'motocicleta',
+  'motocicletas',
+  'carro',
+  'carros',
+  'vehiculo',
+  'vehiculos',
+  'para',
+  'par',
+  'una',
+  'uno',
+  'unos',
+  'unas',
+  ...POSITION_WORDS,
+  ...PURCHASE_VERBS,
+])
+
+export function isPositionToken(token: string) {
+  return POSITION_WORDS.has(foldWord(token))
+}
+
+export function isPurchaseVerbToken(token: string) {
+  return PURCHASE_VERBS.has(foldWord(token))
+}
+
+export function isModelBlockToken(token: string) {
+  return MODEL_BLOCK.has(foldWord(token))
+}
+
+export function hasProductObject(tokens: readonly string[]) {
+  if (resolvePartFamily(tokens)) return true
+  return tokens.some((token) => {
+    const folded = foldWord(token)
+    if (folded.length < 3) return false
+    if (isPurchaseVerbToken(folded) || isPositionToken(folded) || isModelBlockToken(folded)) return false
+    if (liveWeakLexemes().has(folded)) return false
+    return true
+  })
+}
+
+export function hasPurchaseOrPartIntent(tokens: readonly string[], raw = '') {
+  if (resolvePartFamily(tokens)) return true
+  if (listPartFamilies(tokens).length) return true
+  if (tokens.some((token) => isPurchaseVerbToken(token))) return true
+  const blob = foldWord(`${tokens.join(' ')} ${raw}`)
+  if (/\bcampana/.test(blob) || /\bmonoshock\b|\bmono[\s-]?shock\b/.test(blob)) return true
+  return false
+}
+
+export function positionsInText(raw: string) {
+  const blob = foldWord(raw)
+  const words = blob.split(/[^a-z0-9]+/).filter(Boolean)
+  const found: string[] = []
+  const push = (word: string) => {
+    if (!word || found.includes(word)) return
+    found.push(word)
+  }
+  for (const word of words) {
+    if (POSITION_WORDS.has(word)) push(word)
+  }
+  if (/\bde adelante\b/.test(blob) || /\badelante\b/.test(blob)) push('delantero')
+  if (/\bde atras\b/.test(blob) || /\batras\b/.test(blob)) push('trasero')
+  if (/\bde arriba\b/.test(blob)) push('superior')
+  if (/\bde abajo\b/.test(blob)) push('inferior')
+  if (/\bdel lado izquierdo\b/.test(blob)) push('izquierdo')
+  if (/\bdel lado derecho\b/.test(blob)) push('derecho')
+  return found
+}
+
+export function oppositePositionPair(raw: string): { left: string; right: string; axis: 'frontRear' | 'leftRight' } | null {
+  const pos = positionsInText(raw)
+  const hasFront = pos.some((word) => FRONT_POSITION.has(word))
+  const hasRear = pos.some((word) => REAR_POSITION.has(word))
+  if (hasFront && hasRear) return { left: 'delantera', right: 'trasera', axis: 'frontRear' }
+  const hasLeft = pos.some((word) => LEFT_POSITION.has(word))
+  const hasRight = pos.some((word) => RIGHT_POSITION.has(word))
+  if (hasLeft && hasRight) return { left: 'izquierdo', right: 'derecho', axis: 'leftRight' }
+  return null
+}
+
+export function oppositePositionTokens(word: string): readonly string[] {
+  const folded = foldWord(word)
+  if (FRONT_POSITION.has(folded)) return [...REAR_POSITION]
+  if (REAR_POSITION.has(folded)) return [...FRONT_POSITION]
+  if (LEFT_POSITION.has(folded)) return [...RIGHT_POSITION]
+  if (RIGHT_POSITION.has(folded)) return [...LEFT_POSITION]
+  return []
+}
+
+export function familyNeedsPosition(family: { id: string; label: string } | null | undefined) {
+  if (!family || family.ambiguous) return false
+  const idStem = partStem(family.id)
+  const labelStem = partStem(family.label)
+  return POSITION_VARIANT_STEMS.has(idStem) || POSITION_VARIANT_STEMS.has(labelStem)
+}
+
+export function positionAxisForFamily(family: { id: string; label: string }): 'frontRear' | 'leftRight' {
+  const stem = partStem(family.id) || partStem(family.label)
+  return LATERAL_POSITION_STEMS.has(stem) ? 'leftRight' : 'frontRear'
+}
+
+export function productPositionAlignment(text: string, asked: readonly string[]): 'match' | 'opposite' | 'unknown' {
+  const blob = foldWord(text)
+  const askedFolded = asked.map(foldWord).filter(Boolean)
+  if (!askedFolded.length) return 'unknown'
+  const hasAsked = askedFolded.some((word) => blob.includes(word) || [...positionAliases(word)].some((alias) => blob.includes(alias)))
+  const hasOpposite = askedFolded.some((word) => oppositePositionTokens(word).some((opp) => blob.includes(opp)))
+  if (hasAsked) return 'match'
+  if (hasOpposite) return 'opposite'
+  return 'unknown'
+}
+
+function positionAliases(word: string) {
+  const folded = foldWord(word)
+  if (FRONT_POSITION.has(folded)) return FRONT_POSITION
+  if (REAR_POSITION.has(folded)) return REAR_POSITION
+  if (LEFT_POSITION.has(folded)) return LEFT_POSITION
+  if (RIGHT_POSITION.has(folded)) return RIGHT_POSITION
+  return new Set([folded])
+}
+
+export function positionForFamily(raw: string, familyLabel: string) {
+  const words = raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((word) => foldWord(word))
+  const familyParts = foldWord(familyLabel).split(/[^a-z0-9]+/).filter((part) => part.length > 2)
+  const index = words.findIndex((word) => familyParts.some((part) => matchesTerm(word, part) || word === part))
+  if (index >= 0) {
+    const window = words.slice(Math.max(0, index - 2), index + 6)
+    const near = window.find((word) => POSITION_WORDS.has(word))
+    if (near) return near
+  }
+  const all = positionsInText(raw)
+  if (!all.length) return ''
+  if (oppositePositionPair(raw)) return ''
+  return all[0] || ''
+}
+
 /** Familia concreta: pastilla ≠ banda ≠ disco, aunque todas lleven “freno”. */
 export function resolvePartFamily(tokens: readonly string[]): ResolvedPart | null {
   const useful = tokens.map(foldWord).filter((token) => token.length > 2 && !liveWeakLexemes().has(token) && !liveGenericTokens().has(token))
@@ -298,9 +574,19 @@ export function resolvePartFamily(tokens: readonly string[]): ResolvedPart | nul
   const has = (term: string) => hasWord(useful, term)
   const brakeCue = has('freno')
   const tireCue = has('llanta') || has('rodadura')
+  const motorCue = has('motor') || has('correa') || has('distribucion')
 
+  if (has('campana')) {
+    return { id: 'campana', label: 'campana', ambiguous: false }
+  }
   if (has('pastilla') || has('pasta') || has('pastas')) {
     return { id: 'pastilla_freno', label: 'pastillas de freno', ambiguous: false }
+  }
+  if (has('guaya') && brakeCue) {
+    return { id: 'banda_freno', label: 'bandas de freno', ambiguous: false }
+  }
+  if ((has('banda') || has('guaya')) && motorCue && !brakeCue) {
+    return { id: 'correa', label: 'correa', ambiguous: false }
   }
   if (has('zapata') || has('balata') || (has('banda') && (brakeCue || !tireCue) && !has('rodadura'))) {
     return { id: 'banda_freno', label: 'bandas de freno', ambiguous: false }
@@ -327,10 +613,17 @@ export function listPartFamilies(tokens: readonly string[]): ResolvedPart[] {
   const found: ResolvedPart[] = []
   const seen = new Set<string>()
   for (const token of tokens) {
+    if (isPositionToken(token) || isPurchaseVerbToken(token)) continue
     const hit = resolvePartFamily([token])
     if (!hit || hit.ambiguous || seen.has(hit.id)) continue
     seen.add(hit.id)
     found.push(hit)
+  }
+  if (found.some((item) => item.id === 'campana')) {
+    return found.filter((item) => item.id !== 'llanta')
+  }
+  if (found.some((item) => item.id === 'barras' || item.id === 'barra')) {
+    return found.filter((item) => item.id !== 'suspension')
   }
   if (found.some((item) => item.id.endsWith('_freno'))) {
     return found.filter((item) => item.id !== 'freno')

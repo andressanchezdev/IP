@@ -45,6 +45,7 @@ export type EntityMap = {
   namedPart?: string
   marca?: string
   modelo?: string
+  posicion?: string
   codigo?: string
   precioMencionado?: string
   queja?: boolean
@@ -64,6 +65,7 @@ export type OfferedProduct = {
   family: string
   marca?: string
   modelo?: string
+  category?: string
   cantidad?: number
   codigo?: string
 }
@@ -73,6 +75,7 @@ export type ScaffoldState =
   | 'awaitingBrand'
   | 'awaitingModel'
   | 'awaitingYear'
+  | 'awaitingPosition'
   | 'readyToSearch'
   | 'showingResults'
   | 'completed'
@@ -85,6 +88,7 @@ export type ScaffoldCaptured = {
   year: string
   cilindraje: string
   partTerm: string
+  position: string
 }
 
 export type ScaffoldedSearch = {
@@ -93,6 +97,37 @@ export type ScaffoldedSearch = {
   history: string[]
   turnsInScaffold: number
   maxTurnsBeforeFallback: number
+}
+
+export type OrderFlowPendingProduct = {
+  id: string
+  label: string
+  codigo: string
+  price: number
+  stock: number
+}
+
+export type OrderFlowState =
+  | 'idle'
+  | 'awaitingSize'
+  | 'routeA_product'
+  | 'routeA_qty'
+  | 'routeA_confirm'
+  | 'routeA_more'
+  | 'routeB_guide'
+  | 'excel_confirm'
+  | 'checkout_offer'
+  | 'checkout_guide'
+
+export type OrderFlow = {
+  currentState: OrderFlowState
+  addedDistinct: number
+  pendingProduct: OrderFlowPendingProduct | null
+  pendingQty: number
+  confirmRetries: number
+  productConfirmed: boolean
+  explainTopic: '' | 'bulk' | 'checkout'
+  explainStep: number
 }
 
 export type SessionContext = {
@@ -124,6 +159,7 @@ export type SessionContext = {
   metrics: SessionMetrics
   phaseLog: PhaseLogEntry[]
   scaffoldedSearch: ScaffoldedSearch
+  orderFlow: OrderFlow
 }
 
 let activeSessionId = ''
@@ -164,10 +200,20 @@ export function emptySession(sessionId = createId()): SessionContext {
     phaseLog: [],
     scaffoldedSearch: {
       currentState: 'idle',
-      captured: { family: '', brand: '', model: '', year: '', cilindraje: '', partTerm: '' },
+      captured: { family: '', brand: '', model: '', year: '', cilindraje: '', partTerm: '', position: '' },
       history: [],
       turnsInScaffold: 0,
       maxTurnsBeforeFallback: 4,
+    },
+    orderFlow: {
+      currentState: 'idle',
+      addedDistinct: 0,
+      pendingProduct: null,
+      pendingQty: 0,
+      confirmRetries: 0,
+      productConfirmed: false,
+      explainTopic: '',
+      explainStep: 0,
     },
   }
 }
@@ -206,12 +252,31 @@ export function loadSession(): SessionContext {
   if (!ctx.scaffoldedSearch) {
     ctx.scaffoldedSearch = {
       currentState: 'idle',
-      captured: { family: '', brand: '', model: '', year: '', cilindraje: '', partTerm: '' },
+      captured: { family: '', brand: '', model: '', year: '', cilindraje: '', partTerm: '', position: '' },
       history: [],
       turnsInScaffold: 0,
       maxTurnsBeforeFallback: 4,
     }
   }
+  if (ctx.scaffoldedSearch?.captured && typeof ctx.scaffoldedSearch.captured.position !== 'string') {
+    ctx.scaffoldedSearch.captured.position = ''
+  }
+  if (!ctx.orderFlow) {
+    ctx.orderFlow = {
+      currentState: 'idle',
+      addedDistinct: 0,
+      pendingProduct: null,
+      pendingQty: 0,
+      confirmRetries: 0,
+      productConfirmed: false,
+      explainTopic: '',
+      explainStep: 0,
+    }
+  }
+  if (typeof ctx.orderFlow.confirmRetries !== 'number') ctx.orderFlow.confirmRetries = 0
+  if (typeof ctx.orderFlow.productConfirmed !== 'boolean') ctx.orderFlow.productConfirmed = false
+  if (ctx.orderFlow.explainTopic !== 'bulk' && ctx.orderFlow.explainTopic !== 'checkout') ctx.orderFlow.explainTopic = ''
+  if (typeof ctx.orderFlow.explainStep !== 'number') ctx.orderFlow.explainStep = 0
   return ctx
 }
 

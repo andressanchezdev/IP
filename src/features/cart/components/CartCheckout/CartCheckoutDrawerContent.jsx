@@ -33,6 +33,9 @@ export function CartCheckoutDrawerContent() {
   const [paymentPanel, setPaymentPanel] = useState(null)
   const [editingDelivery, setEditingDelivery] = useState(false)
   const [editingPayment, setEditingPayment] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(true)
+  const [deliveryOpen, setDeliveryOpen] = useState(true)
+  const [paymentOpen, setPaymentOpen] = useState(true)
 
   const personal = profileSettings?.personal ?? {}
   const credit = profileSettings?.credit ?? profile?.credit ?? {
@@ -94,6 +97,14 @@ export function CartCheckoutDrawerContent() {
   const showPaymentSection = hasDelivery
     && !editingDelivery
     && (!paymentConfirmed || editingPayment)
+
+  useEffect(() => {
+    if (showDeliverySection) setDeliveryOpen(true)
+  }, [showDeliverySection])
+
+  useEffect(() => {
+    if (showPaymentSection) setPaymentOpen(true)
+  }, [showPaymentSection])
 
   const handleEditDelivery = () => {
     setEditingPayment(false)
@@ -247,10 +258,10 @@ export function CartCheckoutDrawerContent() {
 
   return (
     <div className="content-main-carrito">
-      <div className="content-main-aux-carrito order-payments-panel checkout-panel checkout-finalize">
+      <div className="content-main-aux-carrito content-main-aux-carrito--scroll order-payments-panel checkout-panel checkout-finalize">
         <CheckoutOrderSummary
-          isOpen
-          onToggle={() => {}}
+          isOpen={summaryOpen}
+          onToggle={setSummaryOpen}
           subtotal={subtotal}
           iva={iva}
           totalToPay={totalToPay}
@@ -265,8 +276,8 @@ export function CartCheckoutDrawerContent() {
 
         {showDeliverySection && (
           <CheckoutDeliverySection
-            isOpen
-            onToggle={() => {}}
+            isOpen={deliveryOpen}
+            onToggle={setDeliveryOpen}
             registeredAddresses={registeredAddresses}
             selectedAddressId={selectedAddressId}
             onSelectAddress={setSelectedAddressId}
@@ -282,8 +293,8 @@ export function CartCheckoutDrawerContent() {
 
         {showPaymentSection && (
           <CheckoutPaymentSection
-            isOpen
-            onToggle={() => {}}
+            isOpen={paymentOpen}
+            onToggle={setPaymentOpen}
             totalToPay={totalToPay}
             creditAvailable={creditAvailable}
             creditPaymentLimitDays={creditPaymentLimitDays}

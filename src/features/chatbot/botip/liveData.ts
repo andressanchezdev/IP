@@ -45,6 +45,74 @@ export function liveLexiconMap(key: string, fallback: Record<string, string>): R
   }
 }
 
+const DEFAULT_NEVER_BRAND_TOKENS = [
+  'llanta',
+  'llantas',
+  'llantica',
+  'llanticas',
+  'yanta',
+  'yantas',
+  'neumatico',
+  'neumaticos',
+  'caucho',
+  'aceite',
+  'amortiguador',
+  'pastilla',
+  'pastillas',
+  'disco',
+  'discos',
+  'banda',
+  'bandas',
+  'correa',
+  'carburador',
+  'carburadores',
+  'chiclero',
+  'freno',
+  'rin',
+  'rines',
+  'filtro',
+  'filtros',
+  'cadena',
+  'bateria',
+  'bujia',
+  'casco',
+] as const
+
+const DEFAULT_MODEL_TO_BRAND: Record<string, string> = {
+  boxer: 'bajaj',
+  pulsar: 'bajaj',
+  platina: 'bajaj',
+  discover: 'bajaj',
+  avenger: 'bajaj',
+  ybr: 'yamaha',
+  fz: 'yamaha',
+  nmax: 'yamaha',
+  crypton: 'yamaha',
+  xtz: 'yamaha',
+  cg125: 'honda',
+  cb190r: 'honda',
+  xr150: 'honda',
+  xre300: 'honda',
+  invicta: 'honda',
+  ak125: 'akt',
+  nkd: 'akt',
+  dynamic: 'akt',
+  crux: 'akt',
+  gn125: 'suzuki',
+  gixxer: 'suzuki',
+  ax4: 'suzuki',
+}
+
+/** Tokens that name a part/category and must not be treated as vehicle brand. */
+export function liveNeverBrandTokens(): ReadonlySet<string> {
+  return liveLexiconSet('neverBrandTokens', new Set(DEFAULT_NEVER_BRAND_TOKENS))
+}
+
+/** Known model stem → brand (additive to inventory inference). */
+export function liveModelToBrandMap(): Record<string, string> {
+  return liveLexiconMap('modelToBrand', DEFAULT_MODEL_TO_BRAND)
+}
+
 export function liveLexiconSet(key: string, fallback: ReadonlySet<string>, lowercase = true): ReadonlySet<string> {
   return new Set(liveLexiconList(key, [...fallback], lowercase))
 }

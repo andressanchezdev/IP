@@ -1,12 +1,12 @@
 import { expandPartSynonyms, explainPartText, isExplainPartAsk, matchSymptom, needsVehicleForCompat } from './expertise'
 import { classifyUnmatched, companyHintWord } from './unmatchedKind'
-import { findTerm, liveAccessoryTerms, liveCatalogParts, liveMotoTerms, liveOtherParts } from './motoParts'
+import { findTerm, liveAccessoryTerms, liveCatalogParts, liveMotoTerms, liveOtherParts, hasProductObject, hasPurchaseOrPartIntent, listPartFamilies, oppositePositionPair, positionForFamily, resolvePartFamily } from './motoParts'
 import { correctTokensContextual, expandStuckTokens, nearestLexiconGuess } from './matchIntent'
 import { liveInventory } from './botip/liveData'
 import { hydrateChatProducts } from './productSource'
 import { getBotSettings, interpolate, keywordsOf } from './botSettings'
 import { clampPipelineConfig } from './pipelineConfig'
-import { countOccurrences, isDefineQuestion, isHowAreYou, isSmallTalk, isStopToken, preProcess, prioritizeLong, hasRichPetitionSignals, tokenizeRaw, tokensEqual, type PreparedInput } from './prepare'
+import { countOccurrences, isDefineQuestion, isHowAreYou, isGreetingToken, isSmallTalk, isThanksTalk, isStopToken, preProcess, prioritizeLong, hasRichPetitionSignals, tokenizeRaw, tokensEqual, type PreparedInput } from './prepare'
 import { extractEntities, preferredTerms } from './entities'
 import { isSecondaryIntent, rankIntents, runAllMatchers, shouldDisambiguate, type Candidate } from './matchers'
 import {
@@ -28,12 +28,13 @@ import {
   companyReply,
   creatureUnmatchedReply,
   disambiguationReply,
-  entityConflictReply,
+  partConflictReply,
   fallbackReply,
   foodUnmatchedReply,
   getChatIntents,
   greetingReply,
   howAreYouReply,
+  thanksReply,
   insultUnmatchedReply,
   INTENT_FOCUS_LABELS,
   INTENT_LABELS,
@@ -72,8 +73,9 @@ import { clearLastOffers } from './inventory'
 import { pushPhaseLog } from './pipelineLog'
 import { matchLandingTeam } from './teamLookup'
 import { parseUserFrame, isTeamNameLookupAllowed } from './userFrame'
-import { classifyTurn, focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus } from './conversationThread'
-import { isScaffoldActive, resetScaffold, resumeScaffoldQuestion, runScaffoldTurn, scaffoldAsideReply } from './scaffoldSearch'
+import { classifyTurn, focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
+import { isScaffoldActive, openScaffold, resetScaffold, resumeScaffoldQuestion, runScaffoldTurn, scaffoldAsideReply } from './scaffoldSearch'
+import { isOrderFlowActive, resetOrderFlow, runOrderFlowTurn, beginAddFromLastOffer, orderProcessGuideReply } from './createOrderFlow'
 
 const AFFIRM = new Set(['si', 'ok', 'dale', 'claro', 'yes', 'yep', 'perfecto'])
 const NEGATE = new Set(['no', 'nope', 'nel', 'nada'])
@@ -130,6 +132,35 @@ function ordinalChoice(raw: string, tokens: readonly string[]) {
   return null
 }
 
+function applyFamilyChoice(ctx: SessionContext, label: string, payload: Record<string, unknown>) {
+  ctx.pendingConfirmation = null
+  const positions = payload.positions && typeof payload.positions === 'object'
+    ? payload.positions as Record<string, string>
+    : {}
+  const chosen = String(payload.chosen || '')
+  const position = String(
+    positions[chosen] ||
+    positions[label] ||
+    ctx.entities.posicion ||
+    '',
+  )
+  const modelo = String(payload.modelo || ctx.entities.modelo || '')
+  const marca = String(payload.marca || ctx.entities.marca || '')
+  ctx.entities.pieza = label
+  ctx.entities.producto = label
+  if (position) ctx.entities.posicion = position
+  if (modelo) ctx.entities.modelo = modelo
+  if (marca) ctx.entities.marca = marca
+  const family = resolvePartFamily(label.split(/\s+/).filter(Boolean)) || { id: label, label, ambiguous: false }
+  return finalize(
+    ctx,
+    openScaffold(ctx, family, { position, model: modelo, brand: marca, partTerm: family.label }),
+    'product',
+    6,
+    configOf(),
+  )
+}
+
 function applyProductChoice(ctx: SessionContext, label: string) {
   ctx.pendingConfirmation = null
   ctx.entities.producto = label
@@ -138,7 +169,28 @@ function applyProductChoice(ctx: SessionContext, label: string) {
   return finalize(ctx, runHandler('product', tokens, ctx), 'product', 6, configOf())
 }
 
+function resolvePendingPair(
+  ctx: SessionContext,
+  pending: NonNullable<SessionContext['pendingConfirmation']>,
+  label: string,
+  tokens: readonly string[],
+  side: 'left' | 'right',
+) {
+  const kind = String(pending.payload.kind || (pending.payload.previous && pending.payload.next ? 'product' : 'intent'))
+  if (kind === 'intent') {
+    ctx.pendingConfirmation = null
+    const intent = side === 'right'
+      ? String(pending.payload.rightIntent || pending.intent)
+      : String(pending.payload.intent || pending.intent)
+    return finalize(ctx, runHandler(intent, tokens, ctx), intent, 5, configOf())
+  }
+  const family = resolvePartFamily(String(label).split(/\s+/).filter(Boolean))
+  if (family && !family.ambiguous) return applyFamilyChoice(ctx, family.label, { ...pending.payload, chosen: label })
+  return applyProductChoice(ctx, label)
+}
+
 function handlePending(tokens: readonly string[], ctx: SessionContext, prepared: PreparedInput, raw: string): ChatReply | null {
+  if (isOrderFlowActive(ctx)) return null
   const pending = ctx.pendingConfirmation
   if (!pending) return null
   const significant = prepared.significant.length ? prepared.significant : prepared.allTokens
@@ -157,28 +209,16 @@ function handlePending(tokens: readonly string[], ctx: SessionContext, prepared:
     const leftHit = mentionsChoice(previous, nextLabel, significant, raw)
     const rightHit = mentionsChoice(nextLabel, previous, significant, raw)
     if (leftHit && !rightHit) {
-      ctx.pendingConfirmation = null
-      return kind === 'intent'
-        ? finalize(ctx, runHandler(String(pending.payload.intent || pending.intent), tokens, ctx), String(pending.payload.intent || pending.intent), 5, configOf())
-        : applyProductChoice(ctx, previous)
+      return resolvePendingPair(ctx, pending, previous, tokens, 'left')
     }
     if (rightHit && !leftHit) {
-      ctx.pendingConfirmation = null
-      return kind === 'intent'
-        ? finalize(ctx, runHandler(String(pending.payload.rightIntent || ''), tokens, ctx), String(pending.payload.rightIntent || pending.intent), 5, configOf())
-        : applyProductChoice(ctx, nextLabel)
+      return resolvePendingPair(ctx, pending, nextLabel, tokens, 'right')
     }
     if (picksFirst && !picksSecond) {
-      ctx.pendingConfirmation = null
-      return kind === 'intent'
-        ? finalize(ctx, runHandler(String(pending.payload.intent || pending.intent), tokens, ctx), String(pending.payload.intent || pending.intent), 5, configOf())
-        : applyProductChoice(ctx, previous)
+      return resolvePendingPair(ctx, pending, previous, tokens, 'left')
     }
     if (picksSecond && !picksFirst) {
-      ctx.pendingConfirmation = null
-      return kind === 'intent'
-        ? finalize(ctx, runHandler(String(pending.payload.rightIntent || ''), tokens, ctx), String(pending.payload.rightIntent || pending.intent), 5, configOf())
-        : applyProductChoice(ctx, nextLabel)
+      return resolvePendingPair(ctx, pending, nextLabel, tokens, 'right')
     }
     if (isYes || isNo) {
       return finalize(ctx, choiceReply(previous, nextLabel), 'disambiguation', 4, configOf())
@@ -321,13 +361,27 @@ function recoverUnmatched(ctx: SessionContext, raw: string, tokens: readonly str
     ctx.offerHumanHandoff = ctx.errorCount >= cfg.HUMAN_HANDOFF_AT
     return finalize(ctx, special, 'fallback', 0, cfg)
   }
+  if (hasProductObject(tokens)) {
+    ctx.offerMenu = true
+    ctx.offerHumanHandoff = ctx.errorCount >= cfg.HUMAN_HANDOFF_AT
+    return finalize(
+      ctx,
+      {
+        text: searchMissGuideText(),
+        actions: [{ kind: 'focus-search', href: '/', label: 'Abrir barra de búsqueda' }],
+      },
+      'fallback',
+      0,
+      cfg,
+    )
+  }
   const label = focusLabel(ctx)
   const safeFocus = label && !INTENT_FOCUS_LABELS.has(label.toLowerCase()) ? label : ''
   if (safeFocus && ctx.conversationFocus) {
     return finalize(ctx, rectifyFocusReply(safeFocus), 'fallback', 0, cfg)
   }
   const guess = nearestLexiconGuess(tokens, dictionary(ctx))
-  if (guess && ctx.fallbackCount < cfg.FALLBACK_MENU_AT) {
+  if (guess && guess !== 'pedido' && ctx.fallbackCount < cfg.FALLBACK_MENU_AT) {
     const intent = intentForGuess(guess)
     ctx.pendingConfirmation = { intent, payload: { intent, guess, kind: 'typo' } }
     return finalize(ctx, rectifyTypoReply(guess), 'fallback', 0, cfg)
@@ -524,7 +578,10 @@ function fastLane(prepared: PreparedInput, ctx: SessionContext, cfg: ReturnType<
   if (isHowAreYou(prepared.text)) {
     return finalize(ctx, howAreYouReply(), 'howAreYou', 5, cfg)
   }
-  if (isSmallTalk(prepared.text) || keywordsOf('greeting').includes(token)) {
+  if (
+    (isSmallTalk(prepared.text) || keywordsOf('greeting').includes(token))
+    && !hasPurchaseOrPartIntent([token, rawToken].filter(Boolean), prepared.text)
+  ) {
     return finalize(ctx, greetingReply(ctx), 'greeting', 5, cfg)
   }
   const allowNames = isTeamNameLookupAllowed(frame, ctx.lastTopIntent, ctx.pendingConfirmation?.intent || null)
@@ -583,13 +640,25 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
 
     updateContext(ctx, prepared, cfg)
 
-    if (prepared.allTokens.some((token) => FORGET.has(token))) {
+    if (isThreadReleaseAsk(raw) || prepared.allTokens.some((token) => FORGET.has(token))) {
       ctx.pendingConfirmation = null
       ctx.topicStack = []
-      ctx.conversationFocus = null
       resetScaffold(ctx)
+      resetOrderFlow(ctx)
+      const leftover = releaseRemainder(raw)
+      if (!leftover) {
+        ctx.conversationFocus = null
+        clearLastOffers(ctx)
+        return finalize(ctx, { text: 'Listo, lo dejamos. El carrito se mantiene. ¿En qué te ayudo ahora?', actions: [] }, 'thanks', 4, cfg)
+      }
+      ctx.entities = {
+        ...ctx.entities,
+        pieza: undefined,
+        producto: undefined,
+        namedPart: undefined,
+        accesorio: undefined,
+      }
       clearLastOffers(ctx)
-      return finalize(ctx, { text: 'Listo, lo dejamos. ¿En qué te ayudo ahora?', actions: [] }, 'thanks', 4, cfg)
     }
 
     const pending = handlePending(prepared.significant, ctx, prepared, raw)
@@ -604,15 +673,47 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
       return withAck(ctx.ackPrefix, reply)
     }
 
-    if (isHowAreYou(raw) || isHowAreYou(prepared.text)) {
+    if (!isOrderFlowActive(ctx) && (isHowAreYou(raw) || isHowAreYou(prepared.text))) {
       return finalize(ctx, howAreYouReply(), 'howAreYou', 6, cfg)
     }
 
-    if (!isFollowUpTurn(prepared.significant.length ? prepared.significant : prepared.allTokens, raw, ctx) && (isSmallTalk(raw) || isSmallTalk(prepared.text))) {
+    if (
+      !isOrderFlowActive(ctx)
+      && !isFollowUpTurn(prepared.significant.length ? prepared.significant : prepared.allTokens, raw, ctx)
+      && (isSmallTalk(raw) || isSmallTalk(prepared.text))
+      && !hasPurchaseOrPartIntent(prepared.allTokens, raw)
+      && !hasPurchaseOrPartIntent(prepared.significant, raw)
+    ) {
       return finalize(ctx, greetingReply(ctx), 'greeting', 6, cfg)
     }
 
-    const seekTokens = expandPartSynonyms(prepared.significant.length ? prepared.significant : prepared.allTokens, raw)
+    const offerFresh = Date.now() - (ctx.lastOffersAt || 0) < 5 * 60 * 1000
+    if (
+      !isOrderFlowActive(ctx)
+      && offerFresh
+      && ctx.lastOffers?.length === 1
+      && (ctx.lastTopIntent === 'product' || ctx.lastTopIntent === 'quote')
+    ) {
+      const folded = foldText(raw).trim()
+      if (/^(si|ok|dale|claro|yes|perfecto)$/.test(folded)) {
+        const add = beginAddFromLastOffer(ctx)
+        if (add) return finalize(ctx, add, 'product', 9, cfg)
+      }
+      if (/^no$/.test(folded)) {
+        clearLastOffers(ctx)
+        return finalize(ctx, { text: 'Ok, no lo agregué.', actions: [] }, 'thanks', 4, cfg)
+      }
+    }
+
+    if (!isOrderFlowActive(ctx) && (isThanksTalk(raw) || isThanksTalk(prepared.text))) {
+      return finalize(ctx, thanksReply(), 'thanks', 4, cfg)
+    }
+
+    const seed = prepared.significant.length ? prepared.significant : prepared.allTokens
+    const seekTokens = expandPartSynonyms(
+      correctTokensContextual(expandStuckTokens(seed, dictionary(ctx)), dictionary(ctx), preferredTerms(ctx.entities)),
+      raw,
+    ).filter((token) => !isGreetingToken(token))
     if (isExecutiveAsk(seekTokens, raw)) {
       return finalize(ctx, executiveReply(), 'attention', 9, cfg)
     }
@@ -621,6 +722,15 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     }
     if (isReturnsAsk(seekTokens, raw)) {
       return finalize(ctx, returnsReply(), 'returns', 6, cfg)
+    }
+    if (!isOrderFlowActive(ctx) && isOrderProcessAsk(seekTokens, raw)) {
+      return finalize(ctx, orderProcessGuideReply(), 'product', 8, cfg)
+    }
+    if (pareceCodigo(raw) || isCreateOrderAsk(seekTokens, raw) || isOrderFlowActive(ctx)) {
+      const orderReply = await runOrderFlowTurn(ctx, seekTokens, raw)
+      if (orderReply) {
+        return finalize(ctx, orderReply, 'product', 9, cfg)
+      }
     }
     if (isPaymentAsk(seekTokens, raw)) {
       const reply = isScaffoldActive(ctx) ? resumeScaffoldQuestion(ctx, paymentReply(seekTokens, ctx)) : paymentReply(seekTokens, ctx)
@@ -708,14 +818,23 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
 
     const extracted = extractEntities(corrected, raw, ctx.entities)
     if (extracted.conflict) {
+      const families = listPartFamilies(corrected)
+      const pair = oppositePositionPair(raw)
+      const left = families.length >= 2 ? families[0].label : extracted.conflict.previous
+      const right = families.length >= 2 ? families[1].label : extracted.conflict.next
+      const leftPos = families.length >= 2 ? positionForFamily(raw, left) : (pair?.left || positionForFamily(raw, left))
+      const rightPos = families.length >= 2 ? positionForFamily(raw, right) : (pair?.right || positionForFamily(raw, right))
       ctx.pendingConfirmation = {
         intent: 'entityConflict',
         payload: {
           kind: 'product',
           intent: 'product',
-          previous: extracted.conflict.previous,
-          next: extracted.conflict.next,
+          previous: left,
+          next: right,
           rightIntent: 'product',
+          positions: { [left]: leftPos, [right]: rightPos },
+          modelo: extracted.next.modelo || '',
+          marca: extracted.next.marca || '',
         },
       }
       ctx.entities = extracted.next
@@ -723,7 +842,11 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
       log(ctx, 'entities', 'conflict')
       return finalize(
         ctx,
-        entityConflictReply(extracted.conflict.previous, extracted.conflict.next),
+        partConflictReply(left, right, {
+          leftLabel: [left, leftPos].filter(Boolean).join(' '),
+          rightLabel: [right, rightPos].filter(Boolean).join(' '),
+          vehicle: extracted.next.modelo || '',
+        }),
         'disambiguation',
         4,
         cfg,

@@ -1,14 +1,14 @@
 import { getApiAuthToken } from '@/shared/api'
 import { postCartItem } from '@/features/cart/api/cartApi'
-import { runWithConcurrency, toMoneyNumber } from './bulkShared'
+import { planCartAdd } from '@/features/cart/api/cartPostBody'
+import { runWithConcurrency } from './bulkShared'
 
 /** Concurrencia de POST /inventory/carts para acelerar el envío masivo. */
 export const CART_POST_CONCURRENCY = 5
 
 /**
  * POST /api/v1/inventory/carts con Bearer token.
- * Body por producto: { id_producto, cantidad, precio_unitario }
- * Un POST distinto por cada fila seleccionada (id distinto por código Excel).
+ * Mismo body que Ordenar / chat: { id_producto, cantidad, precio_unitario }
  */
 export async function postBulkOrderToCart(
   rows = [],
@@ -32,40 +32,45 @@ export async function postBulkOrderToCart(
 
   onProgress?.(0, list.length)
 
-  // Precalcula cantidades por id para evitar colisiones si hubiera ids repetidos.
   list.forEach((row) => {
-    const productId = row?.id != null ? String(row.id) : ''
-    const stock = Math.max(0, Number(row?.stock) || 0)
-    const requested = Math.max(0, Number(row?.cantidad) || 0)
-    const orderQty = Math.min(requested, stock)
-    if (!productId || orderQty <= 0) return
-
-    const base = plannedQtyById.has(productId)
-      ? plannedQtyById.get(productId)
-      : Number(getExistingQty?.(productId) || 0)
-    plannedQtyById.set(productId, base + orderQty)
+    const planned = planCartAdd({
+      idProducto: row?.id,
+      requestedQty: row?.cantidad,
+      stock: row?.stock,
+      existingQty: plannedQtyById.has(String(row?.id))
+        ? plannedQtyById.get(String(row?.id))
+        : Number(getExistingQty?.(String(row?.id)) || 0),
+      precioUnitario: row?.precio,
+    })
+    if (!planned.ok) return
+    plannedQtyById.set(String(row.id), planned.body.cantidad)
   })
 
   await runWithConcurrency(list, concurrency, async (row) => {
     const productId = row?.id != null ? String(row.id) : ''
-    const stock = Math.max(0, Number(row?.stock) || 0)
-    const requested = Math.max(0, Number(row?.cantidad) || 0)
-    const orderQty = Math.min(requested, stock)
-    const requestBody = {
-      id_producto: Number(productId),
-      cantidad: plannedQtyById.get(productId) ?? orderQty,
-      precio_unitario: toMoneyNumber(row?.precio),
-    }
+    const existingQty = Number(getExistingQty?.(productId) || 0)
+    const planned = planCartAdd({
+      idProducto: row?.id,
+      requestedQty: row?.cantidad,
+      stock: row?.stock,
+      existingQty,
+      precioUnitario: row?.precio,
+    })
 
-    if (!productId || !Number.isFinite(requestBody.id_producto) || orderQty <= 0) {
+    if (!planned.ok) {
       failed.push({
         codigo: row?.codigo,
-        reason: !productId ? 'Código sin producto en inventario' : 'Sin stock disponible',
-        request: requestBody,
+        reason: planned.reason,
+        request: planned.body,
       })
       done += 1
       onProgress?.(done, list.length)
       return
+    }
+
+    const requestBody = {
+      ...planned.body,
+      cantidad: plannedQtyById.get(productId) ?? planned.body.cantidad,
     }
 
     try {
@@ -77,7 +82,7 @@ export async function postBulkOrderToCart(
       })
       posted.push({
         codigo: row.codigo,
-        cantidad: orderQty,
+        cantidad: planned.orderQty,
         id: productId,
         request: requestBody,
       })

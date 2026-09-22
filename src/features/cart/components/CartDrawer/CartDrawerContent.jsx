@@ -98,7 +98,7 @@ function CartCard({ item, catalogStock = 0, onQuantityChange, onRemove }) {
             onClick={() => onRemove(item.id)}
             {...namedControl(`Eliminar ${descriptionText || referenceText || 'producto'}`)}
           >
-            🗑
+            <span className="carrito-card__remove-icon" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -158,7 +158,7 @@ export function CartDrawerContent() {
 
   return (
     <div className="content-main-carrito">
-      <div className="content-main-aux-carrito">
+      <div className="content-main-aux-carrito content-main-aux-carrito--scroll">
         {cartItems.length === 0 ? (
           <p className="content-main-carrito__empty">
             El carrito está vacío.

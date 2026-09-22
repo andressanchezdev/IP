@@ -92,7 +92,7 @@ export const BOT_REPLY_FIELDS: Array<{ id: string; label: string }> = [
 
 export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
   greeting: {
-    keywords: 'hola, buenas, buenos, saludo, hey, holas, holis, hello, hi, saludos, buen, tardes, noches',
+    keywords: 'hola, buenas, buenos, saludo, hey, holas, holis, holiwis, hello, hi, saludos, buen, tardes, noches, ola, epa, epale, quiubo, quihubo, alo, habla',
     text: '',
     texts: [
       'Hola, bienvenido al chat Premium. soy botIP! Cuéntanos tu duda o el motivo de la consulta.',
@@ -164,18 +164,18 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
   },
   complaint: {
     keywords: 'queja, reclamo, reclamar, quejar, molestia, problema, garantia, pqr, inconforme, inconformidad, falla, defectuoso',
-    text: 'Lamentamos el inconveniente. Cuéntame qué pasó: producto, pedido y fecha, si los tienes. Te ayudo a dejarlo radicado. También puedes escribir al WhatsApp {phone}. El correo es {email}.',
+    text: 'Lamentamos el inconveniente. Ten en cuenta: la devolución está sujeta a términos y condiciones; los productos eléctricos no están sujetos a cambios ni cuentan con garantía; toda devolución o garantía se revisa previamente (plazo máximo 10 días con factura y empaque en buen estado). Cuéntame qué pasó: producto, pedido y fecha, si los tienes. También puedes escribir al WhatsApp {phone}. El correo es {email}.',
     texts: [
-      'Registramos tu molestia. Describe el caso con el mayor detalle que tengas. Un asesor lo atiende al {phone}. Correo {email}.',
-      'Vamos a ayudarte. Cuéntame el problema. También puedes escribir a {phone}. Correo {email}.',
+      'Registramos tu molestia. Recuerda que las devoluciones y garantías pasan por revisión, que los productos eléctricos no tienen garantía y que el plazo máximo es de 10 días con factura y empaque en buen estado. Describe el caso. Un asesor lo atiende al {phone}. Correo {email}.',
+      'Vamos a ayudarte. Para devoluciones o garantías aplica revisión previa, productos eléctricos sin garantía y plazo de 10 días con factura. Cuéntame el problema. También puedes escribir a {phone}. Correo {email}.',
     ],
   },
   returns: {
     keywords: 'devolver, devolucion, devoluciones, cambios, cambiarlo, cambiarla, reembolso, reembolsar',
-    text: 'Los cambios y devoluciones siguen nuestros términos y condiciones. Puedes visitarnos en {address}. Si prefieres, un asesor te atiende.',
+    text: 'La devolución de productos está sujeta a términos y condiciones. Los productos eléctricos no cuentan con garantía ni están sujetos a cambios. Para solicitar una devolución, el producto y su empaque deben conservarse en buen estado y debe presentarse la factura física y/o digital dentro de los 10 días posteriores a la compra. Toda devolución o garantía pasa por un proceso de revisión. Puedes visitarnos en {address} o te paso con un asesor.',
     texts: [
-      'Los cambios y devoluciones se rigen por nuestros términos y condiciones. Puedes visitarnos en {address}. Un asesor real también te guía.',
-      'Para un cambio o una devolución aplica lo indicado en términos y condiciones. Visítanos en {address}. Si quieres, te paso con un asesor.',
+      'Las devoluciones y garantías están sujetas a revisión. Los productos eléctricos no cuentan con garantía. Para solicitar una devolución, el producto y su empaque deben estar en buen estado y debe presentarse la factura física dentro de los 10 días posteriores a la compra. Visítanos en {address} o habla con un asesor.',
+      'Política de devoluciones: los productos eléctricos no tienen garantía. Las devoluciones y garantías pasan por un proceso de revisión. El producto debe conservarse en buen estado y presentarse con su empaque y factura física. El plazo máximo para solicitar una devolución es de 10 días. Dirección: {address}.',
     ],
   },
   quote: {
@@ -423,7 +423,7 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
     keywords: 'colaborador, colaboradora, integrante, funcionario',
     text: 'claro que si! {name} pertenece a nuestro grupo {role}. su linea de contacto es {phone}.',
     texts: [
-      '{name} es {role}. Puedes escribirle al {phone}.',
+      '{name} es {role}. Contacto: {phone}.',
       'En el equipo esta {name} ({role}). Contacto: {phone}.',
       '{name} atiende como {role}. Su telefono es {phone}.',
     ],
@@ -496,15 +496,15 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
   },
   humanHandoff: {
     keywords: '',
-    text: '¿Quieres que te conecte con un asesor humano?',
+    text: 'Entiendo. Puedo pasarte con un asesor real del equipo Premium. Dime el nombre de quien prefieres o elige una opción.',
     texts: [
-      'Puedo pasarte con una persona del equipo. ¿Te parece?',
-      'Si prefieres, te derivo con un humano. ¿Lo hago?',
+      'Sin problema. Te oriento con un asesor humano. Indica el nombre o elige en la lista.',
+      'Prefieres persona real: dime el asesor o elige uno de los publicados.',
     ],
     textsEn: [
-      'Want me to connect you with a human advisor?',
-      'I can pass you to the team. Sound good?',
-      'Prefer a person? I can hand you off.',
+      'Understood. I can connect you with a real Premium advisor. Tell me a name or pick one.',
+      'Prefer a person? Tell me the advisor or choose from the list.',
+      'I can hand you off to a human advisor. Name one or pick from the options.',
     ],
   },
   clarification: {
@@ -889,12 +889,12 @@ export const TEXTS_EN: Record<string, string[]> = {
     'Send the part and vehicle, or talk to someone at {phone}. {ask}',
   ],
   complaint: [
-    'Sorry about that. Tell me what happened (product, order or date if you have them), or write {phone} / {email}.',
+    'Sorry about that. Returns and warranties are reviewed; electrical products have no warranty; max 10 days with invoice and packaging. Tell me what happened, or write {phone} / {email}.',
     'We will help. Describe the issue or contact {phone} and {email} to log it.',
   ],
   returns: [
-    'Returns and exchanges follow our terms and conditions. You can visit us at {address} or I can connect you with a real advisor.',
-    'For a change or a return, our terms and conditions apply. Visit us at {address} or talk to an advisor.',
+    'Returns follow our terms. Electrical products have no warranty. Product and packaging must be in good condition with invoice within 10 days. All returns are reviewed. Visit us at {address} or talk to an advisor.',
+    'For a change or a return, our terms apply: electrical products have no warranty, 10-day window with invoice and packaging. Visit us at {address} or talk to an advisor.',
   ],
   quote: [
     'Reference for {term}: published price and stock may be outdated; a real advisor must confirm. {ask} WhatsApp {phone}. Catalog: {catalog}.',

@@ -187,9 +187,36 @@
   opacity: 0.55;
 }
 
-/* En móvil, mobile.css reduce .content-main-data-carrito__checkout;
-   Confirmar debe conservar las mismas medidas que en web. */
 @media (max-width: 768px) {
+  .checkout-finalize {
+    align-items: stretch;
+    box-sizing: border-box;
+    gap: 10px;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .checkout-finalize > .accordion,
+  .checkout-finalize .accordion {
+    align-self: stretch;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .checkout-finalize__box {
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .checkout-finalize__map-slot,
+  .checkout-finalize__map-canvas {
+    min-height: 180px;
+    height: 180px;
+  }
+
   .content-main-data-carrito__checkout.checkout-finalize__confirm {
     flex: none;
     font-size: var(--drawer-fs, 13px);
@@ -197,5 +224,38 @@
     min-width: 0;
     padding: 10px 16px;
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-finalize {
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .checkout-finalize__option {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .checkout-finalize__map-slot,
+  .checkout-finalize__map-canvas {
+    min-height: 160px;
+    height: 160px;
+    max-width: 100%;
+    touch-action: pan-x pan-y;
+  }
+}
+
+@media (max-width: 360px) {
+  .checkout-finalize__box {
+    padding: 6px;
+  }
+
+  .checkout-finalize__map-slot,
+  .checkout-finalize__map-canvas {
+    min-height: 140px;
+    height: 140px;
   }
 }

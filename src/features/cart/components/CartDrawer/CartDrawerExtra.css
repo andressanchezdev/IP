@@ -40,11 +40,14 @@
   color: var(--color-gris-oscuro);
   display: flex;
   flex-direction: column;
-  flex: 1;
-  height: calc(100dvh - 60px);
+  flex: 1 1 auto;
+  /* vh primero (fallback), dvh después (gana en móviles con barra dinámica) */
   height: calc(100vh - 60px);
+  height: calc(100dvh - 60px);
   justify-content: space-between;
+  max-height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .content-main-carrito__empty {
@@ -84,6 +87,7 @@
   font-weight: var(--drawer-fw, 600);
   padding: 10px 16px;
   white-space: nowrap;
+  margin-bottom: 0px;
 }
 
 .content-main-data-carrito__checkout:disabled {
@@ -147,9 +151,155 @@
 }
 
 .content-main-data-carrito--stack .content-main-data-carrito__checkout {
-  width: 344px	;
+  width: 344px;
   height: 44px;
   transform: translateY(-4px);
+}
+
+/* Mobile: must live here so it wins over the desktop 344px width above
+   (CartDrawer.css loads after mobile.css). */
+@media (max-width: 768px) {
+  .content-main-carrito {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    height: auto;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .content-main-aux-carrito {
+    align-items: stretch;
+    box-sizing: border-box;
+    flex: 1 1 0%;
+    gap: 10px;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+    min-height: 0;
+    min-width: 0;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    width: 100%;
+  }
+
+  .content-main-aux-carrito > .accordion,
+  .content-main-aux-carrito .accordion {
+    align-self: stretch;
+    box-sizing: border-box;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .content-main-data-carrito {
+    box-sizing: border-box;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    height: auto;
+    max-width: 100%;
+    min-height: 72px;
+    overflow: visible;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    width: 100%;
+  }
+
+  .content-main-data-carrito--stack {
+    min-height: auto;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+  }
+
+  .content-main-data-carrito__checkout {
+    box-sizing: border-box;
+    flex: 1;
+    font-size: 12px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    transform: none;
+    white-space: normal;
+  }
+
+  .content-main-data-carrito--stack .content-main-data-carrito__checkout {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 44px;
+    transform: none;
+    width: 100%;
+  }
+
+  .content-main-data-carrito--stack .content-main-data-carrito__breakdown {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .content-main-aux-carrito {
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .content-main-data-carrito,
+  .content-main-data-carrito--stack {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .content-main-data-carrito__checkout,
+  .content-main-data-carrito--stack .content-main-data-carrito__checkout {
+    font-size: 12px;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-main-aux-carrito {
+    gap: 8px;
+    padding-bottom: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .content-main-data-carrito,
+  .content-main-data-carrito--stack {
+    gap: 8px;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .content-main-data-carrito__row--total span,
+  .content-main-data-carrito__row--total strong {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .content-main-aux-carrito {
+    gap: 6px;
+    padding-bottom: 14px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .content-main-data-carrito,
+  .content-main-data-carrito--stack {
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .content-main-data-carrito__checkout,
+  .content-main-data-carrito--stack .content-main-data-carrito__checkout {
+    font-size: 11px;
+    min-height: 40px;
+    padding: 8px 10px;
+  }
 }
 
 .order-payments-panel__input--error {

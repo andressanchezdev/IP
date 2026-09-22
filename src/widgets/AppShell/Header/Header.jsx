@@ -20,6 +20,7 @@ export function Header({
   onNew,
   onPromo,
   onCart,
+  searchCue = 0,
   cartCount = 0,
   cartActive = false,
   filterActive = false,
@@ -66,6 +67,28 @@ export function Header({
   useEffect(() => {
     setMobileToolsOpen(false)
   }, [showStoreFilters, showHistoryFilters])
+
+  useEffect(() => {
+    if (!searchCue) {
+      return undefined
+    }
+    const root = searchShellRef.current
+    if (!root) {
+      return undefined
+    }
+    root.classList.remove('header__search-shell--cue')
+    void root.offsetWidth
+    root.classList.add('header__search-shell--cue')
+    const input = root.querySelector('input')
+    input?.focus?.({ preventScroll: true })
+    const timer = window.setTimeout(() => {
+      root.classList.remove('header__search-shell--cue')
+    }, 850)
+    return () => {
+      window.clearTimeout(timer)
+      root.classList.remove('header__search-shell--cue')
+    }
+  }, [searchCue])
 
   const openMobileTools = () => {
     if (hasMobileTools) {

@@ -1,4 +1,5 @@
 import brandImage from '@/assets/images/Captura de pantalla 2026-08-05 090935.png'
+import brandImageMobile from '@/assets/images/loginIpmovil.png'
 import { Modal } from '@/shared/ui/Modal'
 import { LoginForm } from './LoginForm'
 import { namedControl } from '@/shared/lib/namedControl'
@@ -25,7 +26,10 @@ export function AuthModal({ isOpen, onClose, onLogin }) {
       <div className="auth-modal__split">
         <div
           className="auth-modal__brand"
-          style={{ backgroundImage: `url(${brandImage})` }}
+          style={{
+            '--auth-brand-desktop': `url(${brandImage})`,
+            '--auth-brand-mobile': `url(${brandImageMobile})`,
+          }}
           role="img"
           {...namedControl('Importadora Premium Online')}
         />

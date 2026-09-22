@@ -1,4 +1,4 @@
-import { EXCEL_TEMPLATE_FILENAME } from '@/features/profile/lib/productExcel'
+import { EXCEL_TEMPLATE_FILENAME } from '@/features/profile/lib/excelCore'
 import { namedControl } from '@/shared/lib/namedControl'
 
 /**

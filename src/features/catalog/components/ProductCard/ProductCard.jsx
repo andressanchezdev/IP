@@ -57,6 +57,21 @@ export const ProductCard = memo(function ProductCard({
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
+  const notifyStockLimit = () => {
+    showToast('cantidad máxima alcanzada', 'error')
+  }
+
+  const applyQuantity = (next) => {
+    const parsed = Number(next)
+    if (!Number.isFinite(parsed)) {
+      return
+    }
+    if (parsed >= maxQuantity) {
+      notifyStockLimit()
+    }
+    setQuantity(clampQuantity(parsed))
+  }
+
   const handleChange = (event) => {
     const raw = event.target.value
     if (raw === '') {
@@ -69,7 +84,7 @@ export const ProductCard = memo(function ProductCard({
       return
     }
 
-    setQuantity(Math.min(maxQuantity, value))
+    applyQuantity(value)
   }
 
   const handleFocus = (event) => {
@@ -95,7 +110,7 @@ export const ProductCard = memo(function ProductCard({
     const parsed = Number(quantity)
     const current = quantity === '' || !Number.isFinite(parsed) ? 0 : parsed
     const delta = event.key === 'ArrowUp' ? 1 : -1
-    setQuantity(clampQuantity(current + delta))
+    applyQuantity(current + delta)
   }
 
   const handleBlur = () => {

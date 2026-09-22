@@ -1,7 +1,7 @@
 import { apiRequest } from '@/shared/api'
 import { toMoneyNumber, wait } from './bulkShared'
-
-export { CART_POST_CONCURRENCY, postBulkOrderToCart } from './bulkCartPost'
+import { getCatalogProductId } from '@/features/catalog/mappers/mapProduct'
+import { stockTotal } from '@/features/catalog/mappers/parseUbicacionStock'
 
 /** Lotes de consulta a inventory/products para no saturar la API. */
 export const STOCK_BATCH_SIZE = 20
@@ -49,8 +49,8 @@ async function fetchStockForCode(codigo) {
 
     return {
       codigo: code,
-      stock: Math.max(0, Number(match.stock) || 0),
-      id: match.id != null ? String(match.id) : null,
+      stock: stockTotal(match.stock),
+      id: getCatalogProductId(match),
       precio: toMoneyNumber(match.precio),
     }
   } catch (error) {

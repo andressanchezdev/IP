@@ -21,6 +21,8 @@ export function useCatalogFilters() {
   const [searchValue, setSearchValue] = useState('')
   const [searchProducts, setSearchProducts] = useState(null)
   const [latestProducts, setLatestProducts] = useState(null)
+  /** Origen del filtro activo: bot (chat) vs user (drawer Filtrar). null = sin filtro de origen. */
+  const [filtersOrigin, setFiltersOrigin] = useState(null)
 
   const filtersRef = useRef(filters)
   const filterNuevosRef = useRef(filterNuevos)
@@ -32,6 +34,7 @@ export function useCatalogFilters() {
   const draftFilterNuevosRef = useRef(draftFilterNuevos)
   const draftFilterPromocionesRef = useRef(draftFilterPromociones)
   const draftWithStockRef = useRef(draftWithStock)
+  const filtersOriginRef = useRef(filtersOrigin)
 
   filtersRef.current = filters
   filterNuevosRef.current = filterNuevos
@@ -43,6 +46,7 @@ export function useCatalogFilters() {
   draftFilterNuevosRef.current = draftFilterNuevos
   draftFilterPromocionesRef.current = draftFilterPromociones
   draftWithStockRef.current = draftWithStock
+  filtersOriginRef.current = filtersOrigin
 
   const syncFilterDraftFromApplied = useCallback(() => {
     const current = filtersRef.current
@@ -68,6 +72,7 @@ export function useCatalogFilters() {
     setFilterNuevos(draftFilterNuevosRef.current)
     setFilterPromociones(draftFilterPromocionesRef.current)
     setWithStock(draftWithStockRef.current)
+    setFiltersOrigin('user')
   }, [])
 
   const clearFilters = useCallback(() => {
@@ -82,6 +87,7 @@ export function useCatalogFilters() {
     setDraftFilterPromociones(false)
     setDraftWithStock(false)
     setLatestProducts(null)
+    setFiltersOrigin(null)
   }, [])
 
   const resetFiltersAndSearch = useCallback(() => {
@@ -94,6 +100,7 @@ export function useCatalogFilters() {
     setSearchValue('')
     setSearchProducts(null)
     setLatestProducts(null)
+    setFiltersOrigin(null)
   }, [])
 
   const applyFiltersDirect = useCallback((payload = {}) => {
@@ -123,7 +130,17 @@ export function useCatalogFilters() {
     setSearchValue('')
     setSearchProducts(null)
     setLatestProducts(null)
+    setFiltersOrigin('bot')
   }, [])
+
+  /** Limpia filtros solo si los aplicó el bot (barra de búsqueda del usuario). */
+  const clearBotFiltersOnSearch = useCallback(() => {
+    if (filtersOriginRef.current !== 'bot') {
+      return false
+    }
+    clearFilters()
+    return true
+  }, [clearFilters])
 
   const hasAppliedFilters = useCallback(() => (
     (filterModesRef.current.brands === 'custom' && (filtersRef.current.brands?.length || 0) > 0)
@@ -169,6 +186,8 @@ export function useCatalogFilters() {
     clearFilters,
     resetFiltersAndSearch,
     applyFiltersDirect,
+    clearBotFiltersOnSearch,
+    filtersOrigin,
     hasAppliedFilters,
   }), [
     filters,
@@ -189,6 +208,8 @@ export function useCatalogFilters() {
     clearFilters,
     resetFiltersAndSearch,
     applyFiltersDirect,
+    clearBotFiltersOnSearch,
+    filtersOrigin,
     hasAppliedFilters,
   ])
 }

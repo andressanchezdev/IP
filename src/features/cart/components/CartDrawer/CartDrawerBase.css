@@ -144,11 +144,20 @@
   color: #e53935;
   cursor: pointer;
   display: inline-flex;
-  font-size: 13px;
   height: 28px;
   justify-content: center;
   line-height: 1;
   width: 28px;
+}
+
+.carrito-card__remove-icon {
+  background-color: currentColor;
+  display: block;
+  flex-shrink: 0;
+  height: 14px;
+  width: 14px;
+  -webkit-mask: url('../../../../assets/icons/delete-account.svg') center / contain no-repeat;
+  mask: url('../../../../assets/icons/delete-account.svg') center / contain no-repeat;
 }
 
 .carrito-card__top {
@@ -169,8 +178,7 @@
 
 .carrito-list-scroll {
   -webkit-overflow-scrolling: touch;
-  flex: 1;
-  min-height: 0;
+  min-height: 150px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

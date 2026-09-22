@@ -15,6 +15,12 @@ const EXTRA_ALIASES: Record<string, string> = {
   caliper: 'mordaza',
   calipers: 'mordaza',
   pinza: 'mordaza',
+  campanas: 'campana',
+  campana: 'campana',
+  resortes: 'resorte',
+  espirales: 'espiral',
+  botellas: 'botella',
+  bieletas: 'bieleta',
   yanta: 'llanta',
   yantas: 'llanta',
   llantra: 'llanta',
@@ -31,8 +37,24 @@ const EXTRA_ALIASES: Record<string, string> = {
   pignon: 'pinon',
   sprocket: 'corona',
   shock: 'amortiguador',
+  shocks: 'amortiguador',
+  monoshock: 'amortiguador',
+  bacheador: 'amortiguador',
+  bacheadro: 'amortiguador',
+  amortiguacion: 'amortiguador',
+  amortiguadro: 'amortiguador',
+  aceitico: 'aceite',
+  guaya: 'banda',
+  llantica: 'llanta',
+  llanticas: 'llanta',
+  cachucha: 'casco',
+  suiche: 'switch',
+  chiclero: 'carburador',
+  pila: 'bateria',
   telescopio: 'barras',
   horquilla: 'barras',
+  tijeras: 'barras',
+  tijera: 'barras',
   arnes: 'ramal',
   cableado: 'ramal',
   acumulador: 'bateria',
@@ -62,6 +84,11 @@ export const PART_KNOWLEDGE: Record<string, string> = {
   filtro: 'Elemento que retiene impurezas del aceite, aire o combustible.',
   clutch: 'Sistema que conecta y desconecta el motor de la transmisión.',
   cdi: 'Módulo que controla el encendido y la chispa del motor.',
+  chiclero: 'Válvula del carburador que dosifica la gasolina en ralentí.',
+  guaya: 'Cable de mando. En frenos suele ser banda o cable; en motor puede ser correa. Se confirma con el catálogo.',
+  bacheador: 'Amortiguador. Controla el rebote de la suspensión.',
+  suiche: 'Interruptor eléctrico (switch) de luces, arranque o kill.',
+  cachucha: 'Casco de protección.',
 }
 
 type SymptomRule = {
@@ -96,13 +123,29 @@ export function expandPartSynonyms(tokens: readonly string[], raw = '') {
   const aliases = { ...EXTRA_ALIASES, ...livePartAliases() }
   const extra: string[] = []
   const seen = new Set(tokens)
+  const blob = fold(`${tokens.join(' ')} ${raw}`)
+  const skipTireAlias = /\bcampana/.test(blob)
   for (const token of tokens) {
-    const mapped = aliases[fold(token)] || aliases[token]
+    const folded = fold(token)
+    const mapped = aliases[folded] || aliases[token]
     if (!mapped || seen.has(mapped)) continue
+    if (skipTireAlias && (folded === 'caucho' || folded === 'cauchos') && mapped === 'llanta') continue
     seen.add(mapped)
     extra.push(mapped)
   }
-  const blob = fold(`${tokens.join(' ')} ${raw}`)
+  if (/\bmono[\s-]?shock/.test(blob)) {
+    for (const mapped of ['amortiguador', 'monoshock']) {
+      if (seen.has(mapped)) continue
+      seen.add(mapped)
+      extra.push(mapped)
+    }
+  }
+  if (/\bcampanas?\b/.test(blob)) {
+    if (!seen.has('campana')) {
+      seen.add('campana')
+      extra.push('campana')
+    }
+  }
   if (/\bpastas?(?:\s+de(?:\s+freno)?)?\b/.test(blob)) {
     for (const mapped of ['pastilla', 'pastillas']) {
       if (seen.has(mapped)) continue

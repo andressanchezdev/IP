@@ -2,6 +2,12 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { buildCheckoutOrder } from '@/features/orders/utils/buildCheckoutOrder'
 import { getCart } from '@/features/cart/api/cartApi'
 import { persistCartItemSafe, removeCartItemSafe, clearCartMassiveSafe } from '@/features/cart/api/cartApiSafe'
+import {
+  planCartAdd,
+  resolveCartProductId,
+  resolveCartStock,
+  resolveCartUnitPrice,
+} from '@/features/cart/api/cartPostBody'
 import { mapApiCartItems } from '@/features/catalog/mappers/mapCartItems'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
@@ -73,7 +79,7 @@ export function useCartSlice({
     [tokenAccess],
   )
 
-  const addToCart = useCallback(async (productId, quantity = 1) => {
+  const addToCart = useCallback(async (productId, quantity = 1, sourceProduct = null) => {
     if (!tokenAccess) {
       events.emit(APP_EVENTS.AUTH_REQUIRED, { pending: 'checkout' })
       return { success: false, needsAuth: true, error: 'Inicia sesión para agregar al carrito' }
@@ -83,28 +89,41 @@ export function useCartSlice({
       return { success: false, error: 'Cantidad inválida' }
     }
 
-    const product = productsRef.current.find((item) => String(item.id) === String(productId))
-    if (!product || product.stock <= 0) {
+    const listed = productsRef.current.find((item) => String(item.id) === String(productId))
+    const sourceId = sourceProduct
+      ? String(sourceProduct.id ?? sourceProduct.id_producto ?? '')
+      : ''
+    const product = (sourceProduct && (!sourceId || sourceId === String(productId)))
+      ? sourceProduct
+      : listed
+    if (!product) {
       return { success: false, error: 'Sin stock disponible' }
     }
 
-    const orderQuantity = Math.min(quantity, product.stock)
     const existing = cartItemsRef.current.find((item) => String(item.id) === String(productId))
     const previousQty = existing ? Number(existing.quantity) || 0 : 0
-    const nextQty = previousQty + orderQuantity
-    const unitPrice = Number(existing?.price ?? product.price ?? product.precio) || 0
+    const planned = planCartAdd({
+      idProducto: resolveCartProductId(product, productId),
+      requestedQty: quantity,
+      stock: resolveCartStock(product),
+      existingQty: previousQty,
+      precioUnitario: existing?.price ?? resolveCartUnitPrice(product),
+    })
+    if (!planned.ok) {
+      return { success: false, error: planned.reason }
+    }
 
     const persisted = await persistCartItemToApi({
-      productId,
-      cantidad: nextQty,
-      precioUnitario: unitPrice,
+      productId: planned.body.id_producto,
+      cantidad: planned.body.cantidad,
+      precioUnitario: planned.body.precio_unitario,
     })
     if (!persisted.success) {
       return persisted
     }
 
     await refreshCartFromApi()
-    return { success: true, quantity: nextQty, previousQty }
+    return { success: true, quantity: planned.body.cantidad, previousQty, request: planned.body }
   }, [tokenAccess, events, persistCartItemToApi, productsRef, refreshCartFromApi])
 
   const removeFromCart = useCallback(async (productId) => {

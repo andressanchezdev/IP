@@ -109,7 +109,15 @@
 
 .landing-chat__bubble p {
   margin: 0;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.landing-chat__text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.45;
 }
 
 .landing-chat__bubble--bot {
@@ -234,6 +242,11 @@
   padding: 12px;
 }
 
+.landing-chat__form--drop {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px #ffc629;
+}
+
 .landing-chat__input {
   border: 1px solid rgba(45, 50, 56, 0.16);
   border-radius: 12px;
@@ -311,8 +324,8 @@
   }
 
   .landing-chat__send {
-    flex: 1 1 auto;
-    min-height: 40px;
+    flex: 1/1 0;
+    min-height: 15px;
   }
 
   .landing-chat__panel {

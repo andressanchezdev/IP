@@ -159,9 +159,158 @@ export function isHowAreYou(raw: string) {
   )
 }
 
+const GREETING_LEAD = new Set([
+  'hola',
+  'holas',
+  'holaa',
+  'holaaa',
+  'holi',
+  'holis',
+  'holiwis',
+  'holiwi',
+  'ola',
+  'buenas',
+  'buen',
+  'buenos',
+  'hey',
+  'heyy',
+  'hello',
+  'helo',
+  'hi',
+  'saludos',
+  'saluditos',
+  'saludo',
+  'epa',
+  'epale',
+  'epaaa',
+  'quiubo',
+  'quihubo',
+  'quiubole',
+  'quiubas',
+  'alo',
+  'aloo',
+  'alooo',
+  'habla',
+])
+
+const GREETING_FILL = new Set([
+  'dias',
+  'dia',
+  'tardes',
+  'noches',
+  'que',
+  'tal',
+  'mas',
+  'hubo',
+  'onda',
+  'pex',
+  'paso',
+  'como',
+  'vas',
+  'va',
+  'estan',
+  'estas',
+  'estas',
+  'andas',
+  'andan',
+  'todo',
+  'bien',
+  'parce',
+  'parcero',
+  'pana',
+  'socio',
+  'amigo',
+  'amiga',
+  'companero',
+  'companera',
+  'jefe',
+  'llave',
+  'gente',
+  'equipo',
+  'bot',
+  'asistente',
+  'asesor',
+  'vendedora',
+  'vendedor',
+  'maquina',
+  'sistema',
+  'me',
+  'ayudas',
+  'ayuda',
+  'colaboras',
+  'pregunta',
+  'duda',
+  'tengo',
+  'quien',
+  'atiende',
+  'alguien',
+  'ahi',
+  'cordiales',
+  'un',
+  'una',
+  'se',
+  'cuenta',
+  'cuentas',
+  'hay',
+  'le',
+  'te',
+  'les',
+  'buen',
+  'santas',
+  'orden',
+  'a',
+  'la',
+  'de',
+])
+
+export function isGreetingToken(token: string) {
+  const folded = stripAccents(token.toLowerCase())
+  return GREETING_LEAD.has(folded)
+}
+
+const GREETING_PHRASES = new Set([
+  'que tal',
+  'que mas',
+  'que hubo',
+  'que onda',
+  'que pex',
+  'que paso',
+  'todo bien',
+  'como vas',
+  'como te va',
+  'como esta',
+  'como estas',
+  'como estan',
+  'como andas',
+  'como le va',
+  'que se cuenta',
+  'que me cuentas',
+  'buenas y santas',
+  'a la orden',
+  'que tal me ayudas',
+  'que tal una pregunta',
+  'hola tengo una pregunta',
+  'hola tengo una duda',
+  'buenas hay alguien',
+  'buenas hay alguien ahi',
+  'hola quien me atiende',
+  'buenas me ayudas',
+  'buenas me colaboras',
+])
+
 export function isSmallTalk(raw: string) {
   if (isHowAreYou(raw)) return true
-  return /^(hola\s+|buenas?\s+|hey\s+)?(que\s+tal|que\s+mas|como\s+vas|como\s+te\s+va|todo\s+bien)$/.test(foldedTalk(raw))
+  const text = foldedTalk(raw)
+  if (!text) return false
+  if (GREETING_PHRASES.has(text)) return true
+  const tokens = text.split(/\s+/).filter(Boolean)
+  if (!tokens.length) return false
+  if (!tokens.every((token) => GREETING_LEAD.has(token) || GREETING_FILL.has(token))) return false
+  return tokens.some((token) => GREETING_LEAD.has(token))
+}
+
+export function isThanksTalk(raw: string) {
+  return /^(gracias|grax|thanks|ty|listo|ok|vale|de nada)$/.test(foldedTalk(raw))
 }
 
 export function compactTokens(values: readonly string[], max = DEFAULT_PIPELINE_CONFIG.MAX_TOKENS): ChatToken[] {

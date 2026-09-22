@@ -30,7 +30,7 @@ function toggleOrderOpenSections(current = [], sectionId) {
   return next.slice(next.length - MAX_OPEN_ORDER_SECTIONS)
 }
 
-export function AppDrawer() {
+export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } = {}) {
   const { clearFilters } = useCatalog()
   const {
     selectedOrder,
@@ -49,6 +49,14 @@ export function AppDrawer() {
   const [profileSubView, setProfileSubView] = useState(null)
   const [orderOpenSections, setOrderOpenSections] = useState([])
   const [productsModalOrder, setProductsModalOrder] = useState(null)
+
+  useEffect(() => {
+    if (!profileLaunchView || !drawerOpen || drawerType !== 'profile') {
+      return
+    }
+    setProfileSubView(profileLaunchView)
+    onProfileLaunchConsumed?.()
+  }, [profileLaunchView, drawerOpen, drawerType, onProfileLaunchConsumed])
 
   useEffect(() => {
     setOrderOpenSections([])

@@ -4,7 +4,7 @@ import {
   EXCEL_TEMPLATE_FILENAME,
   MAX_EXCEL_LINES,
   MIN_PRODUCT_CODES,
-} from '@/features/profile/lib/productExcel'
+} from '@/features/profile/lib/excelCore'
 import { ExcelWindowPreview } from './ExcelWindowPreview'
 import { InfoPanel } from './BulkUploadInfoPanel'
 import { useBulkUpload } from './useBulkUpload'

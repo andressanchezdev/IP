@@ -13,18 +13,21 @@ const WEAK_DESC = new Set(['del', 'tra', 'der', 'izq', 'ant', 'pos', 'inf', 'sup
  */
 const CATEGORY_HINTS = [
   { hints: ['pastilla', 'pastillas', 'pasta', 'pastas', 'balata', 'balatas', 'pad', 'pads'], needles: ['pastilla'] },
-  { hints: ['aceite', 'aceites', 'lubricante', 'lubricantes', 'oil'], needles: ['lubricante', 'aceite'] },
-  { hints: ['banda', 'bandas', 'correa', 'correas'], needles: ['banda'] },
+  { hints: ['aceite', 'aceites', 'lubricante', 'lubricantes', 'oil', 'aceitico'], needles: ['lubricante', 'aceite'] },
+  { hints: ['banda', 'bandas', 'correa', 'correas', 'guaya', 'guayas'], needles: ['banda'] },
   { hints: ['disco', 'discos', 'rotor'], needles: ['disco'] },
-  { hints: ['llanta', 'llantas', 'yanta', 'yantas', 'neumatico', 'caucho'], needles: ['llanta'] },
+  { hints: ['llanta', 'llantas', 'llantica', 'llanticas', 'yanta', 'yantas', 'neumatico', 'caucho'], needles: ['llanta'] },
   { hints: ['rin', 'rines', 'rinspa'], needles: ['rin'] },
-  { hints: ['amortiguador', 'amortiguadores', 'shock'], needles: ['amortiguador'] },
+  { hints: ['amortiguador', 'amortiguadores', 'shock', 'bacheador', 'bacheadores'], needles: ['amortiguador'] },
   { hints: ['filtro', 'filtros'], needles: ['filtro'] },
   { hints: ['cadena', 'cadenas'], needles: ['cadena'] },
-  { hints: ['bateria', 'baterias'], needles: ['bateria'] },
+  { hints: ['bateria', 'baterias', 'pila'], needles: ['bateria'] },
   { hints: ['bujia', 'bujias'], needles: ['bujia'] },
-  { hints: ['casco', 'cascos'], needles: ['casco'] },
+  { hints: ['casco', 'cascos', 'cachucha'], needles: ['casco'] },
+  { hints: ['carburador', 'carburadores', 'chiclero'], needles: ['carburador'] },
 ]
+
+const PART_FAMILY_TOKENS = new Set(CATEGORY_HINTS.flatMap((group) => group.hints))
 
 export function foldMatchText(value = '') {
   return String(value)
@@ -74,6 +77,47 @@ function fieldTokens(value) {
     .filter((token) => token.length >= 2 && !ARTICLES.has(token))
 }
 
+function levenshtein(left, right) {
+  if (left === right) return 0
+  if (!left.length) return right.length
+  if (!right.length) return left.length
+  const rows = left.length + 1
+  const cols = right.length + 1
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0))
+  for (let row = 0; row < rows; row += 1) matrix[row][0] = row
+  for (let col = 0; col < cols; col += 1) matrix[0][col] = col
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
+      const cost = left[row - 1] === right[col - 1] ? 0 : 1
+      matrix[row][col] = Math.min(
+        matrix[row - 1][col] + 1,
+        matrix[row][col - 1] + 1,
+        matrix[row - 1][col - 1] + cost,
+      )
+    }
+  }
+  return matrix[left.length][right.length]
+}
+
+function tokensLookLikeLlanta(q) {
+  return /(?:^|\s)(llanta|llantas|llantica|llanticas|yanta|yantas)(?:\s|$)/.test(` ${q} `)
+}
+
+function explicitLlantaBrandAsk(q) {
+  return /\bmarca\s+llanta|\bde la marca llanta|\bllanta marca\b/.test(q)
+}
+
+function queryHasPartFamilyToken(q) {
+  return q.split(' ').some((token) => PART_FAMILY_TOKENS.has(token))
+}
+
+function marcaLooksLikePartName(marca) {
+  const f = foldMatchText(marca)
+  if (!f) return false
+  if (tokensLookLikeLlanta(f) || f.includes('llanta')) return true
+  return PART_FAMILY_TOKENS.has(f) || [...PART_FAMILY_TOKENS].some((token) => token.length >= 4 && f.includes(token))
+}
+
 export function fieldMatch(query, field) {
   const q = normalizarQuery(query)
   const f = foldMatchText(field)
@@ -88,11 +132,15 @@ export function fieldMatch(query, field) {
   return qTokens.some((token) => {
     const compact = compactMatchText(token)
     if (compact.length >= 3 && (fc.includes(compact) || compact.includes(fc))) return true
-    return fTokens.some((word) => (
-      word === token
-      || (compact.length >= 3 && compactMatchText(word).includes(compact))
-      || (token.length >= 4 && (word.startsWith(token) || token.startsWith(word)))
-    ))
+    return fTokens.some((word) => {
+      if (word === token) return true
+      if (compact.length >= 3 && compactMatchText(word).includes(compact)) return true
+      if (token.length >= 4 && (word.startsWith(token) || token.startsWith(word))) return true
+      if (token.length >= 5 && word.length >= 5 && Math.abs(token.length - word.length) <= 2) {
+        return levenshtein(token, word) <= 2
+      }
+      return false
+    })
   })
 }
 
@@ -146,18 +194,32 @@ export function scoreProducto(query, product = {}, resolvedCategory = '') {
   const categoria = String(product.categoria ?? product.category ?? '')
   const codigo = String(product.codigo ?? product.reference ?? '')
   const descripcion = String(product.descripcion ?? product.description ?? '')
+  const llantaQuery = tokensLookLikeLlanta(q) && !explicitLlantaBrandAsk(q)
+  const partFamilyQuery = queryHasPartFamilyToken(q)
+  const categoryFold = foldMatchText(categoria)
 
   if (fieldMatch(q, modelo)) {
     score += 100
     if (exactish(q, modelo)) score += 50
   }
-  if (fieldMatch(q, marca)) score += 80
-  if (resolvedCategory && foldMatchText(categoria) === foldMatchText(resolvedCategory)) {
+  if (fieldMatch(q, marca)) {
+    const skipMarcaAsPart =
+      partFamilyQuery && marcaLooksLikePartName(marca) && !explicitLlantaBrandAsk(q)
+    if (!skipMarcaAsPart) score += 80
+  }
+  if (resolvedCategory && categoryFold === foldMatchText(resolvedCategory)) {
     score += 60
+    if (llantaQuery && categoryFold.includes('llanta')) score += 20
+  } else if (llantaQuery && categoryFold.includes('llanta')) {
+    score += 80
   }
   const qCompact = compactMatchText(q)
   if (qCompact && qCompact === compactMatchText(codigo)) score += 70
-  if (score > 0 && fieldMatch(q, descripcion)) score += 10
+  if (llantaQuery) {
+    if (fieldMatch(q, descripcion)) score += 30
+  } else if (score > 0 && fieldMatch(q, descripcion)) {
+    score += 10
+  }
   return score
 }
 
@@ -186,9 +248,5 @@ export function rankCatalogProducts(products, query, categorias, options = {}) {
   }
 
   const limit = Number.isFinite(options.limit) ? Math.max(1, options.limit) : 5
-  const strong = scored.filter((item) => item.score >= 60).map((item) => item.product)
-  if (strong.length) return strong.slice(0, limit)
-  const weak = scored.filter((item) => item.score > 0).map((item) => item.product)
-  if (weak.length) return weak.slice(0, limit)
-  return products.slice(0, limit)
+  return scored.filter((item) => item.score >= 60).map((item) => item.product).slice(0, limit)
 }

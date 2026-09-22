@@ -36,7 +36,7 @@ import {
 } from './intents'
 import { livePublishedTeam } from './botip/liveData'
 import { matchLandingTeam, wantsAdvisorContact } from './teamLookup'
-import { classifyTurn, mergeFocusTokens } from './conversationThread'
+import { classifyTurn, isAdvisorAsk, mergeFocusTokens } from './conversationThread'
 
 export type HandlerFn = (tokens: readonly string[], ctx: SessionContext) => ChatReply
 
@@ -46,10 +46,10 @@ export const HANDLERS: Record<string, HandlerFn> = {
   catalog: (tokens) => withHowToBuy(catalogReply(tokens), tokens),
   parts: () => partsReply(),
   accessory: (tokens, ctx) => accessoryReply(tokens, ctx),
-  attention: (tokens) => {
+  attention: (tokens, ctx) => {
     const match = matchLandingTeam(tokens)
     if (match) return teamMatchReply(match, tokens)
-    if (wantsAdvisorContact(tokens)) {
+    if (wantsAdvisorContact(tokens) || isAdvisorAsk(tokens, ctx.lastUserText || '')) {
       return teamMatchReply({ type: 'group', group: 'asesor', members: livePublishedTeam('asesor') }, tokens)
     }
     return attentionReply()

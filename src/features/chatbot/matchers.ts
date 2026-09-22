@@ -1,4 +1,4 @@
-import { findTerm, liveAccessoryTerms, liveCatalogParts, liveOtherParts, resolvePartFamily } from './motoParts'
+import { findTerm, liveAccessoryTerms, liveCatalogParts, liveOtherParts, resolvePartFamily, hasPurchaseOrPartIntent } from './motoParts'
 import { defaultKeywords, keywordsOf, VACANCY_EXACT_WORDS } from './botSettings'
 import { getChatIntents, hasProductTerm, matchingProductsForTokens } from './intents'
 import { matchLandingTeam, wantsAdvisorContact } from './teamLookup'
@@ -53,7 +53,7 @@ function applyModifiers(
   const recent = ctx.lastResponses.slice(-2).some((item) => item.intent === intent)
   if (recent && focus?.intent !== intent && focus?.referent !== 'current') score -= 1
   if (hasQuestion && ['quote', 'product', 'accessory'].includes(intent)) score += 2
-  if (veryShort && intent === 'greeting') score += 1
+  if (veryShort && intent === 'greeting' && !hasPurchaseOrPartIntent(matched, '')) score += 1
   void cfg
   return cap(score)
 }
@@ -208,7 +208,7 @@ export function runAllMatchers(
   const complaint = runSafe('complaint', () => {
     if (!isComplaintAsk(tokens, raw)) return null
     const matched = tokens.filter((token) =>
-      ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr', 'molestia', 'garantia', 'devolucion', 'inconforme', 'inconformidad', 'defectuoso', 'llanta', 'indicada'].includes(token),
+      ['queja', 'quejas', 'reclamo', 'reclamos', 'reclamar', 'quejar', 'pqr', 'molestia', 'garantia', 'inconforme', 'inconformidad', 'defectuoso', 'llanta', 'indicada'].includes(token),
     )
     return {
       intent: 'complaint',
@@ -341,6 +341,7 @@ export function runAllMatchers(
     )
 
   const greeting = runSafe('greeting', () => {
+    if (hasPurchaseOrPartIntent(tokens, raw)) return null
     const scored = scoreMatch(tokens, keywordsOf('greeting', defaultKeywords('greeting')))
     if (!scored.score) return null
     return {

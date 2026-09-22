@@ -1,23 +1,45 @@
-import { findTerm, listPartFamilies, liveAccessoryTerms, liveCatalogParts, liveOtherParts, resolvePartFamily } from './motoParts'
+import { findTerm, listPartFamilies, liveAccessoryTerms, liveCatalogParts, liveOtherParts, positionForFamily, resolvePartFamily } from './motoParts'
 import { applyBotText, defaultKeywords, getBotSettings, keywordsOf, liveContact, livePayments } from './botSettings'
 import { nextAskPhrase, nextAskSubject } from './askPhrase'
 import { advisorAskKind, groupLabel, type TeamMatch } from './teamLookup'
 import type { LandingTeamMember } from './types'
 import { chatHasAuth, getLastProductPlan, lastProductFetchFailed, type ProductQueryPlan } from './productSource'
 import { liveBrandNames, liveCatalogLabels, liveCatalogProducts, liveLexiconSet, livePublishedTeam, liveShipping } from './botip/liveData'
-import { isBroadPriceAsk, isHowToBuyAsk, isHoursAsk, isLocationAsk } from './conversationThread'
+import { isBroadPriceAsk, isHowToBuyAsk, isHoursAsk, isLocationAsk, searchMissGuideText } from './conversationThread'
 import type { SessionContext } from './sessionContext'
-import { catalogOptionLabel, catalogSearchQuery, findInventoryMatches, pickLastOffer, rememberOffers } from './inventory'
+import {
+  findInventoryMatches,
+  formatMatchLine,
+  formatMatchesListText,
+  formatSingleMatchText,
+  pickLastOffer,
+  pickOfferByIndex,
+  productChoiceOptions,
+  rememberOffers,
+  enrichSearchWithBrand,
+  searchBarQuery,
+} from './inventory'
 
+/** Comandos de UI. No inventar endpoints.
+ * add-cart → POST /api/v1/inventory/carts { id_producto, cantidad, precio_unitario } (un ítem).
+ * bulk-commit → mismo POST /carts, una llamada por fila Excel ya validada (no hay POST multipart de archivo).
+ * filter → POST /inventory/products/filter (listado, no carrito).
+ */
 export type CatalogCommand =
   | { kind: 'search'; query: string }
   | { kind: 'filter'; brands?: string[]; categories?: string[]; models?: string[] }
+  | { kind: 'add-cart'; row: { id: string; codigo?: string; cantidad: number; stock?: number; precio?: number; estado?: string } }
+  | { kind: 'bulk-commit' }
+  | { kind: 'refresh-cart' }
+  | { kind: 'open-cart' }
+  | { kind: 'open-bulk-upload' }
+  | { kind: 'download-template' }
 
 export type ChatAction = {
   href?: string
   label: string
   external?: boolean
-  kind?: 'catalog-download' | 'prompt' | 'login' | 'catalog-search' | 'catalog-filter'
+  kind?: 'catalog-download' | 'prompt' | 'login' | 'catalog-search' | 'catalog-filter' | 'open-bulk-upload' | 'open-cart' | 'download-template' | 'focus-search'
   prompt?: string
   search?: string
   brands?: string[]
@@ -200,14 +222,31 @@ function advisorContactAction(): ChatAction {
   }
 }
 
-function driveSearchReply(product: { codigo?: string; nombre?: string }, extraActions: ChatAction[] = []): ChatReply {
-  const query = catalogSearchQuery({
-    codigo: product.codigo || '',
-    nombre: product.nombre || '',
-  })
+const YES_NO_ADD: ChatAction[] = [
+  { kind: 'prompt', label: 'Sí', prompt: 'si' },
+  { kind: 'prompt', label: 'No', prompt: 'no' },
+]
+
+function barSearchCommand(
+  key: string,
+  ctx?: SessionContext,
+  products: ReturnType<typeof findInventoryMatches> = [],
+  product?: ReturnType<typeof findInventoryMatches>[number],
+): ChatReply['catalogCommand'] | undefined {
+  const plan = getLastProductPlan()
+  const raw = String(ctx?.lastUserText || '').trim()
+  const campo = String(key || raw || plan?.searchText || '').trim()
+  const query = searchBarQuery(campo, { raw: raw || campo, ctx, product, products })
+  return query ? { kind: 'search', query } : undefined
+}
+
+function singleMatchReply(product: ReturnType<typeof findInventoryMatches>[number], extraActions: ChatAction[] = []): ChatReply {
+  const codigo = String(product.codigo || '').trim()
+  const query = enrichSearchWithBrand(codigo || product.nombre, product.marca)
   return {
-    text: 'Lo busqué en el catálogo.',
+    text: formatSingleMatchText(product),
     actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }, ...extraActions],
+    options: YES_NO_ADD,
     ...(query ? { catalogCommand: { kind: 'search' as const, query } } : {}),
   }
 }
@@ -227,17 +266,21 @@ function driveFilterReply(plan: ProductQueryPlan): ChatReply {
   }
 }
 
-function productOptionsReply(products: ReturnType<typeof findInventoryMatches>, familyLabel = ''): ChatReply {
+function productOptionsReply(
+  products: ReturnType<typeof findInventoryMatches>,
+  familyLabel = '',
+  ctx?: SessionContext,
+): ChatReply {
+  const query = familyLabel ? labelOf(familyLabel) : 'tu búsqueda'
+  const shown = products.slice(0, 5)
+  const plan = getLastProductPlan()
+  const raw = String(ctx?.lastUserText || '').trim()
+  const campo = raw || String(plan?.searchText || familyLabel || '').trim()
   return {
-    text: familyLabel
-      ? `Encontré varias fichas de ${labelOf(familyLabel)}. ¿Cuál buscas?`
-      : 'Encontré varias fichas. ¿Cuál buscas?',
-    actions: [],
-    options: products.map((product) => ({
-      kind: 'catalog-search' as const,
-      label: catalogOptionLabel(product, products),
-      search: catalogSearchQuery(product),
-    })),
+    text: formatMatchesListText(query, shown),
+    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    options: productChoiceOptions(shown),
+    ...(campo ? { catalogCommand: barSearchCommand(campo, ctx, shown) } : {}),
   }
 }
 
@@ -281,8 +324,8 @@ function productApiErrorReply(): ChatReply {
 
 function productMissReply(): ChatReply {
   return {
-    text: 'No encontré ese producto con esos datos. Indica el nombre, la marca y el modelo de la moto. También puedes abrir el catálogo.',
-    actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }, advisorContactAction()],
+    text: searchMissGuideText(),
+    actions: [{ kind: 'focus-search', href: CATALOG_PATH, label: 'Abrir barra de búsqueda' }, advisorContactAction()],
   }
 }
 
@@ -375,10 +418,36 @@ export function matchingProductsForTokens(tokens: readonly string[]) {
 }
 
 function pickedProductReply(tokens: readonly string[], ctx: SessionContext): ChatReply | null {
+  const offers = ctx.lastOffers || []
+  if (!offers.length) return null
+  const text = (ctx.lastUserText || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+  const byIndex = pickOfferByIndex(ctx, ctx.lastUserText || '')
+  if (byIndex) {
+    ctx.entities.producto = byIndex.nombre
+    rememberOffers(ctx, [byIndex])
+    return singleMatchReply(byIndex)
+  }
+  const chose =
+    /\b(esa|ese|eso|esta|este|primera|segundo|segunda)\b/.test(text)
+    || offers.some((offer) => {
+      const label = foldAsk(offer.label || '')
+      const rawText = text.trim()
+      return (offer.codigo && foldAsk(offer.codigo) === rawText)
+        || (label && (label === rawText || rawText.includes(label) || label.includes(rawText)))
+    })
+  if (!chose && offers.length === 1) return null
   const picked = pickLastOffer(ctx, tokens, ctx.lastUserText || '')
   if (!picked) return null
   ctx.entities.producto = picked.nombre
-  return driveSearchReply(picked)
+  rememberOffers(ctx, [picked])
+  return singleMatchReply(picked)
+}
+
+function foldAsk(value: string) {
+  return value.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
 }
 
 function productAuthReply(): ChatReply {
@@ -404,6 +473,11 @@ export function productReply(tokens: readonly string[], ctx?: SessionContext): C
   }
   const families = listPartFamilies(tokens)
   if (families.length >= 2) {
+    const raw = ctx?.lastUserText || ''
+    const leftPos = positionForFamily(raw, families[0].label)
+    const rightPos = positionForFamily(raw, families[1].label)
+    const leftLabel = [labelOf(families[0].label), leftPos].filter(Boolean).join(' ')
+    const rightLabel = [labelOf(families[1].label), rightPos].filter(Boolean).join(' ')
     if (ctx) {
       ctx.pendingConfirmation = {
         intent: 'product',
@@ -413,20 +487,20 @@ export function productReply(tokens: readonly string[], ctx?: SessionContext): C
           previous: families[0].label,
           next: families[1].label,
           rightIntent: 'product',
+          positions: {
+            [families[0].label]: leftPos,
+            [families[1].label]: rightPos,
+          },
+          modelo: ctx.entities.modelo || '',
+          marca: ctx.entities.marca || '',
         },
       }
     }
-    return {
-      text: applyBotText('disambiguation', '¿Te refieres a {left} o a {right}?', {
-        left: families[0].label,
-        right: families[1].label,
-      }),
-      actions: [],
-      options: [
-        { kind: 'prompt', label: families[0].label, prompt: families[0].label },
-        { kind: 'prompt', label: families[1].label, prompt: families[1].label },
-      ],
-    }
+    return partConflictReply(families[0].label, families[1].label, {
+      leftLabel,
+      rightLabel,
+      vehicle: ctx?.entities.modelo || '',
+    })
   }
   const family = resolvePartFamily(tokens)
   if (family?.ambiguous) {
@@ -451,11 +525,11 @@ export function productReply(tokens: readonly string[], ctx?: SessionContext): C
   if (hits.length > 1) {
     rememberOffers(ctx, hits)
     const familyLabel = family?.label || findTerm(tokens, liveCatalogParts()) || ''
-    return productOptionsReply(hits, familyLabel)
+    return productOptionsReply(hits, familyLabel, ctx)
   }
 
   rememberOffers(ctx, hits)
-  return driveSearchReply(hits[0])
+  return singleMatchReply(hits[0])
 }
 
 export function hasProductTerm(tokens: readonly string[]) {
@@ -561,7 +635,7 @@ export function complaintReply(): ChatReply {
   return {
     text: applyBotText(
       'complaint',
-      `Lamentamos el inconveniente. Cuéntame qué pasó: producto, pedido y fecha, si los tienes. Te ayudo a dejarlo radicado. También puedes escribir al WhatsApp ${liveContact().phoneDisplay}. El correo es ${liveContact().email}.`,
+      `Lamentamos el inconveniente. Ten en cuenta: la devolución está sujeta a términos y condiciones; los productos eléctricos no están sujetos a cambios ni cuentan con garantía; toda devolución o garantía se revisa previamente (plazo máximo 10 días con factura y empaque en buen estado). Cuéntame qué pasó: producto, pedido y fecha, si los tienes. También puedes escribir al WhatsApp ${liveContact().phoneDisplay}. El correo es ${liveContact().email}.`,
       completeVars(''),
     ),
     actions: [
@@ -580,7 +654,7 @@ export function returnsReply(): ChatReply {
   return {
     text: applyBotText(
       'returns',
-      `Los cambios y devoluciones siguen nuestros términos y condiciones. Puedes visitarnos en ${address}. Si prefieres, un asesor te atiende.`,
+      `La devolución de productos está sujeta a términos y condiciones. \nLos productos eléctricos no cuentan con garantía ni están sujetos a cambios. \nPara solicitar una devolución, el producto y su empaque deben conservarse en buen estado y debe presentarse la factura física y/o digital dentro de los 10 días posteriores a la compra. \nToda devolución o garantía pasa por un proceso de revisión.`,
       completeVars('', { address }),
     ),
     actions: [
@@ -609,10 +683,16 @@ export function quoteReply(tokens: readonly string[] = [], ctx?: SessionContext)
   if (plan?.uiSlot === 'marca' || plan?.uiSlot === 'modelo' || plan?.uiSlot === 'categoria') {
     return driveFilterReply(plan)
   }
-  const picked = ctx ? pickLastOffer(ctx, tokens, ctx.lastUserText || '') : null
+  const picked = ctx
+    ? (pickOfferByIndex(ctx, ctx.lastUserText || '') || pickLastOffer(ctx, tokens, ctx.lastUserText || ''))
+    : null
   if (picked && ctx) {
     ctx.entities.producto = picked.nombre
-    return driveSearchReply(picked)
+    rememberOffers(ctx, [picked])
+    return {
+      text: ['🔍 Encontré:', '', formatMatchLine(picked)].join('\n'),
+      actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    }
   }
   const term = subjectFrom(tokens, ctx)
   const named = term ? labelOf(term) : ''
@@ -622,11 +702,14 @@ export function quoteReply(tokens: readonly string[] = [], ctx?: SessionContext)
   }
   if (hits.length > 1) {
     rememberOffers(ctx, hits)
-    return productOptionsReply(hits, named)
+    return productOptionsReply(hits, named, ctx)
   }
   if (hits.length === 1) {
     rememberOffers(ctx, hits)
-    return driveSearchReply(hits[0])
+    return {
+      text: ['🔍 Encontré:', '', formatMatchLine(hits[0])].join('\n'),
+      actions: [{ href: CATALOG_PATH, label: 'Ver catálogo' }],
+    }
   }
   if (plan?.source === 'api' || plan?.source === 'cache') return productMissReply()
   return {
@@ -807,11 +890,37 @@ function chipOptions(labels: readonly string[]): ChatAction[] {
   }))
 }
 
-export function scaffoldAskBrandReply(family: string, chips: readonly string[]): ChatReply {
+export function scaffoldAskBrandReply(
+  family: string,
+  chips: readonly string[],
+  extra: { position?: string; model?: string } = {},
+): ChatReply {
+  const subject = [family, extra.position].filter(Boolean).join(' ')
+  const title = extra.model
+    ? `🔧 ${labelOf(subject)} · ${labelOf(extra.model)}`
+    : `🔧 ${labelOf(subject)}`
+  const ask = extra.model
+    ? '¿Para qué marca de vehículo lo necesitas?'
+    : '¿Para qué vehículo lo necesitas?'
   return {
-    text: `Perfecto, manejamos ${family}. ¿Para qué marca de vehículo lo necesitas?`,
+    text: `${title}\n\n${ask}`,
     actions: [],
     options: chipOptions(chips),
+  }
+}
+
+export function scaffoldAskPositionReply(
+  family: string,
+  extra: { model?: string; axis?: 'frontRear' | 'leftRight' } = {},
+): ChatReply {
+  const title = extra.model
+    ? `🔧 ${labelOf(family)} · ${labelOf(extra.model)}`
+    : `🔧 ${labelOf(family)}`
+  const lateral = extra.axis === 'leftRight'
+  return {
+    text: `${title}\n\n${lateral ? '¿Izquierdo o derecho?' : '¿Delantera o trasera?'}`,
+    actions: [],
+    options: chipOptions(lateral ? ['Izquierdo', 'Derecho'] : ['Delantera', 'Trasera']),
   }
 }
 
@@ -820,17 +929,6 @@ export function scaffoldAskModelReply(family: string, brand: string, chips: read
     text: brand
       ? `Bien, ${family} para ${brand}. ¿Qué modelo es?`
       : `Bien, veamos. ¿Qué modelo aproximado usas, o prefieres que te muestre las más consultadas?`,
-    actions: [],
-    options: chipOptions(chips),
-  }
-}
-
-export function scaffoldAskYearReply(brand: string, model: string, chips: readonly string[]): ChatReply {
-  const vehicle = [brand, model].filter(Boolean).join(' ')
-  return {
-    text: vehicle
-      ? `¿De qué año aproximado es tu ${vehicle}? (opcional, puedes omitirlo)`
-      : '¿De qué año aproximado es el vehículo? (opcional, puedes omitirlo)',
     actions: [],
     options: chipOptions(chips),
   }
@@ -871,7 +969,6 @@ export function scaffoldInventoryReply(
     }
   }
   const hits = findInventoryMatches(tokens).slice(0, limit)
-  const query = tokens.join(' ') || family
   if (!hits.length) {
     return {
       text: `No encontré ${family} con esos datos. Afina marca o modelo, o te conecto con un asesor.`,
@@ -880,17 +977,8 @@ export function scaffoldInventoryReply(
     }
   }
   rememberOffers(ctx, hits)
-  if (hits.length === 1) return driveSearchReply(hits[0])
-  return {
-    text: `Encontré estas opciones para ${family}. Te muestro ${hits.length}:`,
-    actions: [],
-    options: hits.map((product) => ({
-      kind: 'catalog-search' as const,
-      label: catalogOptionLabel(product, hits),
-      search: catalogSearchQuery(product),
-    })),
-    catalogCommand: { kind: 'search', query },
-  }
+  if (hits.length === 1) return singleMatchReply(hits[0])
+  return productOptionsReply(hits, family, ctx)
 }
 
 export function orderStatusReply(): ChatReply {
@@ -1031,7 +1119,17 @@ export function vehicleUnmatchedReply(word: string): ChatReply {
 
 function memberWhatsapp(member: LandingTeamMember) {
   const digits = member.whatsappDigits || member.phoneDisplay.replace(/\D/g, '')
-  return digits ? `https://wa.me/${digits}` : liveContact().whatsappUrl
+  return digits ? `https://wa.me/${digits}` : ''
+}
+
+function memberContactActions(member: LandingTeamMember): ChatAction[] {
+  const href = memberWhatsapp(member)
+  const actions: ChatAction[] = []
+  if (href) {
+    actions.push({ href, label: `WhatsApp de ${member.fullName}`, external: true })
+  }
+  actions.push(advisorContactAction())
+  return actions
 }
 
 function rolePhrase(role: string) {
@@ -1043,13 +1141,22 @@ function rolePhrase(role: string) {
 function joinNames(names: string[]) {
   if (names.length <= 1) return names[0] ?? ''
   if (names.length === 2) return `${names[0]} y ${names[1]}`
-  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`
+  return `${names.slice(0,).join(', ')} y ${names[names.length - 1]}`
+}
+
+function memberPhoneLine(member: LandingTeamMember) {
+  const phone = member.phoneDisplay.trim()
+  return phone || 'sin teléfono publicado'
 }
 
 function describeMember(member: LandingTeamMember) {
   const role = rolePhrase(member.role)
-  const phone = member.phoneDisplay || 'el número del equipo'
-  return applyBotText('teamMember', `${member.fullName} es ${role}. Puedes escribirle al ${phone}.`, {
+  const phone = memberPhoneLine(member)
+  const fallback =
+    phone === 'sin teléfono publicado'
+      ? `${member.fullName} es ${role}. No tiene teléfono publicado.`
+      : `${member.fullName} es ${role}. Puedes escribirle al ${phone}.`
+  return applyBotText('teamMember', fallback, {
     name: member.fullName,
     role,
     phone,
@@ -1057,7 +1164,7 @@ function describeMember(member: LandingTeamMember) {
   })
 }
 
-const ROLES_LINE = 'En Premium hay varios roles; los publicados son asesores y administrativos.'
+const ROLES_LINE = 'En Premium hay varios roles; contamos con asesores y administrativos.'
 
 function advisorGroupReply(_members: LandingTeamMember[], kind: ReturnType<typeof advisorAskKind>): ChatReply {
   const list = livePublishedTeam('asesor').filter((item) => item.fullName.trim())
@@ -1097,7 +1204,7 @@ function advisorGroupReply(_members: LandingTeamMember[], kind: ReturnType<typeo
   }
 
   return {
-    text: `${ROLES_LINE} En el grupo de asesores están ${names}. Elije el asesor que desees`,
+    text: `${ROLES_LINE} Elije el asesor que desees a continuacion:`,
     actions: [carousel],
     options,
   }
@@ -1105,17 +1212,23 @@ function advisorGroupReply(_members: LandingTeamMember[], kind: ReturnType<typeo
 
 export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly string[] = []): ChatReply {
   if (match.type === 'all') {
-    const asesores = match.asesores.map((member) => member.fullName)
-    const admins = match.administrativos.map((member) => member.fullName)
-    const advisorLine = asesores.length
-      ? `En asesores están ${joinNames(asesores)}.`
+    const advisorOptions = match.asesores
+      .filter((member) => member.fullName.trim())
+      .map((member) => ({ kind: 'prompt' as const, label: member.fullName, prompt: member.fullName }))
+    const adminOptions = match.administrativos
+      .filter((member) => member.fullName.trim())
+      .map((member) => ({ kind: 'prompt' as const, label: member.fullName, prompt: member.fullName }))
+    const options = [...advisorOptions, ...adminOptions]
+    const advisorLine = advisorOptions.length
+      ? 'Elige un asesor de la lista:'
       : 'Por ahora no hay asesores publicados.'
-    const adminLine = admins.length
-      ? `En administrativos están ${joinNames(admins)}.`
+    const adminLine = adminOptions.length
+      ? 'También puedes elegir un administrativo:'
       : 'Por ahora no hay administrativos publicados.'
     return {
-      text: `${ROLES_LINE} ${advisorLine} ${adminLine} Dime un nombre si quieres el teléfono o escribirle.`,
+      text: `${ROLES_LINE} ${advisorLine} ${adminLine}`,
       actions: [advisorContactAction()],
+      options,
     }
   }
 
@@ -1129,10 +1242,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
     const text = listed.length === 1 ? lines[0] : `Encontré a estas personas. ${lines.join(' ')}`
     return {
       text: `${text}${more}`,
-      actions: [
-        { href: memberWhatsapp(listed[0]), label: `WhatsApp de ${listed[0].fullName}`, external: true },
-        advisorContactAction(),
-      ],
+      actions: memberContactActions(listed[0]),
     }
   }
 
@@ -1155,7 +1265,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
   }
 
   const role = rolePhrase(match.member.role)
-  const phone = match.member.phoneDisplay || 'el número del equipo'
+  const phone = memberPhoneLine(match.member)
   return {
     text: applyBotText(
       'teamSuggest',
@@ -1167,10 +1277,7 @@ export function teamMatchReply(match: Exclude<TeamMatch, null>, tokens: readonly
         phone,
       },
     ),
-    actions: [
-      { href: memberWhatsapp(match.member), label: `WhatsApp de ${match.member.fullName}`, external: true },
-      advisorContactAction(),
-    ],
+    actions: memberContactActions(match.member),
   }
 }
 
@@ -1259,9 +1366,15 @@ export function menuReply(): ChatReply {
 }
 
 export function handoffReply(): ChatReply {
+  const list = livePublishedTeam('asesor').filter((item) => item.fullName.trim())
+  const options = list.map((member) => ({ kind: 'prompt' as const, label: member.fullName, prompt: member.fullName }))
   return {
-    text: applyBotText('humanHandoff', '¿Quieres que te conecte con un asesor humano?'),
-    actions: contactActions(),
+    text: applyBotText(
+      'humanHandoff',
+      'Entiendo. Puedo pasarte con un asesor real del equipo Premium. Dime el nombre de quien prefieres o elige una opción.',
+    ),
+    actions: [advisorContactAction()],
+    options,
   }
 }
 
@@ -1280,8 +1393,28 @@ export function choiceReply(left: string, right: string): ChatReply {
   }
 }
 
+export function partConflictReply(
+  left: string,
+  right: string,
+  extra: { leftLabel?: string; rightLabel?: string; vehicle?: string } = {},
+): ChatReply {
+  const leftLabel = extra.leftLabel || left
+  const rightLabel = extra.rightLabel || right
+  const vehicle = extra.vehicle
+    ? `\n\n> Ya registré el vehículo: ${labelOf(extra.vehicle)}`
+    : ''
+  return {
+    text: `🔧 Dos piezas detectadas\n\n¿Cuál revisamos primero?${vehicle}`,
+    actions: [],
+    options: [
+      { kind: 'prompt', label: labelOf(leftLabel), prompt: left },
+      { kind: 'prompt', label: labelOf(rightLabel), prompt: right },
+    ],
+  }
+}
+
 export function entityConflictReply(previous: string, next: string): ChatReply {
-  return choiceReply(previous, next)
+  return partConflictReply(previous, next)
 }
 
 export function productTokensFromLabel(label: string) {
