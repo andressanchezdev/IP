@@ -1,5 +1,5 @@
 import { findTerm, listPartFamilies, liveAccessoryTerms, liveCatalogParts, liveOtherParts, positionForFamily, resolvePartFamily } from './motoParts'
-import { applyBotText, defaultKeywords, getBotSettings, keywordsOf, liveContact, livePayments } from './botSettings'
+import { applyBotText, defaultKeywords, getBotSettings, keywordsOf, liveContact, livePayments, pickWhatsappUrl } from './botSettings'
 import { nextAskPhrase, nextAskSubject } from './askPhrase'
 import { advisorAskKind, groupLabel, type TeamMatch } from './teamLookup'
 import type { LandingTeamMember } from './types'
@@ -83,7 +83,7 @@ type Intent = {
 const CATALOG_PATH = '/'
 
 function whatsappHref(text: string) {
-  const base = liveContact().whatsappUrl
+  const base = pickWhatsappUrl()
   const joiner = base.includes('?') ? '&' : '?'
   return `${base}${joiner}text=${encodeURIComponent(text)}`
 }

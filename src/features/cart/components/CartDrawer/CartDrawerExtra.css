@@ -1,4 +1,4 @@
-﻿.carrito-search {
+.carrito-search {
   align-items: center;
   background: var(--color-bg-surface);
   border-radius: 10px;
@@ -156,11 +156,18 @@
   transform: translateY(-4px);
 }
 
-/* Mobile: must live here so it wins over the desktop 344px width above
-   (CartDrawer.css loads after mobile.css). */
 @media (max-width: 768px) {
+  .carrito-card__description {
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .carrito-card__image-slot {
+    height: 44px;
+    width: 44px;
+  }
+
   .content-main-carrito {
-    box-sizing: border-box;
     flex: 1 1 auto;
     height: auto;
     max-height: 100%;
@@ -171,7 +178,6 @@
 
   .content-main-aux-carrito {
     align-items: stretch;
-    box-sizing: border-box;
     flex: 1 1 0%;
     gap: 10px;
     margin-left: 0;
@@ -186,13 +192,14 @@
     padding-bottom: 8px;
     padding-left: 12px;
     padding-right: 12px;
+    touch-action: pan-y;
     width: 100%;
   }
 
   .content-main-aux-carrito > .accordion,
   .content-main-aux-carrito .accordion {
     align-self: stretch;
-    box-sizing: border-box;
+    flex-shrink: 0;
     margin-left: auto;
     margin-right: auto;
     max-width: 100%;
@@ -200,7 +207,6 @@
   }
 
   .content-main-data-carrito {
-    box-sizing: border-box;
     flex-shrink: 0;
     flex-wrap: wrap;
     height: auto;
@@ -219,7 +225,6 @@
   }
 
   .content-main-data-carrito__checkout {
-    box-sizing: border-box;
     flex: 1;
     font-size: 12px;
     max-width: 100%;

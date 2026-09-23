@@ -6,6 +6,16 @@
   overflow: hidden;
   position: absolute;
   width: 100%;
+  transform:scale(1.5);
+}
+
+.product-magnify--static {
+  cursor: zoom-in;
+}
+
+.product-magnify--static .product-magnify__media {
+  transform: none;
+  transform-origin: center center;
 }
 
 .product-magnify.is-zooming {
@@ -18,7 +28,7 @@
   object-fit: contain;
   object-position: center center;
   pointer-events: none;
-  transform: translate(0px, 0px) scale(2);
+  transform: translate(0px, 0px) scale(1);
   transform-origin: 0 0;
   user-select: none;
   width: 100%;
@@ -69,4 +79,15 @@
 
 .product-magnify-lightbox__close:hover {
   opacity: 0.85;
+}
+
+@media (max-width: 768px) {
+  .product-magnify {
+    cursor: zoom-in;
+  }
+
+  .product-magnify__media {
+    transform: none;
+    transform-origin: center center;
+  }
 }

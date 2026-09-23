@@ -1,5 +1,6 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
 import { parseImageArray, stockTotal } from './parseUbicacionStock'
+import { resolveProductCardImageUrl } from './productImageThumb'
 
 const PLACEHOLDER_IMAGE_HINTS = [
   'blanco.png',
@@ -79,6 +80,7 @@ export function getCatalogProductId(product) {
  * codigo → reference
  * imagen → brandLogo / img_marca
  * imagen_producto → imageUrl / img_producto
+ * thumb card → imageCardUrl (*_card.webp o API thumb)
  * stock → stock
  */
 export function mapApiProduct(product) {
@@ -86,6 +88,7 @@ export function mapApiProduct(product) {
   const brandLogoUrl = resolveAssetUrl(product.imagen)
   const imageUrls = pickProductImageUrls(product.imagen_producto)
   const imageUrl = imageUrls[0] ?? ''
+  const imageCardUrl = resolveProductCardImageUrl(imageUrl, product)
   const precio = mapPrecio(product)
 
   const id = getCatalogProductId(product)
@@ -102,6 +105,7 @@ export function mapApiProduct(product) {
     stock: stockTotal(product.stock),
     searching: String(product.searching ?? '').trim(),
     imageUrl,
+    imageCardUrl,
     imageUrls,
     brandLogo: brandLogoUrl,
     brandLogoUrl,

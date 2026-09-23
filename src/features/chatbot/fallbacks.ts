@@ -15,7 +15,14 @@ export const LANDING_CONTACT = {
   lat: 6.241189,
   lng: -75.571933,
   zoom: 16,
-  whatsappUrl: 'https://wa.me/5731261495527',
+  whatsappUrl: 'https://wa.me/573102927158',
+  whatsappUrls: [
+    'https://wa.me/573102927158',
+    'https://wa.me/573104648569',
+    'https://wa.me/573104649590',
+    'https://wa.me/573104649824',
+    'https://wa.me/573108803566',
+  ],
   social: [
     {
       id: 'instagram',

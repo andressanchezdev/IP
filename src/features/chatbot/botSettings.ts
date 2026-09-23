@@ -671,6 +671,8 @@ export type LiveContact = {
   lng: number
   zoom: number
   whatsappUrl: string
+  /** Pool de WhatsApp para repartir “Hablar con un asesor” (wa.me o teléfonos). */
+  whatsappUrls: string[]
   social: Array<{ id?: string; label: string; href: string }>
 }
 
@@ -687,24 +689,68 @@ function digitsFromPhone(display: string) {
   return display.replace(/\D/g, '')
 }
 
+function toWhatsappUrl(value: string) {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\/wa\.me\//i.test(trimmed)) {
+    const digits = digitsFromPhone(trimmed.replace(/^https?:\/\/wa\.me\//i, ''))
+    return digits ? `https://wa.me/${digits}` : ''
+  }
+  const digits = digitsFromPhone(trimmed)
+  return digits ? `https://wa.me/${digits}` : ''
+}
+
+function normalizeWhatsappPool(raw: unknown, fallbackUrl: string): string[] {
+  const fromList = Array.isArray(raw)
+    ? raw.map((item) => toWhatsappUrl(String(item))).filter(Boolean)
+    : []
+  if (fromList.length) {
+    return [...new Set(fromList)]
+  }
+  const single = toWhatsappUrl(fallbackUrl)
+  return single ? [single] : []
+}
+
+/** Elige un WhatsApp al azar del pool de contacto (reparto entre asesores). */
+export function pickWhatsappUrl(contact = liveContact()): string {
+  const pool = contact.whatsappUrls?.length
+    ? contact.whatsappUrls
+    : normalizeWhatsappPool(undefined, contact.whatsappUrl)
+  if (!pool.length) return contact.whatsappUrl || ''
+  const index = Math.floor(Math.random() * pool.length)
+  return pool[index] ?? pool[0]
+}
+
 /** Contacto y pagos del `botIP.md` activo, con respaldo a los valores de fábrica. */
 export function liveContact(): LiveContact {
   const base: LiveContact = {
     ...LANDING_CONTACT,
+    whatsappUrls: [...LANDING_CONTACT.whatsappUrls],
     social: LANDING_CONTACT.social.map((item) => ({ ...item })),
   }
   try {
-    const raw = getActiveDocument().catalog?.contact as Partial<LiveContact> | undefined
+    const raw = getActiveDocument().catalog?.contact as (Partial<LiveContact> & {
+      whatsappUrls?: unknown
+    }) | undefined
     if (!raw || typeof raw !== 'object') return base
     const merged: LiveContact = {
       ...base,
       ...raw,
       social: Array.isArray(raw.social) && raw.social.length ? raw.social : base.social,
       address: LANDING_CONTACT.address,
+      whatsappUrls: base.whatsappUrls,
     }
     if (raw.phoneDisplay && !raw.whatsappUrl) {
       const digits = digitsFromPhone(raw.phoneDisplay)
       if (digits) merged.whatsappUrl = `https://wa.me/${digits}`
+    }
+    const pool = normalizeWhatsappPool(
+      raw.whatsappUrls,
+      String(raw.whatsappUrl || merged.whatsappUrl || ''),
+    )
+    if (pool.length) {
+      merged.whatsappUrls = pool
+      merged.whatsappUrl = pool[0]
     }
     return merged
   } catch {

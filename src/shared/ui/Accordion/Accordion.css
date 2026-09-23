@@ -3,6 +3,7 @@
   border-radius: 10px;
   border: 1px solid var(--color-border);
   box-sizing: border-box;
+  flex-shrink: 0;
   max-width: 100%;
   overflow: hidden;
   width: 100%;
@@ -22,18 +23,18 @@
   width: 22px;
 }
 
+/* Panel: no es el scroller; el pan vertical debe llegar al padre (drawer/aux). */
 .accordion__panel {
   display: flex;
   flex-direction: column;
   font-weight: 600;
-  gap: 0px;
+  gap: 0;
   margin-top: 1px;
   min-width: 0;
   overflow: visible;
   padding: 0 12px 12px;
   position: relative;
-  touch-action: manipulation;
-  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .accordion--open .accordion__trigger {
@@ -74,25 +75,19 @@
 @media (max-width: 768px) {
   .accordion {
     align-self: stretch;
-    box-sizing: border-box;
     margin-left: auto;
     margin-right: auto;
-    max-width: 100%;
-    width: 100%;
   }
 
+  /* Abierto: no recortar hijos; gestos verticales para scroll del contenedor padre */
   .accordion.accordion--open {
     overflow: visible;
+    touch-action: pan-y;
   }
 
   .accordion__trigger {
-    box-sizing: border-box;
-    margin-left: 0;
-    margin-right: 0;
-    max-width: 100%;
     min-height: 48px;
     padding: 12px;
-    width: 100%;
   }
 
   .accordion__icon {
@@ -104,9 +99,11 @@
   .accordion__panel {
     padding: 0 10px 10px;
     pointer-events: auto;
+    touch-action: pan-y;
   }
 
   .accordion__panel .accordion {
+    flex-shrink: 0;
     overflow: visible;
   }
 }
@@ -127,8 +124,9 @@
   .accordion__panel {
     gap: 8px;
     padding: 4px 10px 12px;
-  }  
+  }
 
+  /* Campos: tap + pan vertical hacia el scroll del padre */
   .accordion__panel label,
   .accordion__panel input,
   .accordion__panel button,
@@ -136,7 +134,7 @@
   .accordion__panel textarea {
     max-width: 100%;
     pointer-events: auto;
-    touch-action: manipulation;
+    touch-action: pan-y;
   }
 }
 

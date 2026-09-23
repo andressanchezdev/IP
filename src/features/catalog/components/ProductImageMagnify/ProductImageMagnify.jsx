@@ -11,11 +11,30 @@ import {
 } from './magnifyConstants'
 import './ProductImageMagnify.css'
 
+const MOBILE_MQ = '(max-width: 768px)'
+
+function useIsMobileViewport() {
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_MQ).matches : false
+  ))
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_MQ)
+    const sync = () => setIsMobile(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  return isMobile
+}
+
 /**
- * Hover: scale fijo + la imagen se desliza a velocidad constante hacia
- * el destino que marca la posición del puntero en el contenedor.
+ * Desktop: hover lupa + click lightbox.
+ * Móvil (≤768px): sin lupa; tap abre lightbox.
  */
 export function ProductImageMagnify({ src, alt }) {
+  const isMobile = useIsMobileViewport()
   const hostRef = useRef(null)
   const mediaRef = useRef(null)
   const currentPanRef = useRef({ x: 0, y: 0 })
@@ -91,7 +110,7 @@ export function ProductImageMagnify({ src, alt }) {
 
   const aimPanFromPointer = useCallback((clientX, clientY) => {
     const host = hostRef.current
-    if (!host || lightboxOpen) {
+    if (!host || lightboxOpen || isMobile) {
       return
     }
     const rect = host.getBoundingClientRect()
@@ -104,10 +123,10 @@ export function ProductImageMagnify({ src, alt }) {
     )
     scaleRef.current = HOVER_ZOOM
     startPanLoop()
-  }, [lightboxOpen, startPanLoop])
+  }, [lightboxOpen, isMobile, startPanLoop])
 
   const handlePointerEnter = (event) => {
-    if (lightboxOpen) {
+    if (isMobile || lightboxOpen) {
       return
     }
     hoveringRef.current = true
@@ -116,13 +135,16 @@ export function ProductImageMagnify({ src, alt }) {
   }
 
   const handlePointerMove = (event) => {
-    if (!hoveringRef.current || lightboxOpen) {
+    if (isMobile || !hoveringRef.current || lightboxOpen) {
       return
     }
     aimPanFromPointer(event.clientX, event.clientY)
   }
 
   const handlePointerLeave = (event) => {
+    if (isMobile) {
+      return
+    }
     const host = hostRef.current
     const next = event.relatedTarget
     if (host && next instanceof Node && host.contains(next)) {
@@ -146,7 +168,7 @@ export function ProductImageMagnify({ src, alt }) {
     setHovering(false)
     setLightboxOpen(false)
     resetHoverZoom()
-  }, [src, resetHoverZoom])
+  }, [src, isMobile, resetHoverZoom])
 
   useEffect(() => () => stopPanLoop(), [stopPanLoop])
 
@@ -170,6 +192,56 @@ export function ProductImageMagnify({ src, alt }) {
 
   if (!src) {
     return <div className="product-magnify__empty" aria-hidden="true" />
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <div
+          className="product-magnify product-magnify--static"
+          onClick={openLightbox}
+        >
+          <img
+            src={src}
+            className="product-magnify__media"
+            draggable={false}
+            {...namedImage(alt || 'Producto')}
+          />
+        </div>
+
+        {lightboxOpen
+          ? createPortal(
+              <div
+                className="product-magnify-lightbox"
+                role="dialog"
+                aria-modal="true"
+                {...namedControl(`Vista ampliada de ${alt || 'producto'}`)}
+                onClick={closeLightbox}
+              >
+                <button
+                  type="button"
+                  className="product-magnify-lightbox__close"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    closeLightbox()
+                  }}
+                  {...namedControl('Cerrar vista ampliada')}
+                >
+                  ×
+                </button>
+                <img
+                  src={src}
+                  className="product-magnify-lightbox__image"
+                  draggable={false}
+                  onClick={(event) => event.stopPropagation()}
+                  {...namedImage(alt || 'Producto')}
+                />
+              </div>,
+              document.body,
+            )
+          : null}
+      </>
+    )
   }
 
   return (

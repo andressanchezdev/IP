@@ -1,13 +1,22 @@
-﻿.auth-field {
+﻿/* Auth modal — Base
+ * Capas: field → form → shell compartido → layout login (split).
+ * Posición/tamaño del panel: .auth-modal
+ * Distribución login: .auth-modal__split
+ * Padding de formulario: .auth-modal__form-col
+ */
+
+/* ——— Field (contenido) ——— */
+
+.auth-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.auth-field__error {
-  color: #d32f2f;
-  font-size: 11px;
-  font-weight: 600;
+.auth-field__label {
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .auth-field__control {
@@ -16,8 +25,8 @@
 
 .auth-field__input {
   background: rgba(255, 255, 255, 0.85);
-  border-radius: 10px;
   border: 1px solid var(--color-border);
+  border-radius: 10px;
   color: var(--color-text-primary);
   font-size: 14px;
   padding: 10px 12px;
@@ -37,6 +46,12 @@
   border-color: #ffc46f;
   box-shadow: 0 0 0 3px rgba(255, 196, 111, 0.25);
   outline: none;
+}
+
+.auth-field__error {
+  color: #d32f2f;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .auth-field__toggle {
@@ -59,44 +74,28 @@
   width: 16px;
 }
 
-.auth-field__label {
-  color: var(--color-text-primary);
-  font-size: 12px;
-  font-weight: 700;
-}
+/* ——— Form (contenido) ——— */
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
   gap: 10px;
+  width: 100%;
 }
 
-/* Login en desktop: centra el bloque y reparte el alto entre campos. */
-@media (min-width: 769px) {
-  .auth-form--login {
-    flex: 1 1 auto;
-    gap: clamp(14px, 2.6vh, 24px);
-    justify-content: center;
-  }
-
-  .auth-form--login .auth-form__subtitle {
-    margin: 0;
-  }
-
-  .auth-form--login .auth-form__actions {
-    gap: 12px;
-    margin-top: clamp(4px, 1.2vh, 12px);
-  }
-
-}
-
-.auth-form__actions {
-  display: flex;
-  flex-direction: column;
+.auth-form__title {
+  color: var(--color-text-primary);
   flex-shrink: 0;
-  gap: 10px;
-  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.auth-form__subtitle {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  font-size: 13px;
+  margin: -6px 0 4px;
 }
 
 .auth-form__remember {
@@ -116,10 +115,27 @@
   width: 16px;
 }
 
+.auth-form__actions {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.auth-form__actions--row {
+  flex-direction: row;
+}
+
+.auth-form__actions--row .auth-form__submit,
+.auth-form__actions--row .auth-form__cancel {
+  flex: 1;
+}
+
 .auth-form__submit {
   background: #ffc46f;
-  border-radius: 10px;
   border: none;
+  border-radius: 10px;
   color: var(--color-gris-oscuro);
   cursor: pointer;
   font-size: 14px;
@@ -133,36 +149,10 @@
   filter: brightness(0.97);
 }
 
-.auth-form__subtitle {
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-  font-size: 13px;
-  margin: -6px 0 4px;
-}
-
-.auth-form__title {
-  color: var(--color-text-primary);
-  flex-shrink: 0;
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.auth-form__actions--row {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-}
-
-.auth-form__actions--row .auth-form__submit,
-.auth-form__actions--row .auth-form__cancel {
-  flex: 1;
-}
-
 .auth-form__cancel {
   background: rgba(255, 255, 255, 0.85);
-  border-radius: 10px;
   border: 1px solid var(--color-border);
+  border-radius: 10px;
   color: var(--color-text-primary);
   cursor: pointer;
   font-size: 14px;
@@ -182,17 +172,36 @@
   opacity: 0.7;
 }
 
+/* Login desktop: el form reparte alto dentro de form-col */
+@media (min-width: 769px) {
+  .auth-form--login {
+    flex: 1 1 auto;
+    gap: clamp(14px, 2.6vh, 24px);
+    justify-content: center;
+  }
+
+  .auth-form--login .auth-form__subtitle {
+    margin: 0;
+  }
+
+  .auth-form--login .auth-form__actions {
+    gap: 12px;
+    margin-top: clamp(4px, 1.2vh, 12px);
+  }
+}
+
+/* ——— Modal shell (compartido: login + address + password + order products + product detail) ——— */
+
 .auth-modal {
   --auth-modal-height: 560px;
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   background: rgba(255, 255, 255, 0.92);
-  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
   display: flex;
   flex-direction: column;
-  height: min(var(--auth-modal-height), calc(100dvh - 32px));
   left: 50%;
   overflow: hidden;
   position: fixed;
@@ -202,20 +211,19 @@
   z-index: 50;
 }
 
-.auth-modal__brand {
-  background-color: var(--color-gris-claro);
-  background-image: var(--auth-brand-desktop);
-  background-position: cover;
-  background-repeat: no-repeat;
-  background-size: cover;
-  border-right: 1px solid var(--color-border);
-  min-height: 280px;
+.auth-modal-backdrop {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  background: rgba(26, 26, 26, 0.45);
+  inset: 0;
+  position: fixed;
+  z-index: 40;
 }
 
 .auth-modal__close {
   background: rgba(244, 244, 244, 0.9);
-  border-radius: 999px;
   border: none;
+  border-radius: 999px;
   color: var(--color-text-primary);
   cursor: pointer;
   font-size: 20px;
@@ -228,13 +236,15 @@
   z-index: 2;
 }
 
+/* Sección de formulario: columna flex + padding; el padre (.auth-modal / split) da el alto */
 .auth-modal__form-col {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
-  padding: 40px 24px 24px;
+  padding: 15px;
 }
+
+/* ——— Login layout (solo AuthModal con --login) ——— */
 
 .auth-modal__split {
   display: grid;
@@ -243,11 +253,12 @@
   min-height: 0;
 }
 
-.auth-modal-backdrop {
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  background: rgba(26, 26, 26, 0.45);
-  inset: 0;
-  position: fixed;
-  z-index: 40;
+.auth-modal__brand {
+  background-color: var(--color-gris-claro);
+  background-image: var(--auth-brand-desktop);
+  background-position: cover;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border-right: 1px solid var(--color-border);
+  min-height: 280px;
 }

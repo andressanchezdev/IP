@@ -1,5 +1,6 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
 import { parseImageArray, parseStock } from './parseUbicacionStock'
+import { resolveProductCardImageUrl } from './productImageThumb'
 
 const PLACEHOLDER_IMAGE_HINTS = [
   'blanco.png',
@@ -56,6 +57,7 @@ export function mapApiCartItem(entry) {
   const brand = text(entry.marca)
   const brandLogoUrl = resolveAssetUrl(entry.imagen)
   const imageUrl = pickProductImageUrl(pickCartProductImageField(entry))
+  const imageCardUrl = resolveProductCardImageUrl(imageUrl, entry)
   const stock = entry.stock != null ? parseStock(entry.stock) : 0
 
   return {
@@ -70,6 +72,7 @@ export function mapApiCartItem(entry) {
     stock,
     searching: text(entry.searching),
     imageUrl,
+    imageCardUrl,
     brandLogo: brandLogoUrl,
     brandLogoUrl,
     quantity: Math.max(1, Number(entry.cantidad) || 1),

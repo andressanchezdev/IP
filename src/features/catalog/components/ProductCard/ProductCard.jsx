@@ -21,19 +21,23 @@ export const ProductCard = memo(function ProductCard({
   reference,
   stock = 0,
   imageUrl = '',
+  imageCardUrl = '',
   brandLogo,
   brandLogoUrl,
   isInCart = false,
+  /** Primera fila visible: carga eager para mejorar LCP. */
+  priority = false,
   onOrder,
   onOpenDetail,
 }) {
   const { showToast } = useToast()
   const [quantity, setQuantity] = useState(1)
-  const [imageFailed, setImageFailed] = useState(false)
+  /** card → thumb WebP; full → imagen_producto; logo → marca */
+  const [imageTier, setImageTier] = useState('card')
 
   useEffect(() => {
-    setImageFailed(false)
-  }, [imageUrl])
+    setImageTier(imageCardUrl ? 'card' : 'full')
+  }, [imageUrl, imageCardUrl])
 
   // Prioriza el campo API `precio`; `price` queda como alias interno.
   const displayPrice = precio ?? price
@@ -41,8 +45,21 @@ export const ProductCard = memo(function ProductCard({
   const isOrdered = isInCart
   const isSoldOut = stock <= 0
   const resolvedBrandLogo = brandLogo || brandLogoUrl
-  // product-card__image usa imagen_producto → imageUrl. Fallback visual: campo imagen (logo).
-  const mediaSrc = !imageFailed && imageUrl ? imageUrl : resolvedBrandLogo
+  // Card: thumb liviana (*_card.webp). Fallback: full → logo marca.
+  const mediaSrc = (() => {
+    if (imageTier === 'card' && imageCardUrl) return imageCardUrl
+    if (imageTier !== 'logo' && imageUrl) return imageUrl
+    return resolvedBrandLogo || ''
+  })()
+
+  const handleImageError = () => {
+    setImageTier((current) => {
+      if (current === 'card' && imageUrl && imageUrl !== imageCardUrl) {
+        return 'full'
+      }
+      return 'logo'
+    })
+  }
   const descriptionText = String(description || '').trim()
   const categoryText = String(category || '').trim()
   const modelText = String(model || '').trim()
@@ -159,9 +176,10 @@ export const ProductCard = memo(function ProductCard({
             <img
               src={mediaSrc}
               className="product-card__image"
-              loading="lazy"
-              decoding="async"
-              onError={() => setImageFailed(true)}
+              loading={priority ? 'eager' : 'lazy'}
+              decoding={priority ? 'sync' : 'async'}
+              fetchPriority={priority ? 'high' : 'auto'}
+              onError={handleImageError}
               {...namedImage(productName)}
             />
           </button>

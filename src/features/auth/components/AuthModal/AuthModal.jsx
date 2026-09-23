@@ -11,7 +11,7 @@ export function AuthModal({ isOpen, onClose, onLogin }) {
       isOpen={isOpen}
       onClose={onClose}
       labelledBy="auth-modal-title"
-      className="auth-modal"
+      className="auth-modal auth-modal--login"
       backdropClassName="auth-modal-backdrop"
     >
       <button

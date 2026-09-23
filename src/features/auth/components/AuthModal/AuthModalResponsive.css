@@ -1,93 +1,67 @@
-/* Ajustes responsive del modal de autenticación (solo login). */
+/* Auth modal — Responsive (SOLO .auth-modal--login)
+ * No aplica a Address / ChangePassword / OrderProducts / ProductDetail.
+ * Padre: tamaño del panel y columna split.
+ * Hijos: solo su porción (brand / form-col / tipografía del login).
+ */
 
 @media (max-width: 768px) {
-  .auth-modal {
+  .auth-modal--login {
     --auth-mobile-width: min(96vw, calc(100vw - 16px));
     --auth-mobile-height: min(88dvh, calc(100dvh - 16px));
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    height: var(--auth-mobile-height);
-    max-height: var(--auth-mobile-height);
-    width: var(--auth-mobile-width);
   }
 
-  .auth-modal__split {
+  .auth-modal--login .auth-modal__split {
     display: flex;
-    flex: 1 1 0%;
     flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-    width: 100%;
+    justify-content: center;
   }
 
-  .auth-modal__split .auth-modal__brand {
+  .auth-modal--login .auth-modal__brand {
     background-image: var(--auth-brand-mobile);
     background-position: center;
     background-size: cover;
     border-bottom: 1px solid var(--color-border);
     border-right: none;
-    box-sizing: border-box;
-    flex: 0 0 50%;
-    height: 28%;
-    min-height: 120px;
-    overflow: hidden;
-    width: 100%;
   }
 
-  .auth-modal__split .auth-modal__form-col {
-    box-sizing: border-box;
-    flex: 1 1 auto;
-    height: auto;
-    max-height: none;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: 20px 16px 16px;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-  }
-
-  .auth-form--login {
-    flex: 1 1 auto;
+  .auth-modal--login .auth-form--login {
     gap: 10px;
     justify-content: space-around;
     min-height: 0;
-    overflow: visible;
   }
 
-  .auth-form--login .auth-form__title,
-  .auth-form--login .auth-form__subtitle,
-  .auth-form--login .auth-field,
-  .auth-form--login .auth-form__remember {
+  .auth-modal--login .auth-form--login .auth-form__title,
+  .auth-modal--login .auth-form--login .auth-form__subtitle,
+  .auth-modal--login .auth-form--login .auth-field,
+  .auth-modal--login .auth-form--login .auth-form__remember,
+  .auth-modal--login .auth-form--login .auth-form__actions {
     flex-shrink: 0;
   }
 
-  .auth-form--login .auth-form__actions {
-    flex-shrink: 0;
+  .auth-modal--login .auth-form--login .auth-form__actions {
     padding-top: 6px;
   }
 
-  .auth-form__title {
+  .auth-modal--login .auth-form__title {
     font-size: 18px;
   }
 
-  .auth-form__subtitle {
+  .auth-modal--login .auth-form__subtitle {
     font-size: 12px;
     margin: 0;
   }
 
-  .auth-field__input {
+  .auth-modal--login .auth-field__input {
     font-size: 16px;
     padding: 9px 11px;
   }
 
-  .auth-form__submit {
+  .auth-modal--login .auth-form__submit {
     font-size: 13px;
     padding: 10px 14px;
   }
 
-  .auth-modal__close {
+  .auth-modal--login .auth-modal__close {
     height: 40px;
     right: 8px;
     top: 8px;
@@ -96,80 +70,74 @@
 }
 
 @media (max-width: 520px) {
-  .auth-modal {
+  .auth-modal--login {
     --auth-mobile-width: calc(99vw - 12px);
+    height: 65%;
   }
 
-  .auth-modal__split .auth-modal__brand {
-    flex: 0 0 50%;
-    height: 24%;
-    min-height: 100px;
+  .auth-modal--login .auth-modal__brand {
+    min-height: 25%;
+    max-height: 35%;
   }
 
-  .auth-modal__split .auth-modal__form-col {
-    padding: 16px 14px 12px;
+  .auth-modal--login .auth-form--login {
+    width: 100%;
+    height: 100%;
   }
 
-  .auth-form--login {
-    gap: 8px;
-  }
-
-  .auth-form__title {
+  .auth-modal--login .auth-form__title {
     font-size: 17px;
   }
 
-  .auth-form__subtitle {
+  .auth-modal--login .auth-form__subtitle {
     font-size: 12px;
   }
 }
 
 @media (max-width: 360px) {
-  .auth-modal {
+  .auth-modal--login {
+    justify-content: center;
     border-radius: 0;
-    height: 100dvh;
+    height: 50dvh;
     left: 0;
-    max-height: 100dvh;
-    top: 0;
+    top: 25%;
     transform: none;
     width: 100vw;
   }
 
-  .auth-modal__split .auth-modal__brand {
-    height: 22%;
-    min-height: 88px;
+  .auth-modal--login .auth-modal__form-col {
+    padding:15px;
+    justify-content: center;
   }
 
-  .auth-modal__split .auth-modal__form-col {
-    padding: 16px 12px 12px;
-  }
-
-  .auth-form__title {
+  .auth-modal--login .auth-form__title {
     font-size: 16px;
   }
 
-  .auth-form__remember {
+  .auth-modal--login .auth-form__remember {
     font-size: 12px;
   }
 
-  .auth-field__label {
+  .auth-modal--login .auth-field__label {
     font-size: 11px;
   }
 
-  .auth-field__input {
+  .auth-modal--login .auth-field__input {
     padding: 8px 10px;
   }
 }
 
 @media (max-width: 240px) {
-  .auth-modal__split .auth-modal__form-col {
-    padding: 12px 8px 8px;
+  .auth-modal--login .auth-modal__form-col {
+    padding:5px;
+    justify-content: center;
   }
 
-  .auth-form__title {
+  .auth-modal--login .auth-form__title {
     font-size: 15px;
   }
 
-  .auth-form__subtitle {
+  .auth-modal--login .auth-form__subtitle {
     font-size: 11px;
   }
 }

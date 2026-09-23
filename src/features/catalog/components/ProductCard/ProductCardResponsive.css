@@ -91,7 +91,20 @@
     font-size: clamp(11px, 3.6cqw, 14px);
     height: clamp(28px, 9cqw, 36px);
     min-width: 44px;
-    visibility: visible;
     width: clamp(44px, 22cqw, 80px);
+  }
+
+  /* Ordenado / agotado: ocultar incrementador (no forzar visibility: visible) */
+  .product-card__qty-input--hidden {
+    flex: 0 0 0;
+    margin: 0;
+    max-width: 0;
+    min-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0;
+    pointer-events: none;
+    visibility: hidden;
+    width: 0;
   }
 }

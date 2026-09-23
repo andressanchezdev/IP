@@ -57,7 +57,8 @@ export function CheckoutPaymentSection({
       <div className="checkout-finalize__box">
         <div className="order-payment__types order-payments-panel__types">
           {paymentTypes.map(({ id, label }) => {
-            const isSelected = paymentPanel === id || paymentMethod === id
+            // Una sola opción activa: panel en edición o, si aún no eligió, el método confirmado.
+            const isSelected = (paymentPanel ?? paymentMethod) === id
             return (
               <button
                 key={id}

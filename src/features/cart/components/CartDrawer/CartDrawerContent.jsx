@@ -10,9 +10,13 @@ import { CartTotals } from '@/features/cart/components/CartTotals/CartTotals'
 import './CartDrawer.css'
 
 function CartItemMedia({ item }) {
-  const [failed, setFailed] = useState(false)
-  // imageUrl viene de imagen_producto / imagenArray (mapApiCartItem). Fallback: logo (imagen).
-  const src = !failed && item.imageUrl ? item.imageUrl : (item.brandLogo || item.brandLogoUrl)
+  const [tier, setTier] = useState(item.imageCardUrl ? 'card' : 'full')
+  // Preferir thumb *_card.webp; fallback full → logo.
+  const src = (() => {
+    if (tier === 'card' && item.imageCardUrl) return item.imageCardUrl
+    if (tier !== 'logo' && item.imageUrl) return item.imageUrl
+    return item.brandLogo || item.brandLogoUrl || ''
+  })()
   const imageAlt = String(item.description || item.category || item.reference || item.id || 'Producto').trim()
 
   if (!src) {
@@ -26,7 +30,14 @@ function CartItemMedia({ item }) {
         className="carrito-card__image"
         loading="lazy"
         decoding="async"
-        onError={() => setFailed(true)}
+        onError={() => {
+          setTier((current) => {
+            if (current === 'card' && item.imageUrl && item.imageUrl !== item.imageCardUrl) {
+              return 'full'
+            }
+            return 'logo'
+          })
+        }}
         {...namedImage(imageAlt)}
       />
     </div>

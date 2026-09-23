@@ -389,3 +389,10 @@
     padding-bottom: calc(16px + 10px + 12px + (2 * clamp(44px, 12vw, 52px)) + env(safe-area-inset-bottom, 0px));
   }
 }
+
+@media (max-width: 480px) {
+  .landing__content {
+    padding: 10px;
+    padding-bottom: calc(16px + 10px + 12px + (2 * clamp(44px, 12vw, 52px)) + env(safe-area-inset-bottom, 0px));
+  }
+}

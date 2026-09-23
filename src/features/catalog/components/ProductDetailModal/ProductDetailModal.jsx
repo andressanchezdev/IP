@@ -93,6 +93,20 @@ export function ProductDetailModal({
     setQuantity(clampQuantity(Number(quantity)))
   }
 
+  const handleQtyFocus = (event) => {
+    event.target.select()
+  }
+
+  const handleQtyMouseUp = (event) => {
+    const input = event.currentTarget
+    const rect = input.getBoundingClientRect()
+    const clickedStepper = rect.width - (event.clientX - rect.left) <= 22
+    if (clickedStepper) {
+      return
+    }
+    event.preventDefault()
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -162,15 +176,17 @@ export function ProductDetailModal({
               />
             </div>
 
-            <p className="product-detail-modal__category">
-              {categoryText ? categoryText.toUpperCase() : ''}
-            </p>
-            <h2 id="product-detail-title" className="product-detail-modal__title">
-              {(titleText || productName).toUpperCase()}
-            </h2>
-            <p className="product-detail-modal__meta">
-              {`${String(product.brand || '').toUpperCase()} - ${String(product.model || '').toUpperCase()}`}
-            </p>
+            <div className="product-detail-modal__identity-row">
+              <p className="product-detail-modal__category">
+                {categoryText ? categoryText.toUpperCase() : ''}
+              </p>
+              <h2 id="product-detail-title" className="product-detail-modal__title">
+                {(titleText || productName).toUpperCase()}
+              </h2>
+              <p className="product-detail-modal__meta">
+                {`${String(product.brand || '').toUpperCase()} - ${String(product.model || '').toUpperCase()}`}
+              </p>
+            </div>
             <p className="product-detail-modal__reference">
               ref# {String(product.reference || '').toUpperCase()} - {isSoldOut ? 'Sin stock' : `Stock: ${stock}`}
             </p>
@@ -190,6 +206,8 @@ export function ProductDetailModal({
               max={maxQuantity}
               step="1"
               onChange={handleChange}
+              onFocus={handleQtyFocus}
+              onMouseUp={handleQtyMouseUp}
               onBlur={handleBlur}
               disabled={isOrdered || isSoldOut}
               tabIndex={isOrdered || isSoldOut ? -1 : undefined}

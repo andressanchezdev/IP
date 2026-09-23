@@ -114,6 +114,8 @@ export function CartCheckoutDrawerContent() {
   const handleEditPayment = () => {
     setEditingDelivery(false)
     setEditingPayment(true)
+    // Reabre el panel con un solo chip activo (el método ya confirmado).
+    setPaymentPanel(paymentMethod || null)
   }
 
   const confirmRegisteredAddress = () => {

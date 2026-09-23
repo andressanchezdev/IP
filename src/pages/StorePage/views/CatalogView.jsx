@@ -103,10 +103,11 @@ export function CatalogView({ products, cartProductIds, onOrder, onOpenDetail, i
   return (
     <section className="landing__panel">
       <div className="landing__grid">
-        {products.map((product) => (
+        {products.map((product, index) => (
           <ProductCard
             key={product.id}
             {...product}
+            priority={index < 6}
             isInCart={cartProductIds.has(product.id)}
             onOrder={onOrder}
             onOpenDetail={onOpenDetail}
