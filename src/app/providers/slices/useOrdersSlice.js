@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { enrichOrder } from '@/features/orders/utils/enrichOrder'
 import { getCurrentFlowLabel } from '@/features/orders/constants/orderSteps'
 import {
@@ -14,6 +14,8 @@ import {
 } from '@/features/orders/mappers/mapSalesHistory'
 import { useOrderFlowWebSocket } from '@/features/orders/ws/useOrderFlowWebSocket'
 import { APP_EVENTS } from '../appEvents'
+
+const HISTORY_TTL_MS = 45_000
 
 function matchOrderId(entry, orderId) {
   const key = String(orderId ?? '').trim()
@@ -154,6 +156,11 @@ export function useOrdersSlice({
   const [orderSubView, setOrderSubView] = useState(null)
   /** Focus del accordion del drawer: { sections, nonce } — nonce fuerza re-apertura. */
   const [orderDrawerFocus, setOrderDrawerFocus] = useState(null)
+  const pendingOrdersRef = useRef(pendingOrders)
+  const historyOrdersRef = useRef(historyOrders)
+  const historyFetchedAtRef = useRef(0)
+  pendingOrdersRef.current = pendingOrders
+  historyOrdersRef.current = historyOrders
 
   useOrderFlowWebSocket({
     enabled: Boolean(tokenAccess),
@@ -175,10 +182,70 @@ export function useOrdersSlice({
       return
     }
     const enriched = enrichOrder(order)
+    historyFetchedAtRef.current = 0
     setPendingOrders((current) => [
       enriched,
       ...current.filter((entry) => entry.id !== enriched.id),
     ])
+  }, [])
+
+  const loadHistoryFromApi = useCallback(async ({ token, signal, force = false } = {}) => {
+    if (!token) {
+      setHistoryOrders([])
+      setPendingOrders([])
+      setHistoryLoadError('Sesión requerida')
+      return { success: false, error: 'Sesión requerida', needsAuth: true }
+    }
+
+    const hasCached = (
+      (pendingOrdersRef.current?.length ?? 0) > 0
+      || (historyOrdersRef.current?.length ?? 0) > 0
+    )
+    const now = Date.now()
+    const isFresh = (
+      !force
+      && historyFetchedAtRef.current > 0
+      && (now - historyFetchedAtRef.current) < HISTORY_TTL_MS
+    )
+    if (isFresh) {
+      return { success: true, skipped: true, from: 'ttl' }
+    }
+
+    // SWR: solo bloquear UI si no hay datos previos.
+    if (!hasCached) {
+      setIsLoadingHistory(true)
+    }
+    setHistoryLoadError('')
+    try {
+      const response = await getManagementSales({ token, signal })
+      const mappedPending = mapSalesToPendingOrders(response.data)
+      const mappedCreditHistory = mapSalesToCreditHistoryOrders(response.data)
+      const apiIds = new Set(mappedPending.map((entry) => String(entry.id)))
+
+      setPendingOrders((current) => {
+        const localCheckout = current.filter((entry) => (
+          entry?.source === 'checkout' && !apiIds.has(String(entry.id))
+        ))
+        return mergeLocalPayments([...localCheckout, ...mappedPending], current)
+      })
+      setHistoryOrders((current) => mergeLocalPayments(mappedCreditHistory, current))
+      historyFetchedAtRef.current = Date.now()
+      return {
+        success: true,
+        pendingOrders: mappedPending,
+        historyOrders: mappedCreditHistory,
+        meta: response.meta,
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError' || signal?.aborted) {
+        return { success: false, aborted: true }
+      }
+      const message = error?.message || 'No se pudo cargar el historial'
+      setHistoryLoadError(message)
+      return { success: false, error: message }
+    } finally {
+      setIsLoadingHistory(false)
+    }
   }, [])
 
   const openOrderDrawer = useCallback((orderId) => {
@@ -470,44 +537,6 @@ export function useOrdersSlice({
 
     return { success: true, isFullyPaid, appliedAmount: applyAmount }
   }, [events, pendingOrders, resetOrderDrawer])
-
-  const loadHistoryFromApi = useCallback(async ({ token, signal } = {}) => {
-    if (!token) {
-      setHistoryOrders([])
-      setPendingOrders([])
-      setHistoryLoadError('Sesión requerida')
-      return { success: false, error: 'Sesión requerida', needsAuth: true }
-    }
-
-    setIsLoadingHistory(true)
-    setHistoryLoadError('')
-    try {
-      const response = await getManagementSales({ token, signal })
-      const mappedPending = mapSalesToPendingOrders(response.data)
-      const mappedCreditHistory = mapSalesToCreditHistoryOrders(response.data)
-      const apiIds = new Set(mappedPending.map((entry) => String(entry.id)))
-
-      setPendingOrders((current) => {
-        const localCheckout = current.filter((entry) => (
-          entry?.source === 'checkout' && !apiIds.has(String(entry.id))
-        ))
-        return mergeLocalPayments([...localCheckout, ...mappedPending], current)
-      })
-      setHistoryOrders((current) => mergeLocalPayments(mappedCreditHistory, current))
-      return {
-        success: true,
-        pendingOrders: mappedPending,
-        historyOrders: mappedCreditHistory,
-        meta: response.meta,
-      }
-    } catch (error) {
-      const message = error?.message || 'No se pudo cargar el historial'
-      setHistoryLoadError(message)
-      return { success: false, error: message }
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }, [])
 
   const value = useMemo(() => ({
     pendingOrders,

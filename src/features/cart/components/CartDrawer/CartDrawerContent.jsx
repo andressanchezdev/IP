@@ -67,7 +67,7 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
     showToast('cantidad máxima alcanzada', 'error')
   }
 
-  /** Solo actualiza UI local; el PUT va en blur (valor ya establecido). */
+  /** Solo actualiza UI local; agenda PUT debounced. Flush en blur. */
   const applyLocalQuantity = (next) => {
     const parsed = Number(next)
     if (!Number.isFinite(parsed)) {
@@ -76,15 +76,17 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
     if (parsed >= maxQuantity) {
       notifyStockLimit()
     }
-    setQuantity(clampQuantity(parsed))
+    const clamped = clampQuantity(parsed)
+    setQuantity(clamped)
+    if (clamped !== Number(item.quantity)) {
+      onQuantityChange?.(item.id, clamped, { debounce: true })
+    }
   }
 
   const commitQuantityToApi = (next) => {
     const clamped = clampQuantity(next)
     setQuantity(clamped)
-    if (clamped !== Number(item.quantity)) {
-      onQuantityChange?.(item.id, clamped)
-    }
+    onQuantityChange?.(item.id, clamped, { flush: true })
   }
 
   const handleChange = (event) => {
@@ -297,8 +299,8 @@ export function CartDrawerContent() {
                       item={item}
                       catalogStock={catalogStockById.get(String(item.id)) ?? 0}
                       qtyBusy={isMutatingCartQty(item.id)}
-                      onQuantityChange={async (productId, quantity) => {
-                        const result = await setCartItemQuantity(productId, quantity)
+                      onQuantityChange={async (productId, quantity, options) => {
+                        const result = await setCartItemQuantity(productId, quantity, options)
                         if (result?.duplicate || result?.skipped) return
                         if (!result?.success) {
                           showToast(result?.error || 'No se pudo actualizar la cantidad', 'error')

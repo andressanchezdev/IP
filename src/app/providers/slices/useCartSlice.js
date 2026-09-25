@@ -38,8 +38,10 @@ export function useCartSlice({
   const cartSyncGenRef = useRef(0)
   const internalHydratingRef = useRef(false)
   const cartHydratingRef = cartHydratingRefProp ?? internalHydratingRef
+  /** Debounce PUT cantidad: timers y payload pendiente por producto. */
+  const qtyDebounceTimersRef = useRef(new Map())
+  const qtyPendingRef = useRef(new Map())
   cartItemsRef.current = cartItems
-
   const syncOrderingProductIds = useCallback(() => {
     setOrderingProductIds(new Set(orderingIdsRef.current))
   }, [])
@@ -150,7 +152,8 @@ export function useCartSlice({
 
   /**
    * POST/PUT suelen devolver 1 línea (o lista parcial). Siempre MERGE.
-   * GET completo solo cuando no hay mutaciones en vuelo.
+   * Sin GET de refuerzo: la UI optimista + merge bastan (1 mutación = 1 viaje).
+   * GET completo queda para login / abrir carrito / refreshCartFromApi explícito.
    */
   const syncCartAfterMutation = useCallback((mutationResult, { allowEmpty = false } = {}) => {
     const carritos = mutationResult?.carritos
@@ -159,23 +162,10 @@ export function useCartSlice({
       return Promise.resolve({ success: true, from: 'merge' })
     }
     if (allowEmpty && Array.isArray(carritos) && carritos.length === 0) {
-      // DELETE: ya aplicamos optimista; no vaciar el resto del carrito.
       return Promise.resolve({ success: true, from: 'optimistic' })
     }
-    if (hasInFlightCartMutation()) {
-      return Promise.resolve({ success: true, from: 'skip-refresh' })
-    }
-    void refreshCartFromApi()
-    return Promise.resolve({ success: true, from: 'background' })
-  }, [mergeCartFromApiRows, hasInFlightCartMutation, refreshCartFromApi])
-
-  /** Cuando terminan todos los Ordenar/PUT, un GET de reconciliación. */
-  const scheduleIdleCartRefresh = useCallback(() => {
-    queueMicrotask(() => {
-      if (hasInFlightCartMutation()) return
-      void refreshCartFromApi({ forceReplace: true })
-    })
-  }, [hasInFlightCartMutation, refreshCartFromApi])
+    return Promise.resolve({ success: true, from: 'optimistic' })
+  }, [mergeCartFromApiRows])
 
   const persistCartItemToApi = useCallback(
     (payload) => persistCartItemSafe({ token: tokenAccess, ...payload }),
@@ -339,9 +329,8 @@ export function useCartSlice({
     } finally {
       orderingIdsRef.current.delete(orderKey)
       syncOrderingProductIds()
-      scheduleIdleCartRefresh()
     }
-  }, [tokenAccess, events, persistCartItemToApi, productsRef, syncCartAfterMutation, syncOrderingProductIds, commitCart, scheduleIdleCartRefresh, mergeCartFromApiRows])
+  }, [tokenAccess, events, persistCartItemToApi, productsRef, syncCartAfterMutation, syncOrderingProductIds, commitCart, mergeCartFromApiRows])
 
   const removeFromCart = useCallback(async (productId, options = {}) => {
     if (!tokenAccess) {
@@ -356,6 +345,14 @@ export function useCartSlice({
     const removeKey = String(productId)
     if (mutatingQtyRef.current.has(removeKey) || orderingIdsRef.current.has(removeKey)) {
       return { success: false, duplicate: true, error: 'Procesando…' }
+    }
+
+    // Cancelar PUT de cantidad pendiente para este ítem.
+    const pendingTimer = qtyDebounceTimersRef.current.get(removeKey)
+    if (pendingTimer) {
+      clearTimeout(pendingTimer)
+      qtyDebounceTimersRef.current.delete(removeKey)
+      qtyPendingRef.current.delete(removeKey)
     }
 
     mutatingQtyRef.current.add(removeKey)
@@ -376,93 +373,160 @@ export function useCartSlice({
     } finally {
       mutatingQtyRef.current.delete(removeKey)
       syncMutatingQtyIds()
-      scheduleIdleCartRefresh()
     }
-  }, [tokenAccess, syncCartAfterMutation, removeCartItemFromApi, commitCart, syncMutatingQtyIds, scheduleIdleCartRefresh])
+  }, [tokenAccess, syncCartAfterMutation, removeCartItemFromApi, commitCart, syncMutatingQtyIds])
+
+  const QTY_PUT_DEBOUNCE_MS = 250
 
   /**
-   * Actualiza cantidad vía PUT /api/v1/inventory/carts
-   * Body: { id_carrito, id_producto, cantidad, precio_unitario, ...fiscales }
+   * Actualiza cantidad: UI optimista inmediata + PUT debounced (flush en blur).
+   * options.flush = true → envía ya el último valor pendiente.
    */
-  const setCartItemQuantity = useCallback(async (productId, quantity) => {
+  const setCartItemQuantity = useCallback((productId, quantity, options = {}) => {
     if (!tokenAccess) {
-      return { success: false, needsAuth: true, error: 'Sesión requerida' }
+      return Promise.resolve({ success: false, needsAuth: true, error: 'Sesión requerida' })
     }
 
     const target = cartItemsRef.current.find((item) => String(item.id) === String(productId))
     if (!target) {
-      return { success: false, error: 'Ítem no encontrado' }
+      return Promise.resolve({ success: false, error: 'Ítem no encontrado' })
     }
 
     if (target.cartId == null || target.cartId === '') {
-      return { success: false, error: 'id_carrito no disponible' }
+      return Promise.resolve({ success: false, error: 'id_carrito no disponible' })
     }
 
     const qtyKey = String(productId)
-    if (mutatingQtyRef.current.has(qtyKey)) {
-      return { success: false, duplicate: true, error: 'Actualizando cantidad…' }
-    }
-
     const product = productsRef.current.find((item) => String(item.id) === String(productId))
     const catalogStock = Number(product?.stock) || 0
-    const totalAvailable = catalogStock + (Number(target.quantity) || 0)
-    const nextQuantity = Math.max(1, Math.min(Number(quantity) || 1, totalAvailable || Number(quantity) || 1))
-    const previousQty = Number(target.quantity) || 0
+    const baselineQty = Number(
+      qtyPendingRef.current.get(qtyKey)?.baselineQty
+      ?? target.quantity,
+    ) || 0
+    const totalAvailable = catalogStock + baselineQty
+    const nextQuantity = Math.max(
+      1,
+      Math.min(Number(quantity) || 1, totalAvailable || Number(quantity) || 1),
+    )
+    const previousQty = baselineQty
 
-    if (nextQuantity === previousQty) {
-      return { success: true, quantity: nextQuantity, previousQty }
-    }
-
-    const idProducto = resolveCartProductId(target, productId)
-    const precioUnitario = resolveCartUnitPrice(target)
-    const fiscalSource = product ?? target
-
-    mutatingQtyRef.current.add(qtyKey)
-    syncMutatingQtyIds()
-    // UI inmediata: cantidad local antes del PUT.
+    // Totales/UI al instante (sin esperar PUT).
     commitCart((items) => items.map((item) => (
       String(item.id) === String(productId)
         ? { ...item, quantity: nextQuantity }
         : item
     )))
 
-    try {
-      const updated = await updateCartItemSafe({
-        token: tokenAccess,
-        idCarrito: target.cartId,
-        productId: idProducto,
-        cantidad: nextQuantity,
-        precioUnitario,
-        product: fiscalSource,
-      })
-
-      if (!updated.success) {
-        commitCart((items) => items.map((item) => (
-          String(item.id) === String(productId)
-            ? { ...item, quantity: previousQty }
-            : item
-        )))
-        return {
-          success: false,
-          error: updated.error || 'No se pudo actualizar la cantidad',
-          previousQty,
-        }
-      }
-
-      await syncCartAfterMutation(updated)
-      return {
-        success: true,
-        quantity: nextQuantity,
-        previousQty,
-        request: updated.request,
-      }
-    } finally {
-      mutatingQtyRef.current.delete(qtyKey)
-      syncMutatingQtyIds()
-      scheduleIdleCartRefresh()
+    if (nextQuantity === previousQty && !qtyPendingRef.current.has(qtyKey)) {
+      return Promise.resolve({ success: true, quantity: nextQuantity, previousQty })
     }
-  }, [tokenAccess, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds, scheduleIdleCartRefresh])
 
+    const idProducto = resolveCartProductId(target, productId)
+    const precioUnitario = resolveCartUnitPrice(target)
+    const fiscalSource = product ?? target
+    const cartId = target.cartId
+
+    const prevPending = qtyPendingRef.current.get(qtyKey)
+    qtyPendingRef.current.set(qtyKey, {
+      nextQuantity,
+      previousQty: prevPending?.previousQty ?? previousQty,
+      baselineQty: prevPending?.baselineQty ?? previousQty,
+      cartId,
+      idProducto,
+      precioUnitario,
+      fiscalSource,
+      resolvers: prevPending?.resolvers ?? [],
+    })
+
+    const runPut = async () => {
+      const pending = qtyPendingRef.current.get(qtyKey)
+      qtyPendingRef.current.delete(qtyKey)
+      qtyDebounceTimersRef.current.delete(qtyKey)
+      if (!pending) {
+        return { success: true, quantity: nextQuantity, previousQty }
+      }
+
+      if (pending.nextQuantity === pending.previousQty) {
+        pending.resolvers.forEach((resolve) => {
+          resolve({ success: true, quantity: pending.nextQuantity, previousQty: pending.previousQty })
+        })
+        return { success: true, quantity: pending.nextQuantity, previousQty: pending.previousQty }
+      }
+
+      if (mutatingQtyRef.current.has(qtyKey)) {
+        const result = { success: false, duplicate: true, error: 'Actualizando cantidad…' }
+        pending.resolvers.forEach((resolve) => resolve(result))
+        return result
+      }
+
+      mutatingQtyRef.current.add(qtyKey)
+      syncMutatingQtyIds()
+
+      try {
+        const updated = await updateCartItemSafe({
+          token: tokenAccess,
+          idCarrito: pending.cartId,
+          productId: pending.idProducto,
+          cantidad: pending.nextQuantity,
+          precioUnitario: pending.precioUnitario,
+          product: pending.fiscalSource,
+        })
+
+        if (!updated.success) {
+          commitCart((items) => items.map((item) => (
+            String(item.id) === String(productId)
+              ? { ...item, quantity: pending.previousQty }
+              : item
+          )))
+          const fail = {
+            success: false,
+            error: updated.error || 'No se pudo actualizar la cantidad',
+            previousQty: pending.previousQty,
+          }
+          pending.resolvers.forEach((resolve) => resolve(fail))
+          return fail
+        }
+
+        await syncCartAfterMutation(updated)
+        const ok = {
+          success: true,
+          quantity: pending.nextQuantity,
+          previousQty: pending.previousQty,
+          request: updated.request,
+        }
+        pending.resolvers.forEach((resolve) => resolve(ok))
+        return ok
+      } finally {
+        mutatingQtyRef.current.delete(qtyKey)
+        syncMutatingQtyIds()
+      }
+    }
+
+    return new Promise((resolve) => {
+      const pending = qtyPendingRef.current.get(qtyKey)
+      if (pending) {
+        pending.resolvers.push(resolve)
+      } else {
+        resolve({ success: true, quantity: nextQuantity, previousQty })
+        return
+      }
+
+      const existingTimer = qtyDebounceTimersRef.current.get(qtyKey)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+      }
+
+      if (options.flush) {
+        void runPut()
+        return
+      }
+
+      const timer = setTimeout(() => {
+        void runPut()
+      }, QTY_PUT_DEBOUNCE_MS)
+      qtyDebounceTimersRef.current.set(qtyKey, timer)
+    })
+  }, [tokenAccess, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds])
   const clearCart = useCallback(async () => {
     if (!tokenAccess) {
       commitCart([])
