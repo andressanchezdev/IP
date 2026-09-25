@@ -1,6 +1,24 @@
+import {
+  pickProductFiscalFields,
+  readProductCompra,
+  readProductExento,
+  readProductIvaRate,
+} from '@/features/catalog/lib/productFiscalFields'
+
 /**
- * Contrato único de POST /api/v1/inventory/carts:
- * { id_producto, cantidad, precio_unitario } + Bearer token.
+ * Contrato POST /api/v1/inventory/carts:
+ * {
+ *   id_producto,      // id numérico del producto (NUNCA el codigo/barcode)
+ *   cantidad,
+ *   precio_unitario,
+ *   compra,
+ *   exento,
+ *   iva,
+ *   aplicacion,
+ *   fecha             // "YYYY-MM-DD HH:mm:ss"
+ * }
+ *
+ * No se envía `codigo`. id_producto ≠ codigo.
  */
 
 export const CART_UNIT_PRICE_ERROR =
@@ -30,18 +48,52 @@ export function toCartUnitPrice(value) {
   return numeric
 }
 
+/** Fecha local "YYYY-MM-DD HH:mm:ss" para el body del carrito. */
+export function formatCartFecha(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(d.getTime())) {
+    return formatCartFecha(new Date())
+  }
+  const pad = (n) => String(n).padStart(2, '0')
+  return [
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`,
+  ].join(' ')
+}
+
+/**
+ * id_producto usable: solo id de inventario.
+ * Preferencia: id → id_producto → idProducto → fallback.
+ * Nunca codigo / reference / searching (el barcode no es el id).
+ */
 export function resolveCartProductId(product, fallbackId) {
+  const codigoHints = {
+    codigo: product?.codigo ?? product?.reference,
+    reference: product?.reference,
+  }
   const candidates = [
+    product?.id,
     product?.id_producto,
     product?.idProducto,
-    product?.id,
     fallbackId,
   ]
   for (const value of candidates) {
     const id = toCartProductId(value)
-    if (Number.isFinite(id)) {
-      return id
+    if (!Number.isFinite(id)) {
+      continue
     }
+    const asText = String(value).trim().toLowerCase()
+    const code = String(codigoHints.codigo ?? '').trim().toLowerCase()
+    const reference = String(codigoHints.reference ?? '').trim().toLowerCase()
+    if (code && asText === code) {
+      console.warn('[cart] Ignorando candidato id igual al codigo', { value, codigo: code })
+      continue
+    }
+    if (reference && asText === reference) {
+      console.warn('[cart] Ignorando candidato id igual a reference/codigo', { value, reference })
+      continue
+    }
+    return id
   }
   return NaN
 }
@@ -58,28 +110,97 @@ export function resolveCartStock(product) {
   return numeric
 }
 
+/** Campos fiscales + aplicacion desde producto/ítem de carrito. */
+export function resolveCartPostExtras(source = {}) {
+  const fiscal = pickProductFiscalFields(source)
+  const iva = fiscal.iva ?? readProductIvaRate(source) ?? 0
+  const exento = fiscal.exento ?? readProductExento(source) ?? 0
+  const compra = fiscal.compra ?? readProductCompra(source) ?? 0
+  const aplicacion = String(source?.aplicacion ?? '').trim()
+
+  return {
+    compra: Number.isFinite(Number(compra)) ? Number(compra) : 0,
+    exento: Number(exento) ? 1 : 0,
+    iva: Number.isFinite(Number(iva)) ? Number(iva) : 0,
+    aplicacion,
+  }
+}
+
 /**
- * Body exacto que viaja en el POST.
- * Ejemplo: { id_producto: 7704790200048, cantidad: 1, precio_unitario: 28000 }
+ * Body exacto que viaja en el POST unitario a carrito.
+ * Ejemplo Thunder:
+ * {
+ *   "id_producto": 2,
+ *   "cantidad": 1,
+ *   "precio_unitario": 28000,
+ *   "compra": 16275.64,
+ *   "exento": 1,
+ *   "iva": 19,
+ *   "aplicacion": "json",
+ *   "fecha": "2026-09-25 10:15:00"
+ * }
  */
-export function buildCartPostBody({ idProducto, cantidad, precioUnitario } = {}) {
+export function buildCartPostBody({
+  idProducto,
+  cantidad,
+  precioUnitario,
+  compra,
+  exento,
+  iva,
+  aplicacion,
+  fecha,
+  product,
+} = {}) {
+  const fromProduct = product ? resolveCartPostExtras(product) : null
+
   const body = {
     id_producto: toCartProductId(idProducto),
     cantidad: toCartQuantity(cantidad, 1),
     precio_unitario: toCartUnitPrice(precioUnitario),
+    compra: toCartUnitPrice(
+      compra != null ? compra : (fromProduct?.compra ?? 0),
+    ),
+    exento: Number(
+      exento != null ? exento : (fromProduct?.exento ?? 0),
+    ) ? 1 : 0,
+    iva: toCartUnitPrice(
+      iva != null ? iva : (fromProduct?.iva ?? 0),
+    ),
+    aplicacion: String(
+      aplicacion != null ? aplicacion : (fromProduct?.aplicacion ?? ''),
+    ),
+    fecha: String(fecha || formatCartFecha(new Date())).trim(),
   }
+
   if (!Number.isFinite(body.id_producto)) {
     throw new Error('id_producto inválido')
   }
   if (!(body.precio_unitario > 0)) {
     throw new Error(CART_UNIT_PRICE_ERROR)
   }
+
+  // Diagnóstico: detectar si por error el id parece el codigo del producto.
+  const codeHint = String(product?.codigo ?? product?.reference ?? '').trim()
+  if (codeHint && String(body.id_producto) === codeHint) {
+    throw new Error(
+      `id_producto no puede ser el codigo (${codeHint}). Usa el id de inventario.`,
+    )
+  }
+
+  if (import.meta.env?.DEV) {
+    console.info('[cart POST body]', body, {
+      productId: product?.id,
+      productCodigo: product?.codigo ?? product?.reference,
+    })
+  }
+
   return body
 }
 
 /**
  * Misma regla para card, detalle, chat y carga masiva:
  * nuevas = min(pedida, stock); el POST envía existente + nuevas.
+ * Masivo puede omitir extras fiscales; el body igual completa defaults.
  */
 export function planCartAdd({
   idProducto,
@@ -87,6 +208,12 @@ export function planCartAdd({
   stock,
   existingQty = 0,
   precioUnitario,
+  compra,
+  exento,
+  iva,
+  aplicacion,
+  fecha,
+  product,
 } = {}) {
   const stockNum = Math.max(0, Number(stock) || 0)
   const requested = Math.max(0, Number(requestedQty) || 0)
@@ -112,6 +239,12 @@ export function planCartAdd({
       idProducto: id,
       cantidad: existing + orderQty,
       precioUnitario: unitPrice,
+      compra,
+      exento,
+      iva,
+      aplicacion,
+      fecha,
+      product,
     }),
   }
 }

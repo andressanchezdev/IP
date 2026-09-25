@@ -8,10 +8,18 @@ import {
   PAYMENT_FIELDS,
   validatePaymentDetails,
 } from '@/features/orders/constants/paymentConfig'
+import {
+  ABONO_STATUS_LABEL,
+  getCreditRemainingDue,
+  getCreditRemainingForNewAbono,
+  resolveAbonoStatus,
+  sumVerifiedAbonos,
+} from '@/features/orders/constants/abonoStatus'
 import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
-import { formatRealAmount } from '@/features/orders/utils/orderFormat'
+import { formatOrderDateTime, formatRealAmount } from '@/features/orders/utils/orderFormat'
 import { readFileAsDataUrl } from '@/shared/lib/readFileAsDataUrl'
-import { namedControl } from '@/shared/lib/namedControl'
+import eyeIcon from '@/assets/icons/eye.svg'
+import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
 import '@/shared/ui/FieldHint/FieldHint.css'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
@@ -26,6 +34,29 @@ function resolveInitialAbonoType(orderType) {
   return 'efectivo'
 }
 
+function AbonoProofLink({ entry }) {
+  if (String(entry?.type || '').toLowerCase() !== 'transferencia') {
+    return null
+  }
+  const details = entry?.details ?? {}
+  const url = String(details.proofDataUrl || '').trim()
+  const name = String(details.proofName || 'Comprobante').trim() || 'Comprobante'
+  if (!url) {
+    return <span className="order-payments-panel__quota">Sin comprobante</span>
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="order-packaging__view-btn"
+      {...namedControl(`Ver comprobante ${name}`)}
+    >
+      <img src={eyeIcon} className="order-packaging__view-icon" {...namedImage(`Ver comprobante ${name}`)} />
+    </a>
+  )
+}
+
 export function OrderPaymentsDrawerContent() {
   const { selectedOrder, formalizeOrderPayment } = useOrders()
   const { showToast } = useToast()
@@ -37,9 +68,10 @@ export function OrderPaymentsDrawerContent() {
   const payment = selectedOrder?.payment
   const fields = PAYMENT_FIELDS[paymentType] ?? []
   const totalAmount = Number(payment?.amount ?? selectedOrder?.total ?? 0)
-  const paidAmount = Number(payment?.paidAmount ?? 0)
-  const remainingAmount = Math.max(0, totalAmount - paidAmount)
   const payments = payment?.payments ?? []
+  const paidAmount = sumVerifiedAbonos(payments)
+  const remainingDue = getCreditRemainingDue(totalAmount, payments)
+  const remainingAmount = getCreditRemainingForNewAbono(totalAmount, payments)
 
   const validation = useMemo(
     () => validatePaymentDetails(paymentType, formValues, {
@@ -108,47 +140,67 @@ export function OrderPaymentsDrawerContent() {
 
     if (!result.success) {
       const message = result.reason === 'exceeds-balance'
-        ? `El abono supera el saldo pendiente de ${formatRealAmount(result.remainingAmount)}`
+        ? `El abono supera el saldo disponible de ${formatRealAmount(result.remainingAmount)}`
         : 'No fue posible registrar el pago'
       showToast(message, 'error')
       return
     }
 
-    showToast(
-      result.isFullyPaid ? 'Pedido pagado y enviado al historial' : 'Abono registrado',
-      'success',
-    )
+    showToast('Abono enviado a revisión', 'success')
   }
 
   const selectedLabel = ABONO_PAYMENT_TYPES.find((entry) => entry.id === paymentType)?.label || ''
+  const limitDays = payment?.checkoutDetails?.paymentLimitDays
+    ?? payment?.details?.paymentLimitDays
+    ?? selectedOrder?.paymentLimitDays
 
   return (
     <div className="content-main-carrito">
       <div className="content-main-aux-carrito order-payments-panel">
         <p className="order-payments-panel__intro">
           Registre un abono del pedido <strong>{selectedOrder.id}</strong>. Solo efectivo o transferencia.
+          El abono queda en revisión hasta que un asesor lo verifique.
+          {limitDays != null ? ` Plazo de crédito: ${limitDays} días.` : ''}
         </p>
 
         <div className="order-payments-panel__summary">
-          <span>Monto pendiente</span>
-          <strong>{formatRealAmount(remainingAmount)}</strong>
+          <span>Saldo pendiente (verificado)</span>
+          <strong>{formatRealAmount(remainingDue)}</strong>
           <span className="order-payments-panel__quota">
-            Abonado: {formatRealAmount(paidAmount)} de {formatRealAmount(totalAmount)}
+            Verificado: {formatRealAmount(paidAmount)} de {formatRealAmount(totalAmount)}
+          </span>
+          <span className="order-payments-panel__quota">
+            Disponible para nuevo abono: {formatRealAmount(remainingAmount)}
           </span>
         </div>
 
         {payments.length > 0 && (
           <Accordion title={`Abonos registrados (${payments.length})`} defaultOpen>
-            {payments.map((entry, index) => (
-              <div key={`${entry.createdAt}-${index}`} className="content-list-data__row">
-                <span className="content-list-data__label">
-                  {`${index + 1}. ${entry.type}`}
-                </span>
-                <span className="content-list-data__value">
-                  {formatRealAmount(entry.amount)}
-                </span>
-              </div>
-            ))}
+            {payments.map((entry, index) => {
+              const status = resolveAbonoStatus(entry)
+              const statusLabel = ABONO_STATUS_LABEL[status] || status
+              const createdLabel = formatOrderDateTime(entry.createdAt)
+              return (
+                <div
+                  key={entry.id || `${entry.createdAt}-${index}`}
+                  className="content-list-data__row content-list-data__row--block"
+                >
+                  <span className="content-list-data__label">
+                    {`${index + 1}. ${entry.type} · ${statusLabel}`}
+                    {createdLabel !== '—' ? ` · ${createdLabel}` : ''}
+                  </span>
+                  <span className="content-list-data__value">
+                    {formatRealAmount(entry.amount)}
+                  </span>
+                  <AbonoProofLink entry={entry} />
+                  {status === 'novedad' && entry.noveltyReason ? (
+                    <span className="order-payments-panel__quota">
+                      Motivo: {entry.noveltyReason}
+                    </span>
+                  ) : null}
+                </div>
+              )
+            })}
           </Accordion>
         )}
 
@@ -247,7 +299,7 @@ export function OrderPaymentsDrawerContent() {
 
       <div className="content-main-data-carrito">
         <div className="content-main-data-carrito__total">
-          <span>Saldo pendiente</span>
+          <span>Disponible para abono</span>
           <strong>{formatRealAmount(remainingAmount)}</strong>
         </div>
         <button

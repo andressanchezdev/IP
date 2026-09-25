@@ -10,6 +10,7 @@ export function CheckoutOrderSummary({
   onToggle,
   subtotal,
   iva,
+  ivaLabel = 'IVA',
   totalToPay,
   hasDelivery,
   deliveryAddress,
@@ -29,7 +30,7 @@ export function CheckoutOrderSummary({
       <div className="checkout-finalize__box">
         <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
         <SummaryRow label="Costo de envío" value="Gratis" />
-        <SummaryRow label="IVA (19%)" value={formatPrice(iva)} />
+        <SummaryRow label={ivaLabel} value={formatPrice(iva)} />
         <SummaryRow label="Total a pagar" value={formatPrice(totalToPay)} highlight />
         {hasDelivery && (
           <div className="checkout-finalize__delivery-note">

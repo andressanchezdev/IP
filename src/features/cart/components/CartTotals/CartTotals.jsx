@@ -1,6 +1,6 @@
 import { formatPrice } from '@/shared/lib/formatPrice'
 
-export function CartTotals({ subtotal, iva, total }) {
+export function CartTotals({ subtotal, iva, total, ivaLabel = 'IVA' }) {
   return (
     <div className="content-main-data-carrito__breakdown">
       <div className="content-main-data-carrito__row">
@@ -8,7 +8,7 @@ export function CartTotals({ subtotal, iva, total }) {
         <strong>{formatPrice(subtotal)}</strong>
       </div>
       <div className="content-main-data-carrito__row">
-        <span>IVA (19%)</span>
+        <span>{ivaLabel}</span>
         <strong>{formatPrice(iva)}</strong>
       </div>
       <div className="content-main-data-carrito__row content-main-data-carrito__row--total">

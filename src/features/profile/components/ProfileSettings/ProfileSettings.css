@@ -259,6 +259,18 @@
   .address-modal--fields {
     grid-template-columns: 1fr;
   }
+
+  .address-modal--form {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Altura corta: no altera el layout de 768, solo evita recorte */
+@media (max-height: 500px) {
+  .address-modal--overlay {
+    height: min(92dvh, calc(100dvh - 16px));
+    max-height: min(92dvh, calc(100dvh - 16px));
+  }
 }
 
 /* ── Change password modal (reutiliza auth-modal) ── */

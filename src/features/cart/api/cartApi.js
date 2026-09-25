@@ -1,9 +1,11 @@
 import { apiRequest } from '@/shared/api'
+import { auditProductFiscalFields } from '@/features/catalog/lib/auditProductFiscalFields'
 import { buildCartPostBody } from './cartPostBody'
 
 const CART_PAGE_SIZE = 50
 const CARTS_PATH = '/api/v1/inventory/carts'
 const CARTS_PATH_MASSIVE = '/api/v1/inventory/carts/massive'
+const CARTS_PATH_CHECK_MASSIVE = '/api/v1/inventory/carts/check-massive'
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams()
@@ -69,6 +71,7 @@ export async function getCart({
   })
 
   const carritos = extractCarts(payload)
+  auditProductFiscalFields(carritos, 'cart')
   const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
 
   return {
@@ -85,14 +88,76 @@ export async function getCart({
  * POST /api/v1/inventory/carts
  * Upsert de ítem en carrito del usuario autenticado.
  *
- * Body (único contrato, todas las vistas):
+ * Body:
  * {
- *   "id_producto": 7704790200048,
+ *   "id_producto": 2,
  *   "cantidad": 1,
- *   "precio_unitario": 28000
+ *   "precio_unitario": 28000,
+ *   "compra": 16275.64,
+ *   "exento": 1,
+ *   "iva": 19,
+ *   "aplicacion": "json",
+ *   "fecha": "2026-09-25 10:15:00"
  * }
+ *
+ * `id_producto` = id de inventario (nunca el codigo/barcode).
  */
 export async function postCartItem({
+  token,
+  idProducto,
+  cantidad,
+  precioUnitario,
+  compra,
+  exento,
+  iva,
+  aplicacion,
+  fecha,
+  product,
+} = {}) {
+  const body = buildCartPostBody({
+    idProducto,
+    cantidad,
+    precioUnitario,
+    compra,
+    exento,
+    iva,
+    aplicacion,
+    fecha,
+    product,
+  })
+
+  const payload = await apiRequest(CARTS_PATH, {
+    method: 'POST',
+    token,
+    body,
+  })
+
+  const carritos = extractCarts(payload)
+  const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+
+  return {
+    carritos,
+    item: carritos[0] ?? null,
+    meta,
+    raw: payload,
+    request: body,
+  }
+}
+
+/**
+ * PUT /api/v1/inventory/carts
+ * Actualiza la cantidad de un ítem ya en carrito.
+ *
+ * Cuerpo de prueba (misma forma que POST, orientado a actualizar cantidad):
+ * {
+ *   "id_producto": 7704790200048,
+ *   "cantidad": 3,
+ *   "precio_unitario": 28000
+ * }
+ *
+ * `cantidad` = nueva cantidad total de la línea (no delta).
+ */
+export async function putCartItem({
   token,
   idProducto,
   cantidad,
@@ -101,10 +166,14 @@ export async function postCartItem({
   const body = buildCartPostBody({ idProducto, cantidad, precioUnitario })
 
   const payload = await apiRequest(CARTS_PATH, {
-    method: 'POST',
+    method: 'PUT',
     token,
     body,
   })
+
+  if (payload?.error) {
+    throw new Error(payload.error)
+  }
 
   const carritos = extractCarts(payload)
   const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
@@ -181,5 +250,63 @@ export async function deleteMassiveCartItems({
   return {
     raw: payload,
     request: body,
+  }
+}
+
+/**
+ * POST /api/v1/inventory/carts/check-massive
+ * Consulta stock masivo (subida Excel): productos con cantidad pedida.
+ *
+ * Body:
+ * {
+ *   "productos": [
+ *     { "id_producto": 2, "cantidad": 10 },
+ *     { "id_producto": 5, "cantidad": 3 }
+ *   ]
+ * }
+ */
+export function buildCartCheckMassiveBody(productos = []) {
+  const list = (Array.isArray(productos) ? productos : [])
+    .map((entry) => {
+      const idProducto = Number(entry?.id_producto ?? entry?.idProducto ?? entry?.id)
+      const cantidad = Math.floor(Number(entry?.cantidad ?? entry?.quantity) || 0)
+      if (!Number.isFinite(idProducto) || idProducto <= 0 || cantidad <= 0) {
+        return null
+      }
+      return {
+        id_producto: idProducto,
+        cantidad,
+      }
+    })
+    .filter(Boolean)
+
+  return { productos: list }
+}
+
+export async function postCartCheckMassive({
+  token,
+  productos,
+  signal,
+} = {}) {
+  const body = buildCartCheckMassiveBody(productos)
+  if (body.productos.length === 0) {
+    throw new Error('Sin productos válidos para check-massive')
+  }
+
+  const payload = await apiRequest(CARTS_PATH_CHECK_MASSIVE, {
+    method: 'POST',
+    token,
+    body,
+    signal,
+  })
+
+  if (payload?.error) {
+    throw new Error(payload.error)
+  }
+
+  return {
+    raw: payload,
+    request: body,
+    data: payload?.data ?? payload,
   }
 }

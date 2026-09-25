@@ -111,9 +111,35 @@
   text-align: left;
 }
 
+.landing__table--historial {
+  border-collapse: collapse;
+  display: table;
+  min-width: 760px;
+  table-layout: auto;
+  width: 100%;
+}
+
+.landing__table--historial thead {
+  display: table-header-group;
+}
+
+.landing__table--historial tbody {
+  display: table-row-group;
+}
+
+.landing__table--historial tr {
+  display: table-row;
+}
+
 .landing__table--historial th,
 .landing__table--historial td {
+  display: table-cell;
   font-size: clamp(13px, 3.12cqw, 15.6px);
+  vertical-align: middle;
+}
+
+.landing__table--historial td::before {
+  content: none;
 }
 
 .landing__table-empty {
@@ -126,6 +152,60 @@
   font-weight: 500;
 }
 
+.historial-abono-btn {
+  align-items: center;
+  background: #f7f7f7;
+  border: none;
+  border-radius: 999px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 22px;
+  font-weight: 400;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  margin: 0;
+  width: 34px;
+}
+
+.historial-abono-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.historial-acciones {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.historial-view-abonos-btn {
+  align-items: center;
+  background: var(--color-gris-claro);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 34px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  width: 34px;
+}
+
+.historial-view-abonos-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.historial-view-abonos-btn__icon {
+  display: block;
+  height: 18px;
+  width: 18px;
+}
+
 .historial-estado-badge {
   border-radius: 5px;
   display: inline-block;
@@ -133,7 +213,6 @@
   font-weight: 600;
   line-height: 1.2;
   max-width: 100%;
-  overflow-wrap: anywhere;
   padding: 4px 10px;
   text-transform: none;
   white-space: normal;
@@ -200,34 +279,16 @@
 }
 
 @media (max-width: 900px) and (min-width: 491px) {
+  /* Cartera: siempre fila de tabla; scroll horizontal si no cabe. */
   .landing__table--historial {
-    min-width: 0;
-    table-layout: fixed;
+    min-width: 760px;
+    table-layout: auto;
     width: 100%;
   }
 
-  .landing__table--historial .landing__table-col--secondary {
-    display: none;
-  }
-
+  .landing__table--historial .landing__table-col--secondary,
   .landing__table--historial .landing__table-col--priority {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  .landing__table--historial th.landing__table-col--priority:nth-child(1),
-  .landing__table--historial td.landing__table-col--priority:nth-child(1) {
-    width: 34%;
-  }
-
-  .landing__table--historial th.landing__table-col--priority:nth-child(2),
-  .landing__table--historial td.landing__table-col--priority:nth-child(2) {
-    width: 33%;
-  }
-
-  .landing__table--historial th.landing__table-col--priority:last-child,
-  .landing__table--historial td.landing__table-col--priority:last-child {
-    width: 33%;
+    display: table-cell;
   }
 
   .landing__table--historial .landing__table-empty {
@@ -235,7 +296,8 @@
   }
 
   .landing__table-wrap {
-    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
   }
 }
 
@@ -302,63 +364,62 @@
     font-size: clamp(11px, 3.2cqw, 12px);
   }
 
+  /*
+   * Cartera: NUNCA apilar en columna/cards.
+   * Mantener tabla en row + scroll horizontal en cualquier viewport.
+   */
   .landing__table--historial {
-    min-width: 0;
+    border-collapse: collapse;
+    display: table;
+    min-width: 760px;
+    table-layout: auto;
     width: 100%;
-  }
-
-  .landing__table--historial .landing__table-col--secondary {
-    display: grid;
   }
 
   .landing__table--historial thead {
-    display: none;
+    display: table-header-group;
   }
 
-  .landing__table--historial tbody,
-  .landing__table--historial tr,
-  .landing__table--historial td {
-    display: block;
-    width: 100%;
+  .landing__table--historial tbody {
+    display: table-row-group;
   }
 
   .landing__table--historial tr {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-card);
-    margin-bottom: 10px;
-    overflow: hidden;
-    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    display: table-row;
+    margin: 0;
+    overflow: visible;
+    padding: 0;
   }
 
+  .landing__table--historial th,
   .landing__table--historial td,
   .landing__table--historial .landing__table-col--priority,
   .landing__table--historial .landing__table-col--secondary {
-    align-items: flex-start;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    display: grid;
-    font-size: clamp(13px, 3.9cqw, 14.3px);
-    gap: 6px 12px;
-    grid-template-columns: minmax(100px, 38%) minmax(0, 1fr);
-    line-height: 1.4;
-    padding: 8px 0;
-    word-break: break-word;
+    align-items: unset;
+    border-bottom: 1px solid var(--color-border);
+    display: table-cell;
+    font-size: clamp(13px, 3.38cqw, 14.3px);
+    gap: unset;
+    grid-template-columns: unset;
+    line-height: inherit;
+    padding: 8px 10px;
+    vertical-align: middle;
+    width: auto;
+    word-break: normal;
   }
 
   .landing__table--historial td:last-child,
   .landing__table--historial .landing__table-col--priority:last-child,
   .landing__table--historial .landing__table-col--secondary:last-child {
-    border-bottom: none;
-    padding-bottom: 2px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 8px;
   }
 
   .landing__table--historial td::before {
-    color: var(--color-text-secondary);
-    content: attr(data-label);
-    font-size: clamp(11.7px, 3.64cqw, 14.3px);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
+    content: none;
   }
 
   .landing__table--historial .historial-estado-badge {
@@ -366,7 +427,7 @@
   }
 
   .landing__table--historial .landing__table-empty {
-    display: block;
+    display: table-cell;
     padding: 16px 8px;
     text-align: center;
   }
@@ -376,10 +437,11 @@
   }
 
   .landing__table-wrap {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    overflow: visible;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
   }
 }
 

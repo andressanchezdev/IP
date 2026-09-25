@@ -6,7 +6,7 @@ import {
   searchInventoryProducts,
 } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
-import { rankCatalogProducts, searchTextFromQuery } from '@/features/catalog/lib/catalogMatch'
+import { cleanSearchNoise, rankCatalogProducts, searchTextFromQuery } from '@/features/catalog/lib/catalogMatch'
 import {
   buildProductsFilterBody,
   isFilterSelectionBlocked,
@@ -163,7 +163,8 @@ export function useStorePageFilters({
     const exactCode = !search.includes(' ')
       && /^[A-Za-z0-9\-_]+$/.test(search)
       && /[0-9]/.test(search)
-    const searchQuery = exactCode ? search : (searchTextFromQuery(search) || search)
+    const cleanedSearch = exactCode ? search : (cleanSearchNoise(search) || search)
+    const searchQuery = exactCode ? search : (searchTextFromQuery(cleanedSearch) || cleanedSearch)
 
     beginCatalogSearch?.()
 
@@ -176,7 +177,7 @@ export function useStorePageFilters({
         if (cancelled) return
         const mapped = rankCatalogProducts(
           mapApiProducts(result.productos).map(normalizeProduct),
-          search,
+          cleanedSearch,
           undefined,
           { keepAll: true },
         )

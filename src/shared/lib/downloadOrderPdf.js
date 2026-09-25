@@ -1,5 +1,5 @@
 import { formatPrice } from '@/shared/lib/formatPrice'
-import { summarizeCartItems } from '@/shared/lib/money'
+import { summarizeCartItems, getIvaBreakdownLabel } from '@/shared/lib/money'
 import {
   PDF_COLORS,
   createPdfDocument,
@@ -112,7 +112,7 @@ function drawItemRow(doc, row, y, alt, columns) {
   return y + rowH
 }
 
-function drawTotals(doc, y, { itemCount, units, total, subtotal, iva }) {
+function drawTotals(doc, y, { itemCount, units, total, subtotal, iva, ivaLabel = 'IVA' }) {
   const { marginX, contentWidth } = getPdfPageMetrics(doc)
   let cursor = y + 4
   doc.setDrawColor(...PDF_COLORS.line)
@@ -136,7 +136,7 @@ function drawTotals(doc, y, { itemCount, units, total, subtotal, iva }) {
     doc.text(pdfText('Subtotal'), labelX, cursor)
     doc.text(pdfText(formatPrice(subtotal)), amountX, cursor, { align: 'right' })
     cursor += 6
-    doc.text(pdfText('IVA (19%)'), labelX, cursor)
+    doc.text(pdfText(ivaLabel), labelX, cursor)
     doc.text(pdfText(formatPrice(iva)), amountX, cursor, { align: 'right' })
     cursor += 7
   }
@@ -199,6 +199,7 @@ export async function downloadOrderPdf(title, items = [], total = 0, options = {
     total: computedTotal,
     subtotal: breakdown.subtotal,
     iva: breakdown.iva,
+    ivaLabel: options.ivaLabel || getIvaBreakdownLabel(items),
   })
 
   finalizePdfPages(doc)

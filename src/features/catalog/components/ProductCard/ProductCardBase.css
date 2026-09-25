@@ -42,7 +42,6 @@
 
 .product-card__description {
   align-items: center;
-  cursor: pointer;
   display: flex;
   flex-direction: row;
   gap: 6px;
@@ -63,7 +62,6 @@
 }
 
 .product-card__category {
-  cursor: pointer;
   flex: 0 1 auto;
   text-align: left;
 }
@@ -131,7 +129,6 @@
 
 .product-card__meta-row {
   color: var(--color-card-meta);
-  cursor: pointer;
   display: flex;
   font-size: var(--font-size-sm);
   justify-content: space-between;

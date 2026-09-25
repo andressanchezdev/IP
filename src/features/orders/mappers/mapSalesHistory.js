@@ -97,9 +97,24 @@ export function mapSalesToHistoryOrders(data = []) {
   return data.map(mapSaleToHistoryOrder)
 }
 
-/** Pedidos de Cartera: solo crédito. */
+/** Pedidos de Cartera: solo crédito, con payment listo para abonos locales. */
 export function mapSalesToCreditHistoryOrders(data = []) {
-  return mapSalesToHistoryOrders(data).filter((order) => isCreditoMetodoPago(order.metodo_pago))
+  return mapSalesToHistoryOrders(data)
+    .filter((order) => isCreditoMetodoPago(order.metodo_pago))
+    .map((order) => ({
+      ...order,
+      paymentMethod: order.metodo_pago,
+      payment: {
+        type: 'credito',
+        method: order.metodo_pago,
+        amount: order.total,
+        paidAmount: 0,
+        payments: [],
+        deadline: order.dateLimit,
+        details: { paymentLimitDays: order.paymentLimitDays },
+        checkoutDetails: { paymentLimitDays: order.paymentLimitDays },
+      },
+    }))
 }
 
 export function mapSaleToPendingOrder(entry) {

@@ -22,12 +22,88 @@ const CATEGORY_HINTS = [
   { hints: ['filtro', 'filtros'], needles: ['filtro'] },
   { hints: ['cadena', 'cadenas'], needles: ['cadena'] },
   { hints: ['bateria', 'baterias', 'pila'], needles: ['bateria'] },
-  { hints: ['bujia', 'bujias'], needles: ['bujia'] },
+  { hints: ['bujia', 'bujias', 'bugia', 'bugias'], needles: ['bujia'] },
   { hints: ['casco', 'cascos', 'cachucha'], needles: ['casco'] },
   { hints: ['carburador', 'carburadores', 'chiclero'], needles: ['carburador'] },
 ]
 
 const PART_FAMILY_TOKENS = new Set(CATEGORY_HINTS.flatMap((group) => group.hints))
+
+/** Correcciones frecuentes (moto / partes) antes de pegarle al endpoint. */
+const COMMON_SEARCH_FIXES = {
+  bugia: 'bujia',
+  bugias: 'bujias',
+  yanta: 'llanta',
+  yantas: 'llantas',
+  amortiguadore: 'amortiguador',
+  filtroo: 'filtro',
+  pastill: 'pastilla',
+  librro: 'libero',
+  liberoo: 'libero',
+}
+
+function collectLocalSearchVocab() {
+  const vocab = new Set(PART_FAMILY_TOKENS)
+  Object.values(COMMON_SEARCH_FIXES).forEach((value) => vocab.add(value))
+  const memory = peekGeneralFilterMemory()
+  const bags = [
+    memory?.categorias,
+    memory?.marcas,
+    memory?.modelos,
+  ]
+  for (const bag of bags) {
+    if (!Array.isArray(bag)) continue
+    for (const item of bag) {
+      const label = foldMatchText(item?.label || item?.categoria || item?.nombre || item?.marca || item?.modelo || '')
+      if (!label) continue
+      label.split(/[^a-z0-9]+/).forEach((token) => {
+        if (token.length >= 3 && !ARTICLES.has(token)) vocab.add(token)
+      })
+    }
+  }
+  return vocab
+}
+
+function maxEditDistance(tokenLength) {
+  if (tokenLength >= 8) return 2
+  if (tokenLength >= 5) return 1
+  return 0
+}
+
+function nearestVocabToken(token, vocab) {
+  const fixed = COMMON_SEARCH_FIXES[token]
+  if (fixed) return fixed
+  if (vocab.has(token)) return token
+  const maxDist = maxEditDistance(token.length)
+  if (!maxDist) return token
+
+  let best = token
+  let bestDist = maxDist + 1
+  for (const candidate of vocab) {
+    if (Math.abs(candidate.length - token.length) > maxDist) continue
+    const dist = levenshtein(token, candidate)
+    if (dist < bestDist || (dist === bestDist && candidate.length === token.length && best !== candidate)) {
+      bestDist = dist
+      best = candidate
+    }
+  }
+  return bestDist <= maxDist ? best : token
+}
+
+/**
+ * Limpia ruido tipográfico del query (1 vez por Enter).
+ * No dispara requests extra: solo prepara el string que va al GET.
+ */
+export function cleanSearchNoise(raw = '') {
+  const normalized = normalizarQuery(raw)
+  if (!normalized) return ''
+  const vocab = collectLocalSearchVocab()
+  return normalized
+    .split(' ')
+    .filter(Boolean)
+    .map((token) => nearestVocabToken(token, vocab))
+    .join(' ')
+}
 
 export function foldMatchText(value = '') {
   return String(value)
@@ -224,7 +300,7 @@ export function scoreProducto(query, product = {}, resolvedCategory = '') {
 }
 
 export function searchTextFromQuery(raw, tokens = [], categorias) {
-  const source = normalizarQuery(raw || tokens.join(' '))
+  const source = cleanSearchNoise(raw || tokens.join(' ')) || normalizarQuery(raw || tokens.join(' '))
   const cats = categorias || peekGeneralFilterMemory()?.categorias || []
   const drop = new Set(categoryHintTokens(source, cats))
   const leftover = source.split(' ').filter((token) => token && !drop.has(token))

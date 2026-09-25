@@ -193,7 +193,7 @@
 /* ——— Modal shell (compartido: login + address + password + order products + product detail) ——— */
 
 .auth-modal {
-  --auth-modal-height: 560px;
+  --auth-modal-height: 500px;
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   background: rgba(255, 255, 255, 0.92);
@@ -204,6 +204,7 @@
   flex-direction: column;
   left: 50%;
   overflow: hidden;
+  height: var(--auth-modal-height, 500px);
   position: fixed;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -240,8 +241,13 @@
 .auth-modal__form-col {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 15px;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ——— Login layout (solo AuthModal con --login) ——— */

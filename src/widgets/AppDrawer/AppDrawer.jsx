@@ -37,6 +37,7 @@ export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } 
     selectedOrderId,
     orderSubView,
     setOrderSubView,
+    orderDrawerFocus,
   } = useOrders()
   const { cartCheckoutStep, setCartCheckoutStep } = useCart()
   const {
@@ -59,7 +60,18 @@ export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } 
   }, [profileLaunchView, drawerOpen, drawerType, onProfileLaunchConsumed])
 
   useEffect(() => {
+    const sections = orderDrawerFocus?.sections
+    if (Array.isArray(sections) && sections.length > 0) {
+      setOrderOpenSections([...sections])
+    }
+  }, [orderDrawerFocus])
+
+  useEffect(() => {
+    if (orderDrawerFocus?.sections?.length) {
+      return
+    }
     setOrderOpenSections([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset al cambiar pedido; focus se aplica aparte
   }, [selectedOrderId])
 
   useEffect(() => {

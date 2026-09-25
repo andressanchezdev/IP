@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useCart, useUi } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
-import { summarizeCartItems } from '@/shared/lib/money'
+import { summarizeCartItems, getIvaBreakdownLabel } from '@/shared/lib/money'
 import { downloadOrderPdf } from '@/shared/lib/downloadOrderPdf'
 import cloudDownloadIcon from '@/assets/icons/cloud-download.svg'
 import deleteAccountIcon from '@/assets/icons/delete-account.svg'
@@ -15,6 +15,7 @@ export function CartMenuDrawerContent() {
   const { showToast } = useToast()
 
   const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
+  const ivaLabel = useMemo(() => getIvaBreakdownLabel(cartItems), [cartItems])
 
   return (
     <div className="content-main-carrito">
@@ -72,6 +73,7 @@ export function CartMenuDrawerContent() {
         <CartTotals
           subtotal={cartTotals.subtotal}
           iva={cartTotals.iva}
+          ivaLabel={ivaLabel}
           total={cartTotals.total}
         />
       </div>

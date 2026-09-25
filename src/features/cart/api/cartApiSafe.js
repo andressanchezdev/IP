@@ -1,11 +1,22 @@
-import { deleteCartItem, deleteMassiveCartItems, postCartItem } from './cartApi'
+import { deleteCartItem, deleteMassiveCartItems, postCartItem, putCartItem } from './cartApi'
 
 /**
  * Wrappers que nunca lanzan: devuelven { success, error?, needsAuth? }
  * para que los slices manejen el resultado sin try/catch propio.
  * Carrito solo por API; no modifica stock (eso lo hace el WS).
  */
-export async function persistCartItemSafe({ token, productId, cantidad, precioUnitario }) {
+export async function persistCartItemSafe({
+  token,
+  productId,
+  cantidad,
+  precioUnitario,
+  compra,
+  exento,
+  iva,
+  aplicacion,
+  fecha,
+  product,
+}) {
   if (!token) {
     return { success: false, error: 'Sesión requerida', needsAuth: true }
   }
@@ -16,13 +27,51 @@ export async function persistCartItemSafe({ token, productId, cantidad, precioUn
       idProducto: productId,
       cantidad,
       precioUnitario,
+      compra,
+      exento,
+      iva,
+      aplicacion,
+      fecha,
+      product,
     })
     return { success: true, ...result }
   } catch (error) {
-    console.error('[cart] No se pudo guardar POST /api/v1/inventory/carts', error)
+    console.error('[cart] No se pudo guardar POST /api/v1/inventory/carts', error, {
+      status: error?.status,
+      payload: error?.payload,
+    })
+    const detail = error?.payload?.message
+      || error?.payload?.error
+      || error?.message
+      || 'No se pudo guardar el carrito'
     return {
       success: false,
-      error: error?.message || 'No se pudo guardar el carrito',
+      error: error?.status ? `HTTP ${error.status}: ${detail}` : detail,
+      status: error?.status,
+      payload: error?.payload,
+    }
+  }
+}
+
+/** PUT: actualiza cantidad de una línea existente (mismo body que POST). */
+export async function updateCartItemSafe({ token, productId, cantidad, precioUnitario }) {
+  if (!token) {
+    return { success: false, error: 'Sesión requerida', needsAuth: true }
+  }
+
+  try {
+    const result = await putCartItem({
+      token,
+      idProducto: productId,
+      cantidad,
+      precioUnitario,
+    })
+    return { success: true, ...result }
+  } catch (error) {
+    console.error('[cart] No se pudo actualizar PUT /api/v1/inventory/carts', error)
+    return {
+      success: false,
+      error: error?.message || 'No se pudo actualizar la cantidad',
     }
   }
 }

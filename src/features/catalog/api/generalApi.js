@@ -1,4 +1,5 @@
 import { apiRequest } from '@/shared/api'
+import { auditProductFiscalFields } from '@/features/catalog/lib/auditProductFiscalFields'
 
 export const PRODUCTS_PAGE_SIZE = 25
 /** Filas visibles al abrir Marca / Categoría / Modelo (el resto, scroll interno). */
@@ -97,6 +98,8 @@ export async function getGeneralInitial({ token } = {}) {
 
   const productos = extractProducts(payload)
   const carritos = extractCartItems(payload)
+  auditProductFiscalFields(productos, 'general')
+  auditProductFiscalFields(carritos, 'cart')
   const lastProduct = productos.length > 0 ? productos[productos.length - 1] : null
   const resolvedLastId = getRawProductId(lastProduct)
   const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
@@ -135,6 +138,7 @@ export async function getGeneral({
   })
 
   const productos = extractProducts(payload)
+  auditProductFiscalFields(productos, 'products')
   const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
   const lastProduct = productos.length > 0 ? productos[productos.length - 1] : null
   const resolvedLastId = getRawProductId(lastProduct) ?? toLastIdQuery(lastId)
@@ -186,6 +190,7 @@ export async function searchInventoryProducts({
     })
 
     const productos = extractProducts(payload)
+    auditProductFiscalFields(productos, 'search')
     const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
 
     return {
@@ -229,6 +234,7 @@ export async function getLatestInventoryProducts({
     })
 
     const productos = extractProducts(payload)
+    auditProductFiscalFields(productos, 'latest')
     const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
 
     return {
@@ -501,6 +507,7 @@ export async function postInventoryProductsList({
   })
 
   const productos = extractProducts(payload)
+  auditProductFiscalFields(productos, 'list')
 
   return {
     productos,
@@ -531,6 +538,7 @@ export async function postInventoryProductsFilter({
   })
 
   const productos = extractProducts(payload)
+  auditProductFiscalFields(productos, 'filter')
 
   return {
     productos,

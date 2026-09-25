@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { buildCheckoutOrder } from '@/features/orders/utils/buildCheckoutOrder'
+import { formatSalesFecha } from '@/features/orders/api/salesApi'
+import { postManagementSalesSafe } from '@/features/orders/api/salesApiSafe'
 import { getCart } from '@/features/cart/api/cartApi'
-import { persistCartItemSafe, removeCartItemSafe, clearCartMassiveSafe } from '@/features/cart/api/cartApiSafe'
+import { persistCartItemSafe, removeCartItemSafe, clearCartMassiveSafe, updateCartItemSafe } from '@/features/cart/api/cartApiSafe'
 import {
   planCartAdd,
   resolveCartProductId,
@@ -9,6 +11,9 @@ import {
   resolveCartUnitPrice,
 } from '@/features/cart/api/cartPostBody'
 import { mapApiCartItems } from '@/features/catalog/mappers/mapCartItems'
+import { enrichCartItemsFiscalFromCatalog } from '@/features/catalog/lib/productFiscalFields'
+import { summarizeCartItems } from '@/shared/lib/money'
+import { resolveCheckoutPaymentType } from '@/features/orders/utils/resolveCheckoutPaymentType'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
 
@@ -23,10 +28,21 @@ export function useCartSlice({
 }) {
   const [cartItems, setCartItems] = useState(() => initialCartItems)
   const [cartCheckoutStep, setCartCheckoutStep] = useState(0)
+  const [orderingProductIds, setOrderingProductIds] = useState(() => new Set())
   const cartItemsRef = useRef(cartItems)
+  const orderingIdsRef = useRef(new Set())
   const internalHydratingRef = useRef(false)
   const cartHydratingRef = cartHydratingRefProp ?? internalHydratingRef
   cartItemsRef.current = cartItems
+
+  const syncOrderingProductIds = useCallback(() => {
+    setOrderingProductIds(new Set(orderingIdsRef.current))
+  }, [])
+
+  const isOrderingProduct = useCallback((productId) => (
+    orderingIdsRef.current.has(String(productId))
+    || orderingProductIds.has(String(productId))
+  ), [orderingProductIds])
 
   // Authenticated cart is API-driven. commitCart only updates React state (no localStorage).
   const commitCart = useCallback((updater) => {
@@ -37,16 +53,22 @@ export function useCartSlice({
 
   const applyCartFromApi = useCallback(async ({ token }) => {
     const { carritos } = await getCart({ token })
-    const apiCart = mapApiCartItems(carritos).map(normalizeCartItem)
+    const apiCart = enrichCartItemsFiscalFromCatalog(
+      mapApiCartItems(carritos).map(normalizeCartItem),
+      productsRef.current,
+    )
     setCartItems(apiCart)
     return apiCart
-  }, [])
+  }, [productsRef])
 
-  const applyCartFromPayload = useCallback((carritos = []) => {
-    const apiCart = mapApiCartItems(carritos).map(normalizeCartItem)
+  const applyCartFromPayload = useCallback((carritos = [], catalogProducts = null) => {
+    const apiCart = enrichCartItemsFiscalFromCatalog(
+      mapApiCartItems(carritos).map(normalizeCartItem),
+      catalogProducts ?? productsRef.current,
+    )
     setCartItems(apiCart)
     return apiCart
-  }, [])
+  }, [productsRef])
 
   const refreshCartFromApi = useCallback(async () => {
     const token = tokenAccess
@@ -89,6 +111,11 @@ export function useCartSlice({
       return { success: false, error: 'Cantidad inválida' }
     }
 
+    const orderKey = String(productId)
+    if (orderingIdsRef.current.has(orderKey)) {
+      return { success: false, duplicate: true, error: 'Procesando pedido…' }
+    }
+
     const listed = productsRef.current.find((item) => String(item.id) === String(productId))
     const sourceId = sourceProduct
       ? String(sourceProduct.id ?? sourceProduct.id_producto ?? '')
@@ -108,23 +135,40 @@ export function useCartSlice({
       stock: resolveCartStock(product),
       existingQty: previousQty,
       precioUnitario: existing?.price ?? resolveCartUnitPrice(product),
+      // Fiscales del producto (id ≠ codigo). El body no incluye codigo.
+      product,
+      aplicacion: product?.aplicacion ?? existing?.aplicacion ?? '',
     })
     if (!planned.ok) {
       return { success: false, error: planned.reason }
     }
 
-    const persisted = await persistCartItemToApi({
-      productId: planned.body.id_producto,
-      cantidad: planned.body.cantidad,
-      precioUnitario: planned.body.precio_unitario,
-    })
-    if (!persisted.success) {
-      return persisted
-    }
+    orderingIdsRef.current.add(orderKey)
+    syncOrderingProductIds()
 
-    await refreshCartFromApi()
-    return { success: true, quantity: planned.body.cantidad, previousQty, request: planned.body }
-  }, [tokenAccess, events, persistCartItemToApi, productsRef, refreshCartFromApi])
+    try {
+      const persisted = await persistCartItemToApi({
+        productId: planned.body.id_producto,
+        cantidad: planned.body.cantidad,
+        precioUnitario: planned.body.precio_unitario,
+        compra: planned.body.compra,
+        exento: planned.body.exento,
+        iva: planned.body.iva,
+        aplicacion: planned.body.aplicacion,
+        fecha: planned.body.fecha,
+        product,
+      })
+      if (!persisted.success) {
+        return persisted
+      }
+
+      await refreshCartFromApi()
+      return { success: true, quantity: planned.body.cantidad, previousQty, request: planned.body }
+    } finally {
+      orderingIdsRef.current.delete(orderKey)
+      syncOrderingProductIds()
+    }
+  }, [tokenAccess, events, persistCartItemToApi, productsRef, refreshCartFromApi, syncOrderingProductIds])
 
   const removeFromCart = useCallback(async (productId) => {
     if (!tokenAccess) {
@@ -146,8 +190,8 @@ export function useCartSlice({
   }, [tokenAccess, refreshCartFromApi, removeCartItemFromApi])
 
   /**
-   * Actualiza cantidad en la card existente (estado local).
-   * No hace POST: el API crea otra fila/card si se vuelve a postear el mismo producto.
+   * Actualiza cantidad vía PUT /api/v1/inventory/carts
+   * Body (prueba = mismo shape que POST): { id_producto, cantidad, precio_unitario }
    */
   const setCartItemQuantity = useCallback(async (productId, quantity) => {
     if (!tokenAccess) {
@@ -169,16 +213,32 @@ export function useCartSlice({
       return { success: true, quantity: nextQuantity, previousQty }
     }
 
-    commitCart((currentItems) => (
-      currentItems.map((item) => (
-        String(item.id) === String(productId)
-          ? { ...item, quantity: nextQuantity }
-          : item
-      ))
-    ))
+    const idProducto = resolveCartProductId(target, productId)
+    const precioUnitario = resolveCartUnitPrice(target)
 
-    return { success: true, quantity: nextQuantity, previousQty }
-  }, [tokenAccess, commitCart, productsRef])
+    const updated = await updateCartItemSafe({
+      token: tokenAccess,
+      productId: idProducto,
+      cantidad: nextQuantity,
+      precioUnitario,
+    })
+
+    if (!updated.success) {
+      return {
+        success: false,
+        error: updated.error || 'No se pudo actualizar la cantidad',
+        previousQty,
+      }
+    }
+
+    await refreshCartFromApi()
+    return {
+      success: true,
+      quantity: nextQuantity,
+      previousQty,
+      request: updated.request,
+    }
+  }, [tokenAccess, productsRef, refreshCartFromApi])
 
   const clearCart = useCallback(async () => {
     if (!tokenAccess) {
@@ -196,9 +256,63 @@ export function useCartSlice({
     return { success: true }
   }, [tokenAccess, commitCart])
 
-  const createOrderFromCheckout = useCallback(({ clientData, paymentType, paymentDetails }) => {
+  const createOrderFromCheckout = useCallback(async ({
+    clientData,
+    paymentType,
+    paymentDetails,
+  }) => {
     if (cartItems.length === 0 || !currentUserId) {
-      return
+      return { success: false, error: 'Carrito vacío o sin usuario' }
+    }
+
+    if (!tokenAccess) {
+      events.emit(APP_EVENTS.AUTH_REQUIRED, { pending: 'checkout' })
+      return { success: false, needsAuth: true, error: 'Sesión requerida' }
+    }
+
+    const resolvedType = resolveCheckoutPaymentType(paymentType, paymentDetails)
+    const totals = summarizeCartItems(cartItems)
+    const total = Number(paymentDetails?.amount) || totals.total
+    const direccion = String(
+      clientData?.address
+      || clientData?.profileAddress
+      || '',
+    ).trim()
+
+    if (!direccion) {
+      return { success: false, error: 'Dirección de entrega requerida' }
+    }
+    if (!Number.isFinite(total) || total <= 0) {
+      return { success: false, error: 'Total inválido' }
+    }
+
+    const salesRequest = {
+      metodo_pago: resolvedType,
+      direccion,
+      fecha: formatSalesFecha(new Date()),
+      total,
+    }
+
+    const created = await postManagementSalesSafe({
+      token: tokenAccess,
+      metodoPago: salesRequest.metodo_pago,
+      direccion: salesRequest.direccion,
+      total: salesRequest.total,
+      fecha: salesRequest.fecha,
+    })
+
+    if (!created.success) {
+      return {
+        success: false,
+        error: created.error || 'No se pudo crear el pedido',
+        needsAuth: created.needsAuth,
+      }
+    }
+
+    // Pedido creado en servidor: vaciar carrito API (best effort).
+    const cleared = await clearCartMassiveSafe({ token: tokenAccess })
+    if (!cleared.success) {
+      console.error('[checkout] Pedido creado pero no se pudo vaciar el carrito', cleared.error)
     }
 
     const order = buildCheckoutOrder({
@@ -207,13 +321,21 @@ export function useCartSlice({
       clientData,
       paymentType,
       paymentDetails,
+      salesRequest: created.request ?? salesRequest,
+      salesResponse: created.sale,
     })
 
     commitCart([])
     setCartCheckoutStep(0)
-    // Orders y UI reaccionan al evento (card en espera + cierre del drawer).
     events.emit(APP_EVENTS.ORDER_CREATED, { order })
-  }, [cartItems, commitCart, currentUserId, events])
+
+    return {
+      success: true,
+      order,
+      sale: created.sale,
+      cartCleared: Boolean(cleared.success),
+    }
+  }, [cartItems, commitCart, currentUserId, events, tokenAccess])
 
   const initiateCheckout = useCallback(() => {
     if (cartItems.length === 0) {
@@ -240,6 +362,8 @@ export function useCartSlice({
     createOrderFromCheckout,
     cartCheckoutStep,
     setCartCheckoutStep,
+    orderingProductIds,
+    isOrderingProduct,
   }), [
     cartItems,
     addToCart,
@@ -250,6 +374,8 @@ export function useCartSlice({
     initiateCheckout,
     createOrderFromCheckout,
     cartCheckoutStep,
+    orderingProductIds,
+    isOrderingProduct,
   ])
 
   return {
@@ -268,6 +394,8 @@ export function useCartSlice({
     cartCheckoutStep,
     setCartCheckoutStep,
     cartHydratingRef,
+    orderingProductIds,
+    isOrderingProduct,
     value,
   }
 }

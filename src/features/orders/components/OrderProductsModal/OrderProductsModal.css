@@ -51,3 +51,19 @@
     --auth-modal-height: 560px;
   }
 }
+
+@media (max-width: 360px) {
+  .order-products-modal {
+    width: calc(100vw - 12px);
+  }
+
+  .order-products-modal__footer {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+@media (max-height: 500px) {
+  .order-products-modal {
+    --auth-modal-height: min(92dvh, calc(100dvh - 16px));
+  }
+}

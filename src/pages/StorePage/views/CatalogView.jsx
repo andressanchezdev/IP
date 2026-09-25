@@ -10,7 +10,14 @@ function getLandingScrollRoot(node) {
   return node.closest('.landing__content')
 }
 
-export function CatalogView({ products, cartProductIds, onOrder, onOpenDetail, isLoadingLatest = false }) {
+export function CatalogView({
+  products,
+  cartProductIds,
+  orderingProductIds,
+  onOrder,
+  onOpenDetail,
+  isLoadingLatest = false,
+}) {
   const {
     hasMoreProducts,
     isLoadingProducts,
@@ -109,6 +116,7 @@ export function CatalogView({ products, cartProductIds, onOrder, onOpenDetail, i
             {...product}
             priority={index < 6}
             isInCart={cartProductIds.has(product.id)}
+            isOrdering={orderingProductIds?.has?.(String(product.id))}
             onOrder={onOrder}
             onOpenDetail={onOpenDetail}
           />

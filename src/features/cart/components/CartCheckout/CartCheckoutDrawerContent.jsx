@@ -8,7 +8,7 @@ import './CheckoutFinalizar.css'
 import { CheckoutDeliverySection } from './CheckoutDeliverySection'
 import { CheckoutPaymentSection } from './CheckoutPaymentSection'
 import { CheckoutOrderSummary } from './CheckoutOrderSummary'
-import { summarizeCartItems } from '@/shared/lib/money'
+import { summarizeCartItems, getIvaBreakdownLabel } from '@/shared/lib/money'
 import { namedControl } from '@/shared/lib/namedControl'
 import { validateAddressLine } from '@/shared/lib/fieldValidation'
 import { formatAddressDisplay } from '@/features/auth/utils/mapAboutAddresses'
@@ -36,6 +36,7 @@ export function CartCheckoutDrawerContent() {
   const [summaryOpen, setSummaryOpen] = useState(true)
   const [deliveryOpen, setDeliveryOpen] = useState(true)
   const [paymentOpen, setPaymentOpen] = useState(true)
+  const [isConfirmingOrder, setIsConfirmingOrder] = useState(false)
 
   const personal = profileSettings?.personal ?? {}
   const credit = profileSettings?.credit ?? profile?.credit ?? {
@@ -85,13 +86,14 @@ export function CartCheckoutDrawerContent() {
   }, [hasCredit, paymentPanel, paymentMethod])
 
   const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
+  const ivaLabel = useMemo(() => getIvaBreakdownLabel(cartItems), [cartItems])
   const subtotal = cartTotals.subtotal
   const shippingCost = 0
   const iva = cartTotals.iva
   const totalToPay = cartTotals.total + shippingCost
 
   const hasDelivery = Boolean(deliveryAddress.trim())
-  const canConfirmOrder = hasDelivery && paymentConfirmed
+  const canConfirmOrder = hasDelivery && paymentConfirmed && !isConfirmingOrder
   // Visible solo mientras faltan datos o se está editando ese bloque.
   const showDeliverySection = !hasDelivery || editingDelivery
   const showPaymentSection = hasDelivery
@@ -224,8 +226,8 @@ export function CartCheckoutDrawerContent() {
     showToast('Crédito seleccionado', 'success')
   }
 
-  const handleConfirmOrder = () => {
-    if (!canConfirmOrder) {
+  const handleConfirmOrder = async () => {
+    if (!hasDelivery || !paymentConfirmed || isConfirmingOrder) {
       return
     }
 
@@ -238,24 +240,37 @@ export function CartCheckoutDrawerContent() {
       personal.country,
     ].map((part) => String(part ?? '').trim()).filter(Boolean).join(', ')
 
-    createOrderFromCheckout({
-      clientData: {
-        fullName: personal.fullName || profile?.fullName || '',
-        email: personal.email || profileSettings?.access?.email || profile?.email || '',
-        phone,
-        mobile: personal.mobile || personal.phone || profile?.mobile || phone,
-        documentId: personal.documentId || profile?.documentId || '',
-        address: deliveryAddress || profileAddress,
-        profileAddress,
-        notes: '',
-        city: personal.city || '',
-        department: personal.department || '',
-        mapLocation,
-      },
-      paymentType: paymentMethod,
-      paymentDetails,
-    })
-    showToast('Pedido creado. Puede seguirlo en Historial.', 'success')
+    setIsConfirmingOrder(true)
+    try {
+      const result = await createOrderFromCheckout({
+        clientData: {
+          fullName: personal.fullName || profile?.fullName || '',
+          email: personal.email || profileSettings?.access?.email || profile?.email || '',
+          phone,
+          mobile: personal.mobile || personal.phone || profile?.mobile || phone,
+          documentId: personal.documentId || profile?.documentId || '',
+          address: deliveryAddress || profileAddress,
+          profileAddress,
+          notes: '',
+          city: personal.city || '',
+          department: personal.department || '',
+          mapLocation,
+        },
+        paymentType: paymentMethod,
+        paymentDetails,
+      })
+
+      if (!result?.success) {
+        showToast(result?.error || 'No se pudo crear el pedido', 'error')
+        return
+      }
+
+      showToast('Pedido creado. Puede seguirlo en Historial.', 'success')
+    } catch (error) {
+      showToast(error?.message || 'No se pudo crear el pedido', 'error')
+    } finally {
+      setIsConfirmingOrder(false)
+    }
   }
 
   return (
@@ -266,6 +281,7 @@ export function CartCheckoutDrawerContent() {
           onToggle={setSummaryOpen}
           subtotal={subtotal}
           iva={iva}
+          ivaLabel={ivaLabel}
           totalToPay={totalToPay}
           hasDelivery={hasDelivery}
           deliveryAddress={deliveryAddress}
@@ -321,7 +337,7 @@ export function CartCheckoutDrawerContent() {
           disabled={!canConfirmOrder}
           {...namedControl('Confirmar pedido')}
         >
-          Confirmar
+          {isConfirmingOrder ? 'Creando pedido…' : 'Confirmar'}
         </button>
       </div>
     </div>

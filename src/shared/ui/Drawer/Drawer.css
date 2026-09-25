@@ -249,6 +249,11 @@
 @media (max-width: 768px) {
   .drawer {
     width: 100vw;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .drawer__header {
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
   }
 
   .drawer > .content-main-carrito {
@@ -261,5 +266,17 @@
 
   .drawer__title {
     font-size: 16px;
+  }
+}
+
+/* Landscape / altura corta: no cambia breakpoints de ancho, solo evita clip */
+@media (max-height: 480px) {
+  .drawer__header {
+    padding-bottom: 8px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  }
+
+  .drawer__title {
+    font-size: 15px;
   }
 }

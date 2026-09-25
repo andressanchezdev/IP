@@ -3,9 +3,12 @@ import brandImageMobile from '@/assets/images/loginIpmovil.png'
 import { Modal } from '@/shared/ui/Modal'
 import { LoginForm } from './LoginForm'
 import { namedControl } from '@/shared/lib/namedControl'
+import { useAuthModalMobileKeyboard } from './useAuthModalMobileKeyboard'
 import './AuthModal.css'
 
 export function AuthModal({ isOpen, onClose, onLogin }) {
+  useAuthModalMobileKeyboard(isOpen)
+
   return (
     <Modal
       isOpen={isOpen}

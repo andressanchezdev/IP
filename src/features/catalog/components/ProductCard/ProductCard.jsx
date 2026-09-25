@@ -25,6 +25,7 @@ export const ProductCard = memo(function ProductCard({
   brandLogo,
   brandLogoUrl,
   isInCart = false,
+  isOrdering = false,
   /** Primera fila visible: carga eager para mejorar LCP. */
   priority = false,
   onOrder,
@@ -69,7 +70,7 @@ export const ProductCard = memo(function ProductCard({
   const metaText = `${String(brand || '').trim()} - ${String(model || '').trim()}`.replace(/^\s*-\s*|\s*-\s*$/g, '').trim()
   const referenceText = String(reference || '').trim()
   const productName = productDisplayName({ description, category, model, brand })
-  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
+  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? `Ordenando ${productName}` : `Ordenar ${productName}`
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
@@ -140,19 +141,18 @@ export const ProductCard = memo(function ProductCard({
 
   const copyField = async (kind, value) => {
     const text = String(value || '').trim().toUpperCase()
-    const labels = {
-      nombre: { empty: 'No hay nombre para copiar', ok: 'Nombre copiado', fail: 'No se pudo copiar el nombre' },
-      categoria: { empty: 'No hay categoría para copiar', ok: 'Categoría copiada', fail: 'No se pudo copiar la categoría' },
-      meta: { empty: 'No hay marca o modelo para copiar', ok: 'Marca y modelo copiados', fail: 'No se pudo copiar marca y modelo' },
-      referencia: { empty: 'No hay referencia para copiar', ok: 'Referencia copiada', fail: 'No se pudo copiar la referencia' },
+    if (kind !== 'referencia') {
+      return
     }
-    const copyLabel = labels[kind]
     if (!text) {
-      showToast(copyLabel.empty, 'error')
+      showToast('No hay referencia para copiar', 'error')
       return
     }
     const copied = await copyTextToClipboard(text)
-    showToast(copied ? copyLabel.ok : copyLabel.fail, copied ? 'success' : 'error')
+    showToast(
+      copied ? 'Referencia copiada' : 'No se pudo copiar la referencia',
+      copied ? 'success' : 'error',
+    )
   }
 
   const handleCopyKey = (event, kind, value) => {
@@ -207,20 +207,7 @@ export const ProductCard = memo(function ProductCard({
           </div>
         </div>
 
-        <div
-          className="product-card__description"
-          role="button"
-          tabIndex={titleText || categoryText ? 0 : -1}
-          onClick={(event) => {
-            if (event.target.closest('.product-card__category')) {
-              copyField('categoria', categoryText)
-              return
-            }
-            copyField('nombre', productName)
-          }}
-          onKeyDown={(event) => handleCopyKey(event, 'nombre', productName)}
-          {...namedControl(`Copiar nombre de ${productName}`)}
-        >
+        <div className="product-card__description">
           <p className="product-card__category">
             {categoryText ? categoryText.toUpperCase() : ''}
           </p>
@@ -230,14 +217,7 @@ export const ProductCard = memo(function ProductCard({
           </h3>
         </div>
 
-        <div
-          className="product-card__meta-row"
-          role="button"
-          tabIndex={metaText && metaText !== '-' ? 0 : -1}
-          onClick={() => copyField('meta', metaText)}
-          onKeyDown={(event) => handleCopyKey(event, 'meta', metaText)}
-          {...namedControl(metaText && metaText !== '-' ? `Copiar marca y modelo ${metaText}` : 'Marca y modelo')}
-        >
+        <div className="product-card__meta-row">
           <span className="product-card__meta">
             {metaText ? metaText.toUpperCase() : ''}
           </span>
@@ -277,13 +257,13 @@ export const ProductCard = memo(function ProductCard({
               type="button"
               className={`product-card__order ${isOrdered ? 'product-card__order--ordered' : ''} ${isSoldOut ? 'product-card__order--sold-out' : ''}`}
               onClick={() => {
-                if (isOrdered || isSoldOut) return
+                if (isOrdered || isSoldOut || isOrdering) return
                 onOrder?.(id, orderQuantity)
               }}
-              disabled={isSoldOut || isOrdered}
+              disabled={isSoldOut || isOrdered || isOrdering}
               {...namedControl(orderLabel)}
             >
-              {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : 'Ordenar'}
+              {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? 'Ordenando…' : 'Ordenar'}
             </button>
           </div>
         </div>

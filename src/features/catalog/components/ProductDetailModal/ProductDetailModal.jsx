@@ -35,6 +35,7 @@ export function ProductDetailModal({
   isOpen,
   onClose,
   isInCart = false,
+  isOrdering = false,
   onOrder,
 }) {
   const gallery = useMemo(() => resolveGallery(product), [product])
@@ -68,7 +69,7 @@ export function ProductDetailModal({
   const activeSrc = gallery[activeIndex] || gallery[0] || ''
   const loremText = pickProductLoremVersion(product.id)
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
-  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
+  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? `Ordenando ${productName}` : `Ordenar ${productName}`
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
@@ -218,15 +219,15 @@ export function ProductDetailModal({
               type="button"
               className={`product-detail-modal__order${isOrdered ? ' is-ordered' : ''}${isSoldOut ? ' is-sold-out' : ''}`}
               onClick={() => {
-                if (isOrdered || isSoldOut) {
+                if (isOrdered || isSoldOut || isOrdering) {
                   return
                 }
                 onOrder?.(product.id, orderQuantity)
               }}
-              disabled={isSoldOut || isOrdered}
+              disabled={isSoldOut || isOrdered || isOrdering}
               {...namedControl(orderLabel)}
             >
-              {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : 'Ordenar'}
+              {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? 'Ordenando…' : 'Ordenar'}
             </button>
           </div>
         </div>

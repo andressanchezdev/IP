@@ -20,6 +20,10 @@ function snapshotCartItems(cartItems = []) {
     price: Number(item.price) || 0,
     imageUrl: item.imageUrl || item.brandLogo || item.brandLogoUrl || '',
     brandLogo: item.brandLogo || item.brandLogoUrl || '',
+    // Fiscales del producto (API: iva, exento, compra) para totales / futuro POST.
+    ...(item.iva != null ? { iva: Number(item.iva) } : {}),
+    ...(item.exento != null ? { exento: Number(item.exento) } : {}),
+    ...(item.compra != null ? { compra: Number(item.compra) } : {}),
   }))
 }
 
@@ -30,13 +34,15 @@ export function buildCheckoutOrder({
   clientData,
   paymentType,
   paymentDetails,
+  salesRequest = null,
+  salesResponse = null,
 }) {
   const now = new Date()
   const items = snapshotCartItems(cartItems)
   const totals = summarizeCartItems(items)
   const subtotal = totals.subtotal
   const iva = totals.iva
-  const total = Number(paymentDetails?.amount) || totals.total
+  const total = Number(paymentDetails?.amount) || Number(salesRequest?.total) || totals.total
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
 
   const resolvedType = resolveCheckoutPaymentType(paymentType, paymentDetails)
@@ -58,6 +64,7 @@ export function buildCheckoutOrder({
     shippingCost: 0,
     proofVerified: Boolean(paymentDetails?.proofVerified),
     paymentLimitDays: deadlineInfo.days,
+    salesRequest: salesRequest ?? null,
   }
 
   const client = {
@@ -73,21 +80,36 @@ export function buildCheckoutOrder({
     department: clientData?.department || '',
   }
 
+  const sale = salesResponse && typeof salesResponse === 'object' ? salesResponse : null
+  const idVenta = Number(sale?.id_venta)
+  const claveVenta = String(sale?.clave_venta ?? '').trim()
+  const orderId = claveVenta
+    || (Number.isFinite(idVenta) && idVenta > 0 ? String(idVenta) : `PED-${Date.now()}`)
+  const invoiceNumber = claveVenta
+    || (Number.isFinite(idVenta) && idVenta > 0 ? `FAC-${idVenta}` : `FAC-${Date.now()}`)
+  const createdAt = sale?.fecha
+    ? String(sale.fecha)
+    : (salesRequest?.fecha || now.toISOString())
+
   return enrichOrder({
-    id: `PED-${Date.now()}`,
+    id: orderId,
+    idventa: Number.isFinite(idVenta) && idVenta > 0 ? idVenta : null,
+    clave_venta: claveVenta || null,
+    claveVenta: claveVenta || null,
     userId,
     source: 'checkout',
-    invoiceNumber: `FAC-${Date.now()}`,
-    createdAt: now.toISOString(),
+    invoiceNumber,
+    createdAt,
     dateLimit: deadlineInfo.deadlineIso,
     dateLimitLabel: deadlineInfo.dateLimitLabel,
     paymentLimitDays: deadlineInfo.days,
     orderType: 'general',
-    estado: 'verificacion',
+    estado: String(sale?.estado ?? 'verificacion').trim() || 'verificacion',
+    metodo_pago: salesRequest?.metodo_pago || resolvedType,
     items,
     client,
     paymentMethod: methodLabel,
-    total,
+    total: Number(sale?.total) || total,
     subtotal,
     iva,
     status: initialStatus,
@@ -95,9 +117,9 @@ export function buildCheckoutOrder({
       method: methodLabel,
       type: resolvedType,
       deadline: deadlineInfo.deadlineIso,
-      amount: total,
+      amount: Number(sale?.total) || total,
       paidAmount: 0,
-      payments: [],
+      payments: Array.isArray(sale?.pagos) ? sale.pagos : [],
       paymentsMade: 0,
       paymentsTotal: 3,
       checkoutDetails,
@@ -109,8 +131,9 @@ export function buildCheckoutOrder({
       totalQuantity,
     },
     delivery: {
-      address: client.address,
+      address: client.address || salesRequest?.direccion || '',
       mapLocation: clientData?.mapLocation ?? null,
     },
   })
 }
+

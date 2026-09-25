@@ -1,9 +1,23 @@
 /* Shared panel / field language from Filtrar — reused by Perfil & Configuración */
 
 .content-main-aux-carrito--scroll {
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-bottom: 8px;
+  touch-action: pan-y;
+}
+
+/* Gana sobre .content-main-aux-carrito { overflow: hidden } del carrito */
+.content-main-aux-carrito.content-main-aux-carrito--scroll {
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .filter-drawer-panel {

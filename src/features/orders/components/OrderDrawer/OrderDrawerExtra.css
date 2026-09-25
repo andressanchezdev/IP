@@ -47,6 +47,17 @@
   transform: scale(1.06);
 }
 
+.order-payment__add-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.order-payment__add-btn:disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
 .order-payment__counter {
   align-items: center;
   display: flex;
@@ -61,11 +72,94 @@
   padding: 0;
 }
 
+.order-payment__pagos-wrap {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  width: 100%;
+}
+
 .order-payment__pagos {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  border-collapse: collapse;
+  color: var(--drawer-color, var(--color-gris-oscuro));
+  font-size: var(--drawer-fs-sm, 12px);
+  font-weight: var(--drawer-fw, 400);
+  margin: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.order-payment__pagos th,
+.order-payment__pagos td {
+  border-bottom: 1px solid var(--color-border);
+  box-sizing: border-box;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  padding: 6px 4px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.order-payment__pagos th {
+  color: var(--drawer-color-muted, var(--color-text-secondary));
+  font-weight: 600;
+}
+
+.order-payment__pagos th:nth-child(1),
+.order-payment__pagos td:nth-child(1) {
+  width: 8%;
+}
+
+.order-payment__pagos th:nth-child(2),
+.order-payment__pagos td:nth-child(2) {
+  width: 16%;
+}
+
+.order-payment__pagos th:nth-child(3),
+.order-payment__pagos td:nth-child(3) {
+  width: 18%;
+}
+
+.order-payment__pagos th:nth-child(4),
+.order-payment__pagos td:nth-child(4) {
+  width: 22%;
+}
+
+.order-payment__pagos th:nth-child(5),
+.order-payment__pagos td:nth-child(5) {
+  width: 24%;
+}
+
+.order-payment__pagos th:nth-child(6),
+.order-payment__pagos td:nth-child(6) {
+  width: 12%;
+}
+
+.order-payment__pagos td:last-child {
+  text-align: center;
+}
+
+.order-payment__pagos .order-packaging__view-btn {
+  display: inline-flex;
+  height: 28px;
+  margin: 0 auto;
+  width: 28px;
+}
+
+.order-payment__pagos .order-packaging__view-icon {
+  height: 14px;
+  width: 14px;
+}
+
+.order-payment__pagos .order-payment__empty {
+  color: var(--drawer-color-muted, var(--color-text-secondary));
+  font-size: inherit;
 }
 
 .order-payment__empty {
@@ -104,11 +198,11 @@
 }
 
 .order-payment__type--active {
-  background: #bbbaba;
-  border-color: #494949;  /* contempalr otros colores (verde)*/
-  color: var(--color-text-primary);
+  background: #616161;
+  border-color: #616161;
+  color: #ffffff; 
   font-weight: 600;
-}
+} 
 
 .order-payment__type--selectable {
   cursor: pointer;
@@ -226,21 +320,41 @@
 }
 
 .content-list-data__row--block {
-  align-items: flex-start;
+  align-items: stretch;
+  display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.content-list-data__row--block > .content-list-data__label {
+  text-align: left;
+  width: 100%;
 }
 
 .order-payment__proof,
 .order-payment__credit {
+  align-items: center;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+  text-align: center;
   width: 100%;
 }
 
+.order-payment__credit > .order-payment__pagos-wrap {
+  align-self: stretch;
+}
+
+.order-payment__credit > .order-payment__add-btn {
+  align-self: center;
+}
+
 .order-payment__proof-preview {
-  align-self: flex-start;
+  align-self: center;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   display: block;
@@ -257,23 +371,31 @@
 .order-payment__proof-check {
   align-items: center;
   display: inline-flex;
-  font-size: 12px;
-  font-weight: 400;
+  font-size: var(--drawer-fs-sm, 12px);
+  font-weight: var(--drawer-fw, 400);
   gap: 8px;
+  justify-content: center;
 }
 
 .order-payment__proof-meta {
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  font-weight: 400;
+  color: var(--drawer-color-muted, var(--color-text-secondary));
+  font-size: var(--drawer-fs-sm, 12px);
+  font-weight: var(--drawer-fw, 400);
+  margin: 0;
+  text-align: left;
+  width: 100%;
 }
 
 .order-payment__saldo {
-  font-size: 15px;
+  font-size: var(--drawer-fs-md, 14px);
+  text-align: center;
 }
 
 .order-payment__saldo--due {
   color: #c62828;
+  margin-top: 0;
+  text-align: left;
+  width: 100%;
 }
 
 .order-payment__saldo--ok {

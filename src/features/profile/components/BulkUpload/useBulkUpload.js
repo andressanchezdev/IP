@@ -113,20 +113,23 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     })
 
     try {
-      const { compareOrderWithStock, fetchStockByCodes } = await import('@/features/profile/api/bulkOrderApi')
-      const stockByCode = await fetchStockByCodes(
-        items.map((item) => item.codigo),
-        {
-          onProgress: (done, total) => {
-            setProcessState((current) => ({
-              ...current,
-              progress: { done, total },
-            }))
-          },
-        },
-      )
+      const { compareBulkOrderWithCheckMassive } = await import('@/features/profile/api/bulkOrderApi')
+      const token = tokenAccessRef.current || getApiAuthToken()
+      if (!token) {
+        showToast('Inicia sesión para consultar stock masivo', 'error')
+        openAuthModal?.()
+        return
+      }
 
-      const comparison = compareOrderWithStock(items, stockByCode)
+      const comparison = await compareBulkOrderWithCheckMassive(items, {
+        token,
+        onProgress: (done, total) => {
+          setProcessState((current) => ({
+            ...current,
+            progress: { done, total },
+          }))
+        },
+      })
       setProcessState((current) => ({ ...current, comparison }))
       showToast('Comparación de stock completada', 'success')
     } catch (error) {

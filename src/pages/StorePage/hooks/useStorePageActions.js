@@ -1,10 +1,12 @@
-import { useCallback, startTransition } from 'react'
+import { useCallback, useRef, startTransition } from 'react'
 import { confirmAction } from '@/shared/lib/confirmAction'
 
 const VIEW_ALIAS = Object.freeze({
   Historial: 'espera',
   Cartera: 'historial',
 })
+
+const ORDER_COOLDOWN_MS = 300
 
 /**
  * Handlers de la página de tienda (navegación, búsqueda, carrito, sesión).
@@ -13,6 +15,7 @@ const VIEW_ALIAS = Object.freeze({
 export function useStorePageActions({
   products,
   addToCart,
+  isOrderingProduct,
   showToast,
   navigateToView,
   setFilterNuevos,
@@ -33,21 +36,38 @@ export function useStorePageActions({
   pendingCheckout,
   pendingEsperaView,
 }) {
+  const orderCooldownRef = useRef(new Map())
+
   const handleOpenOrder = useCallback((orderId) => {
     openOrderDrawer(orderId)
   }, [openOrderDrawer])
 
   const handleOrderProduct = useCallback(async (productId, quantity) => {
+    const key = String(productId)
+    if (isOrderingProduct?.(productId)) {
+      return
+    }
+
+    const lastAt = orderCooldownRef.current.get(key) || 0
+    if (Date.now() - lastAt < ORDER_COOLDOWN_MS) {
+      return
+    }
+
     const product = products.find((item) => String(item.id) === String(productId))
     const result = await addToCart(productId, quantity, product)
+
+    if (result?.duplicate) {
+      return
+    }
 
     if (!result?.success) {
       showToast(result?.error || 'No se pudo agregar al carrito', 'error')
       return
     }
 
+    orderCooldownRef.current.set(key, Date.now())
     showToast(`${product?.description ?? 'Producto'} agregado al carrito`, 'success')
-  }, [addToCart, products, showToast])
+  }, [addToCart, isOrderingProduct, products, showToast])
 
   const handleNavigate = useCallback((view) => {
     const resolvedView = VIEW_ALIAS[view] ?? view

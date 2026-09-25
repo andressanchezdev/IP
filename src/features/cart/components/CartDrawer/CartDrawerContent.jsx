@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useCart, useCatalog } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
-import { summarizeCartItems } from '@/shared/lib/money'
+import { summarizeCartItems, getIvaBreakdownLabel } from '@/shared/lib/money'
 import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { SearchBar } from '@/shared/ui/SearchBar/SearchBar'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
@@ -137,6 +137,7 @@ export function CartDrawerContent() {
   }, [products])
 
   const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
+  const ivaLabel = useMemo(() => getIvaBreakdownLabel(cartItems), [cartItems])
 
   const filteredItems = useMemo(() => {
     const query = cartSearchValue.trim().toLowerCase()
@@ -223,6 +224,7 @@ export function CartDrawerContent() {
         <CartTotals
           subtotal={cartTotals.subtotal}
           iva={cartTotals.iva}
+          ivaLabel={ivaLabel}
           total={cartTotals.total}
         />
         <button

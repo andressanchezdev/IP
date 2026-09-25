@@ -1,6 +1,7 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
 import { parseImageArray, parseStock } from './parseUbicacionStock'
 import { resolveProductCardImageUrl } from './productImageThumb'
+import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
 
 const PLACEHOLDER_IMAGE_HINTS = [
   'blanco.png',
@@ -41,6 +42,8 @@ function text(value) {
 /**
  * Mapea un ítem de GET /api/v1/inventory/carts → modelo de carrito-card.
  * Solo usa campos de la respuesta API (sin merge/localStorage/catálogo).
+ * Conserva iva / exento / compra si el carrito los trae; si no, el slice
+ * puede enriquecerlos desde catálogo con enrichCartItemsFiscalFromCatalog.
  */
 export function mapApiCartItem(entry) {
   if (!entry || typeof entry !== 'object') {
@@ -59,6 +62,7 @@ export function mapApiCartItem(entry) {
   const imageUrl = pickProductImageUrl(pickCartProductImageField(entry))
   const imageCardUrl = resolveProductCardImageUrl(imageUrl, entry)
   const stock = entry.stock != null ? parseStock(entry.stock) : 0
+  const fiscal = pickProductFiscalFields(entry)
 
   return {
     id: productId,
@@ -81,6 +85,7 @@ export function mapApiCartItem(entry) {
     discount: Number(entry.descuento) || 0,
     aplicacion: text(entry.aplicacion),
     cartDate: entry.fecha ?? null,
+    ...fiscal,
   }
 }
 

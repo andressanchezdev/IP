@@ -12,7 +12,7 @@ export function enrichOrder(order) {
 
   const totalQuantity = order.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0
   const numericId = String(order.id ?? '').replace(/\D/g, '') || String(Date.now())
-  const paymentMethod = order.paymentMethod ?? 'Efectivo'
+  const paymentMethod = order.paymentMethod ?? order.metodo_pago ?? 'Efectivo'
   const statusLabel = getCurrentFlowLabel(order.status ?? order.estado)
   const stepIndex = getOrderStepIndex(order.status ?? order.estado)
   const isCompleted = stepIndex >= ORDER_STEP_DEFS.length - 1
@@ -37,6 +37,15 @@ export function enrichOrder(order) {
   const dateLimitLabel = order.dateLimitLabel
     || (deadlineInfo.hasLimit ? deadlineInfo.dateLimitLabel : PAYMENT_LIMIT_MISSING_MESSAGE)
 
+  const rawType = order.payment?.type ?? String(paymentMethod).toLowerCase()
+  const resolvedType = rawType.includes('credito')
+    ? 'credito'
+    : rawType.includes('transfer')
+      ? 'transferencia'
+      : rawType.includes('efectivo')
+        ? 'efectivo'
+        : rawType
+
   return {
     ...order,
     invoiceNumber: order.invoiceNumber ?? `FAC-${numericId}`,
@@ -44,20 +53,24 @@ export function enrichOrder(order) {
     status: statusLabel,
     statusLabel,
     processStatus: statusLabel,
+    paymentMethod,
     paymentLimitDays: deadlineInfo.days,
     dateLimit: deadlineIso,
     dateLimitLabel,
     payment: {
       method: order.payment?.method ?? paymentMethod,
-      type: order.payment?.type ?? String(paymentMethod).toLowerCase(),
+      type: resolvedType,
       deadline: deadlineIso,
       amount: order.payment?.amount ?? order.total ?? 0,
       paidAmount: order.payment?.paidAmount ?? 0,
       payments: order.payment?.payments ?? [],
       paymentsMade: order.payment?.paymentsMade ?? 0,
       paymentsTotal: order.payment?.paymentsTotal ?? 3,
-      checkoutDetails: order.payment?.checkoutDetails ?? order.payment?.details ?? {},
-      details: order.payment?.details ?? {},
+      checkoutDetails: {
+        paymentLimitDays,
+        ...(order.payment?.checkoutDetails ?? order.payment?.details ?? {}),
+      },
+      details: order.payment?.details ?? { paymentLimitDays },
       lastPaymentAt: order.payment?.lastPaymentAt ?? null,
     },
     packaging: {

@@ -193,7 +193,8 @@ export function useCatalogSlice({
           setProducts(mappedProducts)
           rememberLastProductId(mappedProducts)
           setHasMoreProducts(result.hasMore)
-          applyCartFromPayload(result.carritos)
+          // Pasar productos mapeados: productsRef aún no refleja setProducts.
+          applyCartFromPayload(result.carritos, mappedProducts)
         }
       } catch (error) {
         if (!cancelled) {

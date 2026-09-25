@@ -23,7 +23,7 @@
   width: 22px;
 }
 
-/* Panel: no es el scroller; el pan vertical debe llegar al padre (drawer/aux). */
+/* Panel: no fija alto propio; el pan vertical debe llegar al scroller padre (drawer/aux). */
 .accordion__panel {
   display: flex;
   flex-direction: column;
@@ -79,9 +79,15 @@
     margin-right: auto;
   }
 
-  /* Abierto: no recortar hijos; gestos verticales para scroll del contenedor padre */
+  /*
+   * Abierto: no recortar ni capturar el scroll.
+   * El usuario navega el contenido del accordion vía el padre
+   * (.content-main-aux-carrito / --scroll); width/height del accordion no cambian.
+   */
   .accordion.accordion--open {
     overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
     touch-action: pan-y;
   }
 
@@ -97,6 +103,8 @@
   }
 
   .accordion__panel {
+    -webkit-overflow-scrolling: touch;
+    overflow: visible;
     padding: 0 10px 10px;
     pointer-events: auto;
     touch-action: pan-y;
@@ -105,6 +113,12 @@
   .accordion__panel .accordion {
     flex-shrink: 0;
     overflow: visible;
+  }
+
+  .accordion__panel .accordion.accordion--open {
+    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 }
 

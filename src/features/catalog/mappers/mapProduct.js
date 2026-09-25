@@ -1,6 +1,7 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
 import { parseImageArray, stockTotal } from './parseUbicacionStock'
 import { resolveProductCardImageUrl } from './productImageThumb'
+import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
 
 const PLACEHOLDER_IMAGE_HINTS = [
   'blanco.png',
@@ -54,15 +55,45 @@ export function isUsableProductId(value) {
   return true
 }
 
-/** id de inventario usable: `id_producto` / `id` (ignora -1 y 0). */
+/**
+ * True si el candidato es en realidad el codigo/barcode (no el id de inventario).
+ * id_producto ≠ codigo.
+ */
+export function isCodigoMistakenAsId(candidate, product) {
+  if (candidate == null || candidate === '') {
+    return false
+  }
+  const value = String(candidate).trim().toLowerCase()
+  if (!value) {
+    return false
+  }
+  const codes = [
+    product?.codigo,
+    product?.reference,
+    product?.Codigo,
+  ]
+    .map((entry) => String(entry ?? '').trim().toLowerCase())
+    .filter(Boolean)
+
+  return codes.includes(value)
+}
+
+/**
+ * id de inventario usable.
+ * Preferencia: `id` (PK de /general) → `id_producto` → `idProducto`.
+ * Nunca usa `codigo` / reference.
+ */
 export function getCatalogProductId(product) {
   const candidates = [
+    product?.id,
     product?.id_producto,
     product?.idProducto,
-    product?.id,
   ]
   for (const value of candidates) {
     if (!isUsableProductId(value)) {
+      continue
+    }
+    if (isCodigoMistakenAsId(value, product)) {
       continue
     }
     return String(value).trim()
@@ -82,6 +113,7 @@ export function getCatalogProductId(product) {
  * imagen_producto → imageUrl / img_producto
  * thumb card → imageCardUrl (*_card.webp o API thumb)
  * stock → stock
+ * iva / exento / compra → campos fiscales (GET /general e inventario)
  */
 export function mapApiProduct(product) {
   const brand = String(product.marca ?? '').trim()
@@ -90,6 +122,7 @@ export function mapApiProduct(product) {
   const imageUrl = imageUrls[0] ?? ''
   const imageCardUrl = resolveProductCardImageUrl(imageUrl, product)
   const precio = mapPrecio(product)
+  const fiscal = pickProductFiscalFields(product)
 
   const id = getCatalogProductId(product)
 
@@ -109,6 +142,7 @@ export function mapApiProduct(product) {
     imageUrls,
     brandLogo: brandLogoUrl,
     brandLogoUrl,
+    ...fiscal,
   }
 }
 

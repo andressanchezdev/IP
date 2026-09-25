@@ -130,7 +130,7 @@
 }
 
 .order-accordion__panel {
-  padding: 0 18px 14px;
+  padding: 14px;
 }
 
 .order-accordion__panel .content-list-data__row:first-child {

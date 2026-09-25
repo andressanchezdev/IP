@@ -33,11 +33,13 @@ export function StorePage() {
     pendingCheckout,
     pendingEsperaView,
   } = useAuth()
-  const { cartItems, addToCart, refreshCartFromApi } = useCart()
+  const { cartItems, addToCart, refreshCartFromApi, orderingProductIds, isOrderingProduct } = useCart()
   const {
     pendingOrders,
     historyOrders,
     openOrderDrawer,
+    openOrderPayments,
+    openOrderAbonos,
     isLoadingHistory,
     historyLoadError,
     loadHistoryFromApi,
@@ -133,6 +135,7 @@ export function StorePage() {
   } = useStorePageActions({
     products: filteredProducts.length ? filteredProducts : products,
     addToCart,
+    isOrderingProduct,
     showToast,
     navigateToView,
     setFilterNuevos,
@@ -181,7 +184,7 @@ export function StorePage() {
   ])
 
   useEffect(() => {
-    if (drawerOpen && drawerType === 'order' && activeView !== 'espera') {
+    if (drawerOpen && drawerType === 'order' && activeView !== 'espera' && activeView !== 'historial') {
       closeDrawer()
     }
   }, [activeView, drawerOpen, drawerType, closeDrawer])
@@ -250,6 +253,9 @@ export function StorePage() {
       price: row?.precio,
     })
     if (!result?.success) {
+      if (result?.duplicate) {
+        return
+      }
       if (result?.needsAuth) {
         openAuthModal()
       }
@@ -383,6 +389,8 @@ export function StorePage() {
           filteredOrders={filteredHistoryOrders}
           isLoading={isLoadingHistory}
           errorMessage={historyLoadError}
+          onCreateAbono={openOrderPayments}
+          onViewAbonos={openOrderAbonos}
         />
       )
     }
@@ -395,6 +403,7 @@ export function StorePage() {
       <CatalogView
         products={filteredProducts}
         cartProductIds={cartProductIds}
+        orderingProductIds={orderingProductIds}
         onOrder={handleOrderProduct}
         onOpenDetail={setDetailProductId}
         isLoadingLatest={isLoadingLatest}
@@ -492,6 +501,7 @@ export function StorePage() {
         isOpen={Boolean(detailProduct)}
         onClose={() => setDetailProductId(null)}
         isInCart={detailProduct ? cartProductIds.has(detailProduct.id) : false}
+        isOrdering={detailProduct ? orderingProductIds.has(String(detailProduct.id)) : false}
         onOrder={handleOrderProduct}
       />
     </div>
