@@ -10,7 +10,23 @@ import {
   searchBarQuery,
 } from './inventory'
 import { liveInventory } from './botip/liveData'
-import { isCreateOrderAsk, isHoursAsk, isLocationAsk, isPaymentAsk, pareceCodigo, searchMissGuideText, releaseRemainder } from './conversationThread'
+import { getApiAuthToken } from '@/shared/api'
+import {
+  isComplaintAsk,
+  isCreateOrderAsk,
+  isCreditAsk,
+  isExecutiveAsk,
+  isHoursAsk,
+  isLocationAsk,
+  isPaymentAsk,
+  isReturnsAsk,
+  isShippingAsk,
+  isVacancyAsk,
+  pareceCodigo,
+  searchMissGuideText,
+  releaseRemainder,
+} from './conversationThread'
+import { shouldEscapeOrderFlow } from './agentLane'
 import { resetScaffold } from './scaffoldSearch'
 import type { ChatAction, ChatReply } from './intents'
 import type { OrderFlow, OrderFlowPendingProduct, SessionContext } from './sessionContext'
@@ -25,6 +41,10 @@ export type ChatBulkPending = {
       cantidad?: number
       stock?: number
       precio?: number
+      compra?: number
+      iva?: number
+      exento?: number
+      aplicacion?: string
     }>
   }
   omitted: Array<{ line?: number; codigo?: string; reason?: string }>
@@ -90,8 +110,27 @@ export function isOrderFlowActive(ctx: SessionContext) {
   return Boolean(state && state !== 'idle')
 }
 
+/** Guía FAQ de “cómo pedir” — no inicia el FSM de crear pedido. */
 export function orderProcessGuideReply(): ChatReply {
-  return checkoutOfferReply()
+  return reply(
+    [
+      '📦 Cómo pedir en Importadora Premium',
+      '',
+      '1. Busca el producto en el catálogo o aquí en el chat.',
+      '2. Agrégalo al carrito (botón Ordenar o con mi ayuda).',
+      '3. En el carrito: Finalizar → dirección y medio de pago.',
+      '4. Confirma el pedido.',
+      '',
+      'Si quieres que te acompañe ahora a armar el pedido, escribe: “quiero hacer un pedido”.',
+    ].join('\n'),
+    {
+      options: [
+        { kind: 'prompt', label: 'Quiero hacer un pedido', prompt: 'quiero hacer un pedido' },
+        { kind: 'prompt', label: 'Medios de pago', prompt: 'medios de pago' },
+        { kind: 'prompt', label: 'Contacto', prompt: 'whatsapp' },
+      ],
+    },
+  )
 }
 
 export function beginAddFromLastOffer(ctx: SessionContext): ChatReply | null {
@@ -346,6 +385,39 @@ function toPendingProduct(product: ProductRecord): OrderFlowPendingProduct {
     codigo: product.codigo || '',
     price: retailPrice(product),
     stock: Number(product.cantidad) || 0,
+    compra: product.compra,
+    iva: product.iva,
+    exento: product.exento,
+    aplicacion: product.aplicacion,
+  }
+}
+
+/** Prefiere ficha cacheada de API (con fiscales) sobre el resumen de lastOffers. */
+function pendingFromOffer(offer: {
+  id: string
+  label: string
+  codigo?: string
+  price: number
+  cantidad?: number
+  compra?: number
+  iva?: number
+  exento?: number
+  aplicacion?: string
+}): OrderFlowPendingProduct {
+  const live = liveInventory().find((item) => String(item.id) === String(offer.id))
+  if (live) {
+    return toPendingProduct(live)
+  }
+  return {
+    id: String(offer.id),
+    label: offer.label,
+    codigo: offer.codigo || '',
+    price: offer.price,
+    stock: Number(offer.cantidad) || 0,
+    compra: offer.compra,
+    iva: offer.iva,
+    exento: offer.exento,
+    aplicacion: offer.aplicacion,
   }
 }
 
@@ -450,13 +522,7 @@ function pickRouteAProduct(ctx: SessionContext, tokens: readonly string[], raw: 
   if (indexMatch && ctx.lastOffers?.length) {
     const offer = ctx.lastOffers[Number(indexMatch[1]) - 1]
     if (offer) {
-      flow.pendingProduct = {
-        id: String(offer.id),
-        label: offer.label,
-        codigo: offer.codigo || '',
-        price: offer.price,
-        stock: Number(offer.cantidad) || 0,
-      }
+      flow.pendingProduct = pendingFromOffer(offer)
       flow.currentState = 'routeA_qty'
       return reply(`¿Qué cantidad de ${flow.pendingProduct.label || 'ese producto'} agrego al carrito?`)
     }
@@ -474,13 +540,7 @@ function pickRouteAProduct(ctx: SessionContext, tokens: readonly string[], raw: 
   const folded = fold(raw)
   const byName = (ctx.lastOffers || []).find((item) => fold(item.label) === folded)
   if (byName) {
-    flow.pendingProduct = {
-      id: String(byName.id),
-      label: byName.label,
-      codigo: byName.codigo || '',
-      price: byName.price,
-      stock: Number(byName.cantidad) || 0,
-    }
+    flow.pendingProduct = pendingFromOffer(byName)
     flow.currentState = 'routeA_qty'
     return reply(`¿Qué cantidad de ${flow.pendingProduct.label || 'ese producto'} agrego al carrito?`)
   }
@@ -599,6 +659,10 @@ function confirmAddReply(ctx: SessionContext): ChatReply {
     cantidad: flow.pendingQty,
     stock: item.stock,
     precio: item.price,
+    compra: item.compra,
+    iva: item.iva,
+    exento: item.exento,
+    aplicacion: item.aplicacion,
     estado: 'Ok',
   }
   flow.pendingProduct = null
@@ -618,7 +682,7 @@ function confirmAddReply(ctx: SessionContext): ChatReply {
       '[ Sí ]   [ No ]',
     ].filter((line) => line.length > 0).join('\n\n'),
     {
-      // Un ítem: POST /api/v1/inventory/carts { id_producto, cantidad, precio_unitario }
+      // POST /api/v1/inventory/carts (body completo vía planCartAdd / buildCartPostBody)
       catalogCommand: { kind: 'add-cart', row },
       options: moreOptions,
     },
@@ -677,11 +741,6 @@ export async function runOrderFlowTurn(
   const active = isOrderFlowActive(ctx)
   const flowState = ctx.orderFlow?.currentState || 'idle'
   const inEntry = flowState.startsWith('routeA') || flowState === 'routeB_guide' || flowState === 'excel_confirm'
-  const locked = flowState === 'awaitingSize'
-    || flowState === 'routeA_qty'
-    || flowState === 'routeA_confirm'
-    || flowState === 'routeA_more'
-    || flowState === 'excel_confirm'
 
   if (codeAsk && flowState !== 'routeA_confirm' && flowState !== 'routeA_qty' && flowState !== 'excel_confirm') {
     return searchByExactCode(ctx, raw)
@@ -698,7 +757,19 @@ export async function runOrderFlowTurn(
   }
 
   const flow = ensureOrderFlow(ctx)
-  if (!locked && (isPaymentAsk(tokens, raw) || isHoursAsk(tokens, raw) || isLocationAsk(tokens, raw))) {
+  /* Escape hatch: asides de dominio salen del FSM aunque el estado esté “locked”. */
+  if (
+    shouldEscapeOrderFlow(tokens, raw, { codeAsk, createAsk })
+    || isPaymentAsk(tokens, raw)
+    || isHoursAsk(tokens, raw)
+    || isLocationAsk(tokens, raw)
+    || isCreditAsk(tokens, raw)
+    || isShippingAsk(tokens, raw)
+    || isReturnsAsk(tokens, raw)
+    || isComplaintAsk(tokens, raw)
+    || isExecutiveAsk(tokens, raw)
+    || isVacancyAsk(tokens, raw)
+  ) {
     return null
   }
 
@@ -908,7 +979,7 @@ export async function processChatExcelFile(ctx: SessionContext, file: File): Pro
   }
 
   const { parseAndValidateProductExcelFile } = await import('@/features/profile/lib/productExcel')
-  const { compareOrderWithStock, fetchStockByCodes } = await import('@/features/profile/api/bulkOrderApi')
+  const { compareBulkOrderWithCheckMassive } = await import('@/features/profile/api/bulkOrderApi')
   const parsed = await parseAndValidateProductExcelFile(file)
   if (!parsed.valid) {
     flow.currentState = 'routeB_guide'
@@ -945,8 +1016,14 @@ export async function processChatExcelFile(ctx: SessionContext, file: File): Pro
     return `Fila ${line || '?'}: ${reason}`
   })
 
-  const stockByCode = await fetchStockByCodes(items.map((item) => item.codigo))
-  const comparison = compareOrderWithStock(items, stockByCode)
+  const token = getApiAuthToken()
+  if (!token) {
+    flow.currentState = 'routeB_guide'
+    return loginReply()
+  }
+
+  // Mismo flujo que drawer: search (codigo→id) + POST /carts/check-massive
+  const comparison = await compareBulkOrderWithCheckMassive(items, { token })
   comparison.results.forEach((row, index) => {
     const source = items[index] as { line?: number } | undefined
     const line = Number(source?.line) || index + 2

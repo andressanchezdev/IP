@@ -53,18 +53,41 @@ export async function persistCartItemSafe({
   }
 }
 
-/** PUT: actualiza cantidad de una línea existente (mismo body que POST). */
-export async function updateCartItemSafe({ token, productId, cantidad, precioUnitario }) {
+/** PUT: actualiza una línea existente por id_carrito (+ body de contenido). */
+export async function updateCartItemSafe({
+  token,
+  idCarrito,
+  productId,
+  cantidad,
+  precioUnitario,
+  compra,
+  exento,
+  iva,
+  aplicacion,
+  fecha,
+  product,
+}) {
   if (!token) {
     return { success: false, error: 'Sesión requerida', needsAuth: true }
+  }
+
+  if (idCarrito == null || idCarrito === '') {
+    return { success: false, error: 'id_carrito no disponible' }
   }
 
   try {
     const result = await putCartItem({
       token,
+      idCarrito,
       idProducto: productId,
       cantidad,
       precioUnitario,
+      compra,
+      exento,
+      iva,
+      aplicacion,
+      fecha,
+      product,
     })
     return { success: true, ...result }
   } catch (error) {

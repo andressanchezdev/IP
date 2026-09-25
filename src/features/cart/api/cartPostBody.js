@@ -187,14 +187,34 @@ export function buildCartPostBody({
     )
   }
 
-  if (import.meta.env?.DEV) {
-    console.info('[cart POST body]', body, {
-      productId: product?.id,
-      productCodigo: product?.codigo ?? product?.reference,
-    })
-  }
-
   return body
+}
+
+/**
+ * Gate real del POST /inventory/carts (confirmado live 2026-09-25):
+ * solo acepta compra>0 + exento:1 + iva:19; luego persiste 0/0/0.
+ * Productos con iva:0 + exento:1 (datos API) fallan con 400 Invalid data.
+ * PUT no tiene este gate — no aplicar ahí.
+ */
+export function applyCartPostFiscalGate(body = {}) {
+  const raw = {
+    compra: body.compra,
+    exento: body.exento,
+    iva: body.iva,
+  }
+  const compra = Number(raw.compra)
+  const normalized = {
+    ...body,
+    compra: Number.isFinite(compra) && compra > 0 ? compra : 1,
+    exento: 1,
+    iva: 19,
+  }
+  const wasAdjusted = (
+    Number(raw.exento) !== 1
+    || Number(raw.iva) !== 19
+    || !(Number.isFinite(compra) && compra > 0)
+  )
+  return { body: normalized, raw, wasAdjusted }
 }
 
 /**

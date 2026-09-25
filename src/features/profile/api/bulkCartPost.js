@@ -1,20 +1,35 @@
 import { getApiAuthToken } from '@/shared/api'
-import { postCartItem } from '@/features/cart/api/cartApi'
+import { postCartItem, putCartItem } from '@/features/cart/api/cartApi'
 import { planCartAdd } from '@/features/cart/api/cartPostBody'
 import { runWithConcurrency } from './bulkShared'
 
-/** Concurrencia de POST /inventory/carts para acelerar el envío masivo. */
-export const CART_POST_CONCURRENCY = 5
+/** Concurrencia moderada para no saturar POST/PUT /inventory/carts. */
+export const CART_POST_CONCURRENCY = 3
+
+function productFromBulkRow(row) {
+  return {
+    id: row?.id,
+    stock: row?.stock,
+    precio: row?.precio,
+    price: row?.precio,
+    compra: row?.compra,
+    iva: row?.iva,
+    exento: row?.exento,
+    aplicacion: row?.aplicacion,
+  }
+}
 
 /**
- * POST /api/v1/inventory/carts con Bearer token.
- * Mismo body que Ordenar / chat: { id_producto, cantidad, precio_unitario }
+ * Envía filas Excel al carrito:
+ * - id ya en carrito + id_carrito → PUT (actualizar cantidad total)
+ * - id nuevo → POST
  */
 export async function postBulkOrderToCart(
   rows = [],
   {
     token,
     getExistingQty,
+    getExistingCartId,
     onProgress,
     concurrency = CART_POST_CONCURRENCY,
   } = {},
@@ -33,6 +48,7 @@ export async function postBulkOrderToCart(
   onProgress?.(0, list.length)
 
   list.forEach((row) => {
+    const product = productFromBulkRow(row)
     const planned = planCartAdd({
       idProducto: row?.id,
       requestedQty: row?.cantidad,
@@ -41,6 +57,7 @@ export async function postBulkOrderToCart(
         ? plannedQtyById.get(String(row?.id))
         : Number(getExistingQty?.(String(row?.id)) || 0),
       precioUnitario: row?.precio,
+      product,
     })
     if (!planned.ok) return
     plannedQtyById.set(String(row.id), planned.body.cantidad)
@@ -49,12 +66,15 @@ export async function postBulkOrderToCart(
   await runWithConcurrency(list, concurrency, async (row) => {
     const productId = row?.id != null ? String(row.id) : ''
     const existingQty = Number(getExistingQty?.(productId) || 0)
+    const existingCartId = getExistingCartId?.(productId)
+    const product = productFromBulkRow(row)
     const planned = planCartAdd({
       idProducto: row?.id,
       requestedQty: row?.cantidad,
       stock: row?.stock,
       existingQty,
       precioUnitario: row?.precio,
+      product,
     })
 
     if (!planned.ok) {
@@ -74,17 +94,50 @@ export async function postBulkOrderToCart(
     }
 
     try {
-      await postCartItem({
-        token: authToken,
-        idProducto: requestBody.id_producto,
-        cantidad: requestBody.cantidad,
-        precioUnitario: requestBody.precio_unitario,
-      })
+      // Ya en carrito → solo PUT. POST de nuevo provoca 400.
+      if (existingCartId != null && existingCartId !== '') {
+        await putCartItem({
+          token: authToken,
+          idCarrito: existingCartId,
+          idProducto: requestBody.id_producto,
+          cantidad: requestBody.cantidad,
+          precioUnitario: requestBody.precio_unitario,
+          compra: requestBody.compra,
+          exento: requestBody.exento,
+          iva: requestBody.iva,
+          aplicacion: requestBody.aplicacion,
+          fecha: requestBody.fecha,
+          product,
+        })
+      } else if (existingQty > 0) {
+        failed.push({
+          codigo: row?.codigo,
+          reason: 'Producto ya en carrito sin id_carrito; recarga el carrito',
+          request: requestBody,
+        })
+        done += 1
+        onProgress?.(done, list.length)
+        return
+      } else {
+        await postCartItem({
+          token: authToken,
+          idProducto: requestBody.id_producto,
+          cantidad: requestBody.cantidad,
+          precioUnitario: requestBody.precio_unitario,
+          compra: requestBody.compra,
+          exento: requestBody.exento,
+          iva: requestBody.iva,
+          aplicacion: requestBody.aplicacion,
+          fecha: requestBody.fecha,
+          product,
+        })
+      }
       posted.push({
         codigo: row.codigo,
         cantidad: planned.orderQty,
         id: productId,
         request: requestBody,
+        method: existingCartId ? 'PUT' : 'POST',
       })
     } catch (error) {
       failed.push({

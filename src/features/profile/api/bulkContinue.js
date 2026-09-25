@@ -11,6 +11,7 @@ export async function submitBulkOrderSelection({
   onlyOk,
   token,
   getExistingQty,
+  getExistingCartId,
   onStart,
   onProgress,
 }) {
@@ -27,6 +28,7 @@ export async function submitBulkOrderSelection({
   const { posted, failed } = await postBulkOrderToCart(selected, {
     token,
     getExistingQty,
+    getExistingCartId,
     onProgress,
   })
 

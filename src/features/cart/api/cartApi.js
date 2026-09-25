@@ -1,6 +1,6 @@
 import { apiRequest } from '@/shared/api'
 import { auditProductFiscalFields } from '@/features/catalog/lib/auditProductFiscalFields'
-import { buildCartPostBody } from './cartPostBody'
+import { applyCartPostFiscalGate, buildCartPostBody } from './cartPostBody'
 
 const CART_PAGE_SIZE = 50
 const CARTS_PATH = '/api/v1/inventory/carts'
@@ -114,7 +114,7 @@ export async function postCartItem({
   fecha,
   product,
 } = {}) {
-  const body = buildCartPostBody({
+  const plannedBody = buildCartPostBody({
     idProducto,
     cantidad,
     precioUnitario,
@@ -125,45 +125,113 @@ export async function postCartItem({
     fecha,
     product,
   })
+  // Solo POST: el API rechaza iva/exento/compra del producto si no pasan el gate.
+  const { body, raw, wasAdjusted } = applyCartPostFiscalGate(plannedBody)
 
-  const payload = await apiRequest(CARTS_PATH, {
+  console.info('[cart POST]', {
+    path: CARTS_PATH,
     method: 'POST',
-    token,
-    body,
+    productId: product?.id ?? idProducto,
+    productCodigo: product?.codigo ?? product?.reference ?? null,
+    fiscalFromProduct: {
+      compra: product?.compra ?? null,
+      exento: product?.exento ?? null,
+      iva: product?.iva ?? null,
+    },
+    bodyBeforeGate: { ...plannedBody, compra: raw.compra, exento: raw.exento, iva: raw.iva },
+    bodySent: body,
+    fiscalGateAdjusted: wasAdjusted,
   })
 
-  const carritos = extractCarts(payload)
-  const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+  try {
+    const payload = await apiRequest(CARTS_PATH, {
+      method: 'POST',
+      token,
+      body,
+    })
 
-  return {
-    carritos,
-    item: carritos[0] ?? null,
-    meta,
-    raw: payload,
-    request: body,
+    console.info('[cart POST ok]', {
+      productId: body.id_producto,
+      response: payload,
+    })
+
+    const carritos = extractCarts(payload)
+    const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+
+    return {
+      carritos,
+      item: carritos[0] ?? null,
+      meta,
+      raw: payload,
+      request: body,
+    }
+  } catch (error) {
+    console.error('[cart POST fail]', {
+      status: error?.status,
+      payload: error?.payload,
+      bodySent: body,
+      fiscalFromProduct: {
+        compra: product?.compra ?? null,
+        exento: product?.exento ?? null,
+        iva: product?.iva ?? null,
+      },
+    })
+    throw error
   }
 }
 
 /**
  * PUT /api/v1/inventory/carts
- * Actualiza la cantidad de un ítem ya en carrito.
+ * Actualiza el contenido de una línea existente del carrito.
  *
- * Cuerpo de prueba (misma forma que POST, orientado a actualizar cantidad):
+ * Body:
  * {
- *   "id_producto": 7704790200048,
+ *   "id_carrito": 276934,
+ *   "id_producto": 2,
  *   "cantidad": 3,
- *   "precio_unitario": 28000
+ *   "precio_unitario": 28000,
+ *   "compra": 16275.64,
+ *   "exento": 1,
+ *   "iva": 19,
+ *   "aplicacion": "json",
+ *   "fecha": "2026-09-25 10:15:00"
  * }
  *
+ * `id_carrito` identifica la línea a actualizar.
  * `cantidad` = nueva cantidad total de la línea (no delta).
  */
 export async function putCartItem({
   token,
+  idCarrito,
   idProducto,
   cantidad,
   precioUnitario,
+  compra,
+  exento,
+  iva,
+  aplicacion,
+  fecha,
+  product,
 } = {}) {
-  const body = buildCartPostBody({ idProducto, cantidad, precioUnitario })
+  const cartId = Number(idCarrito)
+  if (!Number.isFinite(cartId) || cartId <= 0) {
+    throw new Error('id_carrito inválido')
+  }
+
+  const body = {
+    id_carrito: cartId,
+    ...buildCartPostBody({
+      idProducto,
+      cantidad,
+      precioUnitario,
+      compra,
+      exento,
+      iva,
+      aplicacion,
+      fecha,
+      product,
+    }),
+  }
 
   const payload = await apiRequest(CARTS_PATH, {
     method: 'PUT',
@@ -187,15 +255,6 @@ export async function putCartItem({
   }
 }
 
-/**
- * DELETE /api/v1/inventory/carts
- * Elimina un ítem del carrito (uno por petición).
- *
- * Body:
- * {
- *   "id_carrito": 276934
- * }
- */
 export async function deleteCartItem({
   token,
   idCarrito,

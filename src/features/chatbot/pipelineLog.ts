@@ -15,6 +15,7 @@ export type PhaseName =
   | 'handler'
   | 'antiRepeat'
   | 'finalize'
+  | 'context'
   | 'emit'
   | 'error'
 

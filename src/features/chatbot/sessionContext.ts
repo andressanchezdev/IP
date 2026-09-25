@@ -1,6 +1,6 @@
 import { DEFAULT_PIPELINE_CONFIG } from './pipelineConfig'
 import { emptyMetrics, type PhaseLogEntry, type SessionMetrics } from './pipelineLog'
-import { removeStore, writeStore } from './storage'
+import { removeStore, readStore, writeStore } from './storage'
 
 const KEY = 'botip-chat-session'
 
@@ -68,6 +68,10 @@ export type OfferedProduct = {
   category?: string
   cantidad?: number
   codigo?: string
+  compra?: number
+  iva?: number
+  exento?: number
+  aplicacion?: string
 }
 
 export type ScaffoldState =
@@ -105,6 +109,10 @@ export type OrderFlowPendingProduct = {
   codigo: string
   price: number
   stock: number
+  compra?: number
+  iva?: number
+  exento?: number
+  aplicacion?: string
 }
 
 export type OrderFlowState =
@@ -225,6 +233,19 @@ function persist(ctx: SessionContext) {
 }
 
 export function startChatSession() {
+  try {
+    const raw = readStore('session', KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as SessionContext
+      if (parsed?.sessionId) {
+        activeSessionId = parsed.sessionId
+        memory = parsed
+        return activeSessionId
+      }
+    }
+  } catch {
+    /* ignore corrupt session */
+  }
   activeSessionId = createId()
   const ctx = emptySession(activeSessionId)
   persist(ctx)

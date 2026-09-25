@@ -746,13 +746,34 @@ export function classifyTurn(tokens: readonly string[], raw: string, ctx: Sessio
   if (familyNow && current && familyNow !== current) return 'switch'
   if (pickLastOffer(ctx, tokens, raw)) return 'continue'
   if (isCreditAsk(tokens, raw) || isPaymentAsk(tokens, raw)) return 'aside'
+  if (isReturnsAsk(tokens, raw) || isComplaintAsk(tokens, raw) || isExecutiveAsk(tokens, raw)) return 'aside'
+  if (isVacancyAsk(tokens, raw)) return 'aside'
+  if (isCreateOrderAsk(tokens, raw) || isOrderProcessAsk(tokens, raw)) return 'fresh'
   if (wantsNewTopic(raw, tokens) && !familyNow) return 'switch'
 
   if (followCues().has('y') && /^(y\s+|entonces\s+|ok\s+|vale\s+)/.test(raw.trim().toLowerCase()) && (!familyNow || familyNow === current)) {
     return 'continue'
   }
   if (significant.some((token) => followCues().has(token)) && (!familyNow || familyNow === current)) return 'continue'
-  if (significant.length <= 2 && ctx.conversationFocus && !familyNow) return 'continue'
+  /* Mensajes cortos: no forzar continue si son asides de dominio o pedido. */
+  if (significant.length <= 2 && ctx.conversationFocus && !familyNow) {
+    if (
+      isCreditAsk(tokens, raw)
+      || isPaymentAsk(tokens, raw)
+      || isLocationAsk(tokens, raw)
+      || isHoursAsk(tokens, raw)
+      || isShippingAsk(tokens, raw)
+      || isReturnsAsk(tokens, raw)
+      || isComplaintAsk(tokens, raw)
+      || isExecutiveAsk(tokens, raw)
+      || isVacancyAsk(tokens, raw)
+      || isCreateOrderAsk(tokens, raw)
+      || isOrderProcessAsk(tokens, raw)
+    ) {
+      return isCreateOrderAsk(tokens, raw) || isOrderProcessAsk(tokens, raw) ? 'fresh' : 'aside'
+    }
+    return 'continue'
+  }
   if (significant.length <= 2 && familyNow && current && familyNow === current) return 'continue'
   return 'fresh'
 }

@@ -2,6 +2,7 @@ import { apiRequest } from '@/shared/api'
 import { toMoneyNumber, wait } from './bulkShared'
 import { getCatalogProductId } from '@/features/catalog/mappers/mapProduct'
 import { stockTotal } from '@/features/catalog/mappers/parseUbicacionStock'
+import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
 import { postCartCheckMassive } from '@/features/cart/api/cartApi'
 
 /** Lotes de resolución codigo→id (search). El stock lo define check-massive. */
@@ -27,7 +28,7 @@ function extractProducts(payload) {
  * Resuelve codigo → { id, precio } vía search.
  * El stock autoritativo viene después de check-massive (no de este GET).
  */
-async function resolveProductByCode(codigo) {
+async function resolveProductByCode(codigo, { token } = {}) {
   const code = String(codigo ?? '').trim()
   if (!code) {
     return { codigo: '', id: null, precio: 0 }
@@ -38,7 +39,7 @@ async function resolveProductByCode(codigo) {
   try {
     const payload = await apiRequest(
       `/api/v1/inventory/products/search?search=${encodeURIComponent(code)}`,
-      { method: 'GET' },
+      { method: 'GET', token },
     )
     const productos = extractProducts(payload)
     const match = productos.find(
@@ -49,10 +50,13 @@ async function resolveProductByCode(codigo) {
       return { codigo: code, id: null, precio: 0 }
     }
 
+    const fiscal = pickProductFiscalFields(match)
     return {
       codigo: code,
       id: getCatalogProductId(match),
       precio: toMoneyNumber(match.precio),
+      aplicacion: String(match?.aplicacion ?? '').trim(),
+      ...fiscal,
     }
   } catch (error) {
     if (error?.name === 'ApiError' && error.status === 404) {
@@ -69,6 +73,7 @@ async function resolveProductByCode(codigo) {
 export async function resolveProductIdsByCodes(
   codes,
   {
+    token,
     batchSize = STOCK_BATCH_SIZE,
     batchWindowMs = STOCK_BATCH_WINDOW_MS,
     onProgress,
@@ -91,8 +96,8 @@ export async function resolveProductIdsByCodes(
 
     for (let j = 0; j < batch.length; j += 1) {
       const startedAt = Date.now()
-      const { codigo, id, precio } = await resolveProductByCode(batch[j])
-      byCode.set(codigo, { id, precio })
+      const { codigo, id, precio, compra, iva, exento, aplicacion } = await resolveProductByCode(batch[j], { token })
+      byCode.set(codigo, { id, precio, compra, iva, exento, aplicacion })
 
       processed += 1
       onProgress?.(processed, list.length)
@@ -224,6 +229,12 @@ export function mapCheckMassiveToComparison(items = [], resolvedByCode = new Map
     const resolved = resolvedByCode.get(codigo)
     const id = resolved?.id != null ? String(resolved.id) : null
     const precio = toMoneyNumber(resolved?.precio)
+    const fiscal = {
+      compra: resolved?.compra,
+      iva: resolved?.iva,
+      exento: resolved?.exento,
+      aplicacion: resolved?.aplicacion,
+    }
 
     if (!id) {
       return {
@@ -258,6 +269,7 @@ export function mapCheckMassiveToComparison(items = [], resolvedByCode = new Map
       estado,
       id,
       precio,
+      ...fiscal,
     }
   })
 
@@ -290,7 +302,7 @@ export async function compareBulkOrderWithCheckMassive(
   const list = Array.isArray(items) ? items : []
   const resolvedByCode = await resolveProductIdsByCodes(
     list.map((item) => item.codigo),
-    { onProgress },
+    { token, onProgress },
   )
 
   const productos = list
@@ -335,6 +347,14 @@ export function compareOrderWithStock(items = [], stockByCode = new Map()) {
     const stock = typeof entry === 'number' ? entry : (entry?.stock ?? 0)
     const id = typeof entry === 'object' && entry ? entry.id : null
     const precio = typeof entry === 'object' && entry ? toMoneyNumber(entry.precio) : 0
+    const fiscal = typeof entry === 'object' && entry
+      ? {
+          compra: entry.compra,
+          iva: entry.iva,
+          exento: entry.exento,
+          aplicacion: entry.aplicacion,
+        }
+      : {}
 
     let estado = STOCK_STATUS.OK
     if (stock <= 0) {
@@ -343,7 +363,7 @@ export function compareOrderWithStock(items = [], stockByCode = new Map()) {
       estado = STOCK_STATUS.SHORT
     }
 
-    return { codigo, cantidad, stock, estado, id, precio }
+    return { codigo, cantidad, stock, estado, id, precio, ...fiscal }
   })
 
   return {

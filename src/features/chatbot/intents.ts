@@ -21,14 +21,30 @@ import {
 } from './inventory'
 
 /** Comandos de UI. No inventar endpoints.
- * add-cart → POST /api/v1/inventory/carts { id_producto, cantidad, precio_unitario } (un ítem).
- * bulk-commit → mismo POST /carts, una llamada por fila Excel ya validada (no hay POST multipart de archivo).
+ * add-cart → POST /api/v1/inventory/carts body completo
+ *   { id_producto, cantidad, precio_unitario, compra, exento, iva, aplicacion, fecha }
+ *   id_producto = id de inventario (nunca codigo/barcode). Un ítem por llamada.
+ * bulk-commit → mismo POST /carts por cada fila Excel validada (no hay POST multipart de archivo).
+ * PUT /carts (cantidad en drawer) usa id_carrito + mismo body; el bot no cambia cantidad vía PUT.
  * filter → POST /inventory/products/filter (listado, no carrito).
  */
+export type ChatCartRow = {
+  id: string
+  codigo?: string
+  cantidad: number
+  stock?: number
+  precio?: number
+  compra?: number
+  iva?: number
+  exento?: number
+  aplicacion?: string
+  estado?: string
+}
+
 export type CatalogCommand =
   | { kind: 'search'; query: string }
   | { kind: 'filter'; brands?: string[]; categories?: string[]; models?: string[] }
-  | { kind: 'add-cart'; row: { id: string; codigo?: string; cantidad: number; stock?: number; precio?: number; estado?: string } }
+  | { kind: 'add-cart'; row: ChatCartRow }
   | { kind: 'bulk-commit' }
   | { kind: 'refresh-cart' }
   | { kind: 'open-cart' }

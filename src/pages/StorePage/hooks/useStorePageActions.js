@@ -54,7 +54,14 @@ export function useStorePageActions({
     }
 
     const product = products.find((item) => String(item.id) === String(productId))
-    const result = await addToCart(productId, quantity, product)
+    let optimisticToast = false
+    const result = await addToCart(productId, quantity, product, {
+      onOptimistic: () => {
+        optimisticToast = true
+        orderCooldownRef.current.set(key, Date.now())
+        showToast(`${product?.description ?? 'Producto'} agregado al carrito`, 'success')
+      },
+    })
 
     if (result?.duplicate) {
       return
@@ -65,8 +72,10 @@ export function useStorePageActions({
       return
     }
 
-    orderCooldownRef.current.set(key, Date.now())
-    showToast(`${product?.description ?? 'Producto'} agregado al carrito`, 'success')
+    if (!optimisticToast) {
+      orderCooldownRef.current.set(key, Date.now())
+      showToast(`${product?.description ?? 'Producto'} agregado al carrito`, 'success')
+    }
   }, [addToCart, isOrderingProduct, products, showToast])
 
   const handleNavigate = useCallback((view) => {

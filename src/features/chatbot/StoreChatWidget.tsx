@@ -48,7 +48,18 @@ type StoreChatWidgetProps = {
   onOpenBulkUpload?: () => void
   onOpenCart?: () => void
   onDownloadTemplate?: () => void
-  onChatAddToCart?: (row: { id: string; codigo?: string; cantidad: number; stock?: number; precio?: number; estado?: string }) => void
+  onChatAddToCart?: (row: {
+    id: string
+    codigo?: string
+    cantidad: number
+    stock?: number
+    precio?: number
+    compra?: number
+    iva?: number
+    exento?: number
+    aplicacion?: string
+    estado?: string
+  }) => void
   onChatBulkCommit?: () => void
   onRefreshCart?: () => void
 }

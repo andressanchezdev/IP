@@ -1,10 +1,10 @@
-import { createContext, useCallback, useContext, useMemo } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
 import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
 import '@/shared/ui/Toast/Toast.css'
 
 const ToastContext = createContext(null)
-const TOAST_DURATION_DESKTOP_MS = 1500
-const TOAST_DURATION_MOBILE_MS = 800
+const TOAST_DURATION_DESKTOP_MS = 1200
+const TOAST_DURATION_MOBILE_MS = 700
 const MOBILE_TOAST_QUERY = '(max-width: 640px)'
 
 function getToastOptions() {
@@ -25,8 +25,13 @@ function getToastOptions() {
 }
 
 export function ToastProvider({ children }) {
+  // Precarga SweetAlert para que el primer toast no espere el import dinámico.
+  useEffect(() => {
+    void loadSweetAlert()
+  }, [])
+
   const showToast = useCallback((title = 'Hecho', icon = 'success') => {
-    loadSweetAlert().then((Swal) => {
+    void loadSweetAlert().then((Swal) => {
       Swal.mixin({
         ...getToastOptions(),
         didOpen: (toast) => {

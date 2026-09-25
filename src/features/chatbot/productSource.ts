@@ -15,6 +15,7 @@ import {
 } from '@/features/catalog/lib/catalogMatch'
 import { stockTotal } from '@/features/catalog/mappers/parseUbicacionStock'
 import { getCatalogProductId } from '@/features/catalog/mappers/mapProduct'
+import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
 
 const GENERIC = new Set([
   'producto',
@@ -205,19 +206,22 @@ function pickProductDisplayName(product: Record<string, unknown>, codigo: string
 }
 
 export function mapApiProductToRecord(product: Record<string, unknown>): ProductRecord | null {
+  // Solo id de inventario (nunca codigo/barcode ni nombre como id).
   const id = getCatalogProductId(product) || ''
   const codigo = String(product?.codigo ?? product?.reference ?? '').trim()
   const descripcion = String(product?.descripcion ?? product?.description ?? '').trim()
   const nombre = pickProductDisplayName(product, codigo)
-  if (!id && !nombre) {
+  if (!id) {
     return null
   }
   const precio = Number(product?.precio ?? product?.price ?? 0)
   const stock = stockTotal(product?.stock ?? product?.cantidad ?? 0)
+  const fiscal = pickProductFiscalFields(product)
+  const aplicacion = String(product?.aplicacion ?? '').trim()
   return {
-    id: id || nombre,
+    id,
     codigo,
-    nombre,
+    nombre: nombre || codigo || id,
     descripcion,
     modelo: String(product?.modelo ?? product?.model ?? '').trim(),
     marca: String(product?.marca ?? product?.brand ?? '').trim() || undefined,
@@ -232,6 +236,8 @@ export function mapApiProductToRecord(product: Record<string, unknown>): Product
     status: 'activo',
     creado_en: '',
     actualizado_en: '',
+    aplicacion: aplicacion || undefined,
+    ...fiscal,
   }
 }
 

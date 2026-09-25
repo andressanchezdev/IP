@@ -1,14 +1,19 @@
 .order-products-modal {
   --auth-modal-height: 640px;
+  display: flex;
+  flex-direction: column;
   width: min(560px, calc(100vw - 32px));
 }
 
-.order-products-modal__form {
+/* El scroll vive en __body; evita que flex:1 del listado colapse a altura 0. */
+.order-products-modal > .auth-modal__form-col.order-products-modal__form {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 12px;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .order-products-modal__header {
@@ -24,9 +29,11 @@
 }
 
 .order-products-modal__body {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 160px;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .order-products-modal__list {
@@ -65,5 +72,9 @@
 @media (max-height: 500px) {
   .order-products-modal {
     --auth-modal-height: min(92dvh, calc(100dvh - 16px));
+  }
+
+  .order-products-modal__body {
+    min-height: 100px;
   }
 }

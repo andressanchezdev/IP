@@ -113,15 +113,31 @@
 }
 
 .carrito-card__qty {
+  -moz-appearance: number-input;
+  appearance: auto;
   background: var(--color-bg-surface);
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--color-border);
+  box-sizing: border-box;
   color: var(--color-text-primary);
-  font-size: 12px;
-  height: 28px;
-  padding: 0 6px;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 36px;
+  min-width: 56px;
+  padding: 0 6px 0 10px;
   text-align: center;
-  width: 52px;
+  visibility: visible;
+  width: clamp(56px, 20%, 80px);
+}
+
+.carrito-card__qty::-webkit-inner-spin-button,
+.carrito-card__qty::-webkit-outer-spin-button {
+  -webkit-appearance: inner-spin-button;
+  appearance: auto;
+  height: 24px;
+  margin: 0;
+  opacity: 1;
 }
 
 .carrito-card__qty-readonly {

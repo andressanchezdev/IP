@@ -16,6 +16,10 @@ import {
   creditReply,
   locationReply,
   partConflictReply,
+  paymentReply,
+  complaintReply,
+  returnsReply,
+  executiveReply,
   scaffoldAbortReply,
   scaffoldAskBrandReply,
   scaffoldAskModelReply,
@@ -26,9 +30,13 @@ import {
   type ChatReply,
 } from './intents'
 import {
+  isComplaintAsk,
   isCreditAsk,
+  isExecutiveAsk,
   isHoursAsk,
   isLocationAsk,
+  isPaymentAsk,
+  isReturnsAsk,
   isShippingAsk,
 } from './conversationThread'
 import { isGreetingToken } from './prepare'
@@ -313,6 +321,10 @@ export function resumeScaffoldQuestion(ctx: SessionContext, reply: ChatReply): C
 
 export function scaffoldAsideReply(ctx: SessionContext, tokens: readonly string[], raw: string): ChatReply | null {
   if (!isScaffoldActive(ctx)) return null
+  if (isExecutiveAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, executiveReply())
+  if (isComplaintAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, complaintReply())
+  if (isReturnsAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, returnsReply())
+  if (isPaymentAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, paymentReply(tokens, ctx))
   if (isShippingAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, shippingReply())
   if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, locationReply(tokens, raw))
   if (isCreditAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, creditReply())

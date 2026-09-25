@@ -167,6 +167,12 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
           )
           return existing ? Number(existing.quantity) || 0 : 0
         },
+        getExistingCartId: (productId) => {
+          const existing = cartItemsRef.current.find(
+            (item) => String(item.id) === String(productId),
+          )
+          return existing?.cartId ?? null
+        },
         onStart: (total) => {
           setProcessState((current) => ({
             ...current,

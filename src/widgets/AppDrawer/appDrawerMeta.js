@@ -25,6 +25,7 @@ export function getDrawerTitle({
   if (drawerType === 'profile') {
     if (profileSubView === 'settings') return 'Configuración'
     if (profileSubView === 'bulk-upload') return 'Subir nuevo archivo'
+    if (profileSubView === 'price-list') return 'Listado de precios'
     if (profileSubView === 'price-download') return PRICE_LIST_TITLES.download
     if (profileSubView === 'price-brand') return PRICE_LIST_TITLES.brand
     if (profileSubView === 'price-category') return PRICE_LIST_TITLES.category

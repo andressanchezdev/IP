@@ -79,6 +79,10 @@ export function rememberOffers(ctx: SessionContext | undefined, products: readon
     modelo: product.modelo || undefined,
     cantidad: product.cantidad,
     codigo: product.codigo || undefined,
+    compra: product.compra,
+    iva: product.iva,
+    exento: product.exento,
+    aplicacion: product.aplicacion,
   }))
   ctx.lastOffersAt = Date.now()
 }
@@ -155,6 +159,10 @@ function recordFromOffer(offer: OfferedProduct): ProductRecord {
     status: 'activo',
     creado_en: '',
     actualizado_en: '',
+    compra: offer.compra,
+    iva: offer.iva,
+    exento: offer.exento,
+    aplicacion: offer.aplicacion,
   }
 }
 

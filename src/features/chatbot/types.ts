@@ -20,6 +20,11 @@ export type ProductRecord = {
   categoryId?: string
   category?: string
   marca?: string
+  /** Fiscales API → POST /inventory/carts (no inventados). */
+  compra?: number
+  iva?: number
+  exento?: number
+  aplicacion?: string
 }
 
 export type LandingTeamGroup = 'asesor' | 'administrativo'

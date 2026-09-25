@@ -73,9 +73,11 @@ import { clearLastOffers } from './inventory'
 import { pushPhaseLog } from './pipelineLog'
 import { matchLandingTeam } from './teamLookup'
 import { parseUserFrame, isTeamNameLookupAllowed } from './userFrame'
-import { classifyTurn, focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
+import { classifyTurn, focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, isCreditAsk, isHoursAsk, isLocationAsk, isShippingAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
 import { isScaffoldActive, openScaffold, resetScaffold, resumeScaffoldQuestion, runScaffoldTurn, scaffoldAsideReply } from './scaffoldSearch'
 import { isOrderFlowActive, resetOrderFlow, runOrderFlowTurn, beginAddFromLastOffer, orderProcessGuideReply } from './createOrderFlow'
+import { tryFastLaneReply } from './agentLane'
+import { buildReplyContext } from './replyContext'
 
 const AFFIRM = new Set(['si', 'ok', 'dale', 'claro', 'yes', 'yep', 'perfecto'])
 const NEGATE = new Set(['no', 'nope', 'nel', 'nada'])
@@ -474,6 +476,8 @@ function finalize(
     }
   }
   log(ctx, 'finalize', intent)
+  const replyCtx = buildReplyContext(ctx)
+  log(ctx, 'context', [replyCtx.focusLabel, replyCtx.orderState, replyCtx.scaffoldState].filter(Boolean).join('|') || '—')
   log(ctx, 'emit', next.text.slice(0, 80))
   saveSession(ctx)
   return next
@@ -722,6 +726,24 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     }
     if (isReturnsAsk(seekTokens, raw)) {
       return finalize(ctx, returnsReply(), 'returns', 6, cfg)
+    }
+    /* Fast lane (FAQ empresa/contacto): también escapa pedido/scaffold sin LLM. */
+    if (!pareceCodigo(raw) && !isCreateOrderAsk(seekTokens, raw)) {
+      const fast = tryFastLaneReply(ctx, seekTokens, raw)
+      if (fast) {
+        const fastIntent = isPaymentAsk(seekTokens, raw)
+          ? 'payment'
+          : isCreditAsk(seekTokens, raw)
+            ? 'credit'
+            : isShippingAsk(seekTokens, raw)
+              ? 'shipping'
+              : isLocationAsk(seekTokens, raw) || isHoursAsk(seekTokens, raw)
+                ? 'location'
+                : isExecutiveAsk(seekTokens, raw)
+                  ? 'attention'
+                  : 'company'
+        return finalize(ctx, fast, fastIntent, 9, cfg)
+      }
     }
     if (!isOrderFlowActive(ctx) && isOrderProcessAsk(seekTokens, raw)) {
       return finalize(ctx, orderProcessGuideReply(), 'product', 8, cfg)

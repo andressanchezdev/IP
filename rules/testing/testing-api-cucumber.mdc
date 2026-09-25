@@ -1,0 +1,39 @@
+---
+description: Pruebas Cucumber de calidad/resiliencia API (rate-limit, red lenta, recovery)
+globs: tests/api/**/*,**/*.feature
+alwaysApply: false
+---
+
+# Pruebas API con Cucumber
+
+## Alcance
+
+Escenarios BDD en `tests/api` para límites de peticiones, red lenta y recuperación offline. No reemplazan unit tests de UI.
+
+## Obligatorio
+
+1. Usar Cucumber (`*.feature` + steps ESM); no scripts sueltos de flood
+2. Cada endpoint de la app debe tener escenario de **caso de uso** en `tests/api/features/usecases/`
+3. Tope duro ≤ 700 en `@load`; escenarios agresivos/use-case usan menos
+4. Preferir GET; mutaciones de carrito solo con cleanup DELETE por `id_carrito`
+5. No crear ventas reales en sondeos; POST sales = contrato de body
+6. Token solo por env (`CART_TEST_TOKEN` / `API_TEST_TOKEN`)
+7. Documentar en `tests/api/README.md`
+8. Recovery: cola local con concurrencia 1 (sin stampede)
+9. Carga producción (`@load`): ~300 req/min con usuarios virtuales; parar ante 429 sostenido
+
+## Comandos
+
+- `npm run test:api` — sin `@live`
+- `npm run test:api:live` — todo `@live`
+- `npm run test:api:load` — ~300 req/min (capacidad producción)
+- `npm run test:api:aggressive` — ráfagas concurrentes
+- `npm run test:api:usecases` — casos de uso por endpoint
+- `npm run test:api:all` — todo
+
+## Prohibido
+
+- Flood sin ritmo (RPM) ni tope
+- Guardar JWT en el repo
+- Tratar un 500 de negocio como evidencia de rate-limit
+- Ejecutar DELETE massive all en sondeos de carga

@@ -115,7 +115,7 @@ export function CatalogView({
             key={product.id}
             {...product}
             priority={index < 6}
-            isInCart={cartProductIds.has(product.id)}
+            isInCart={cartProductIds.has(String(product.id))}
             isOrdering={orderingProductIds?.has?.(String(product.id))}
             onOrder={onOrder}
             onOpenDetail={onOpenDetail}

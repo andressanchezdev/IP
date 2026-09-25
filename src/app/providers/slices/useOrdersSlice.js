@@ -50,46 +50,93 @@ function resolveOrderRefId(order) {
   return String(order?.claveVenta ?? order?.clave_venta ?? '').trim()
 }
 
+function orderLookupKeys(order) {
+  return [
+    String(order?.id ?? '').trim(),
+    String(order?.idventa ?? '').trim(),
+    String(order?.claveVenta ?? order?.clave_venta ?? '').trim(),
+  ].filter(Boolean)
+}
+
+function pickOrderLineItems(order) {
+  if (Array.isArray(order?.items) && order.items.length > 0) {
+    return order.items
+  }
+  if (Array.isArray(order?.venta) && order.venta.length > 0) {
+    return order.venta
+  }
+  return []
+}
+
+/** Conserva abonos locales y snapshot de ítems del checkout si la API no trae líneas. */
 function mergeLocalPayments(mappedOrders, previousOrders) {
   const localByKey = new Map()
   previousOrders.forEach((entry) => {
-    const payments = entry?.payment?.payments
-    if (!Array.isArray(payments) || payments.length === 0) {
+    const keys = orderLookupKeys(entry)
+    if (keys.length === 0) {
       return
     }
-    const keys = [
-      String(entry.id ?? '').trim(),
-      String(entry.idventa ?? '').trim(),
-      String(entry.claveVenta ?? entry.clave_venta ?? '').trim(),
-    ].filter(Boolean)
+    const snapshot = {
+      payment: entry?.payment,
+      items: pickOrderLineItems(entry),
+      packaging: entry?.packaging,
+      client: entry?.client,
+      delivery: entry?.delivery,
+      source: entry?.source,
+    }
     keys.forEach((key) => {
-      localByKey.set(key, entry.payment)
+      localByKey.set(key, snapshot)
     })
   })
 
   return mappedOrders.map((order) => {
-    const keys = [
-      String(order.id ?? '').trim(),
-      String(order.idventa ?? '').trim(),
-      String(order.claveVenta ?? order.clave_venta ?? '').trim(),
-    ].filter(Boolean)
-    const localPayment = keys.map((key) => localByKey.get(key)).find(Boolean)
-    if (!localPayment) {
+    const keys = orderLookupKeys(order)
+    const local = keys.map((key) => localByKey.get(key)).find(Boolean)
+    if (!local) {
       return order
     }
-    const payments = localPayment.payments ?? []
-    const paidAmount = sumVerifiedAbonos(payments)
-    return {
-      ...order,
-      payment: {
-        ...(order.payment ?? {}),
-        ...localPayment,
-        amount: order.payment?.amount ?? order.total ?? localPayment.amount,
-        paidAmount,
-        payments,
-        paymentsMade: payments.length,
-      },
+
+    let next = order
+    const localPayment = local.payment
+    const localPayments = Array.isArray(localPayment?.payments) ? localPayment.payments : []
+    if (localPayments.length > 0) {
+      const paidAmount = sumVerifiedAbonos(localPayments)
+      next = {
+        ...next,
+        payment: {
+          ...(order.payment ?? {}),
+          ...localPayment,
+          amount: order.payment?.amount ?? order.total ?? localPayment.amount,
+          paidAmount,
+          payments: localPayments,
+          paymentsMade: localPayments.length,
+        },
+      }
     }
+
+    const apiItems = pickOrderLineItems(next)
+    if (apiItems.length === 0 && local.items.length > 0) {
+      const totalQuantity = local.items.reduce(
+        (sum, item) => sum + (Number(item?.quantity ?? item?.cant) || 0),
+        0,
+      )
+      next = {
+        ...next,
+        items: local.items,
+        venta: local.items,
+        source: next.source || local.source || 'checkout',
+        client: next.client ?? local.client,
+        delivery: next.delivery ?? local.delivery,
+        packaging: {
+          productCount: local.items.length,
+          totalQuantity,
+          ...(local.packaging ?? {}),
+          ...(next.packaging ?? {}),
+        },
+      }
+    }
+
+    return next
   })
 }
 

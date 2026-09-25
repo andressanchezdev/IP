@@ -16,16 +16,81 @@ function toSafeNumber(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback
 }
 
-function toHistoryItems(venta = []) {
-  if (!Array.isArray(venta)) {
+/** Acepta array, JSON string o un solo objeto de línea. */
+function coerceLineArray(raw) {
+  if (Array.isArray(raw)) {
+    return raw
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    if (!trimmed) {
+      return []
+    }
+    try {
+      const parsed = JSON.parse(trimmed)
+      return coerceLineArray(parsed)
+    } catch {
+      return []
+    }
+  }
+  if (raw && typeof raw === 'object') {
+    if (
+      raw.idpr != null
+      || raw.id_producto != null
+      || raw.idProducto != null
+      || raw.codigo != null
+    ) {
+      return [raw]
+    }
+  }
+  return []
+}
+
+/**
+ * Líneas de producto de una venta API.
+ * El backend ha usado `venta`, y a veces `productos` / `detalle` / `items`.
+ */
+function pickSaleLines(entry) {
+  const candidates = [
+    entry?.venta,
+    entry?.productos,
+    entry?.detalle,
+    entry?.detalle_venta,
+    entry?.items,
+    entry?.lines,
+  ]
+  for (const candidate of candidates) {
+    const lines = coerceLineArray(candidate)
+    if (lines.length > 0) {
+      return lines
+    }
+  }
+  return []
+}
+
+function toHistoryItems(rawLines = []) {
+  const lines = coerceLineArray(rawLines)
+  if (lines.length === 0) {
     return []
   }
 
-  return venta.map((item, index) => {
-    const idpr = item?.idpr ?? null
-    const cant = toSafeNumber(item?.cant, 0)
-    const costo = toSafeNumber(item?.costo, 0)
+  return lines.map((item, index) => {
+    const idpr = item?.idpr ?? item?.id_producto ?? item?.idProducto ?? item?.id ?? null
+    const cant = toSafeNumber(item?.cant ?? item?.cantidad ?? item?.quantity, 0)
+    const costo = toSafeNumber(
+      item?.costo ?? item?.precio ?? item?.precio_unitario ?? item?.price,
+      0,
+    )
     const rel = toSafeNumber(item?.rel, 0)
+    const description = String(
+      item?.description
+      ?? item?.descripcion
+      ?? item?.nombre
+      ?? '',
+    ).trim() || `Producto #${idpr ?? index + 1}`
+    const reference = String(
+      item?.reference ?? item?.codigo ?? item?.referencia ?? idpr ?? '',
+    ).trim()
 
     return {
       idpr,
@@ -35,8 +100,18 @@ function toHistoryItems(venta = []) {
       id: String(idpr ?? `pr-${index}`),
       quantity: cant,
       price: costo,
-      description: `Producto #${idpr ?? index + 1}`,
-      reference: idpr != null ? String(idpr) : '',
+      description,
+      reference,
+      category: String(item?.category ?? item?.categoria ?? '').trim(),
+      brand: String(item?.brand ?? item?.marca ?? '').trim(),
+      model: String(item?.model ?? item?.modelo ?? '').trim(),
+      imageUrl: String(
+        item?.imageUrl
+        ?? item?.imagen
+        ?? item?.imagen_producto
+        ?? '',
+      ).trim(),
+      brandLogo: String(item?.brandLogo ?? item?.brandLogoUrl ?? item?.imagen_marca ?? '').trim(),
     }
   })
 }
@@ -44,7 +119,7 @@ function toHistoryItems(venta = []) {
 export function mapSaleToHistoryOrder(entry) {
   const idventa = toSafeNumber(entry?.id_venta, 0)
   const claveVenta = String(entry?.clave_venta ?? '').trim()
-  const venta = toHistoryItems(entry?.venta)
+  const venta = toHistoryItems(pickSaleLines(entry))
   const metodo_pago = String(entry?.metodo_pago ?? '').trim()
   const estado = String(entry?.estado ?? '').trim()
   const fecha = entry?.fecha ?? ''

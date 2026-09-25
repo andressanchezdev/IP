@@ -23,6 +23,7 @@ export function ProfileDrawerSubViews({ profileSubView, setProfileSubView, close
   return (
     <ProfileDrawerContent
       onOpenBulkUpload={() => setProfileSubView('bulk-upload')}
+      initialOpenSectionId={profileSubView === 'price-list' ? 'price-list' : null}
     />
   )
 }

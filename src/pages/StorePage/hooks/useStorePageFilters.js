@@ -393,7 +393,7 @@ export function useStorePageFilters({
   }, [activeView, historyOrders, debouncedSearchValue, historyPaymentFilter, historyStatusFilter])
 
   const cartProductIds = useMemo(
-    () => new Set(cartItems.map((item) => item.id)),
+    () => new Set(cartItems.map((item) => String(item.id))),
     [cartItems],
   )
 

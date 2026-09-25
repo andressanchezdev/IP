@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth, useProfile } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
@@ -70,11 +70,11 @@ function ProfilePanelRow({ label, value, highlight = false }) {
   )
 }
 
-export function ProfileDrawerContent({ onOpenBulkUpload }) {
+export function ProfileDrawerContent({ onOpenBulkUpload, initialOpenSectionId = null }) {
   const { profile, profileSettings } = useProfile()
   const { tokenAccess } = useAuth()
   const { showToast } = useToast()
-  const [openSectionId, setOpenSectionId] = useState(null)
+  const [openSectionId, setOpenSectionId] = useState(initialOpenSectionId)
   const [priceDownloadMethod, setPriceDownloadMethod] = useState('pdf')
   const [priceDownloadMethodOpen, setPriceDownloadMethodOpen] = useState(false)
   const [isDownloadingPriceList, setIsDownloadingPriceList] = useState(false)
@@ -89,6 +89,12 @@ export function ProfileDrawerContent({ onOpenBulkUpload }) {
     models: 'all',
   })
   const [openPriceFilterId, setOpenPriceFilterId] = useState(null)
+
+  useEffect(() => {
+    if (initialOpenSectionId) {
+      setOpenSectionId(initialOpenSectionId)
+    }
+  }, [initialOpenSectionId])
   const {
     categorias,
     marcas,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCart, useCatalog } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
@@ -44,15 +44,103 @@ function CartItemMedia({ item }) {
   )
 }
 
-function CartCard({ item, catalogStock = 0, onQuantityChange, onRemove }) {
+/** Mismo comportamiento de incrementador que ProductCard (landing). */
+function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, onRemove }) {
   const categoryText = String(item.category || '').trim()
   const descriptionText = String(item.description || '').trim()
   const brandText = String(item.brand || '').trim()
   const modelText = String(item.model || '').trim()
   const referenceText = String(item.reference || item.id || '').trim()
   // Stock disponible = catálogo (API inicial + WS) + unidades ya en esta línea (API carrito).
-  const maxQty = Math.max(1, (Number(catalogStock) || 0) + (Number(item.quantity) || 0))
+  const maxQuantity = Math.max(1, (Number(catalogStock) || 0) + (Number(item.quantity) || 0))
   const unitPrice = Number(item.price) || 0
+  const [quantity, setQuantity] = useState(() => Number(item.quantity) || 1)
+  const { showToast } = useToast()
+
+  useEffect(() => {
+    setQuantity(Number(item.quantity) || 1)
+  }, [item.quantity, item.cartId])
+
+  const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
+
+  const notifyStockLimit = () => {
+    showToast('cantidad máxima alcanzada', 'error')
+  }
+
+  /** Solo actualiza UI local; el PUT va en blur (valor ya establecido). */
+  const applyLocalQuantity = (next) => {
+    const parsed = Number(next)
+    if (!Number.isFinite(parsed)) {
+      return
+    }
+    if (parsed >= maxQuantity) {
+      notifyStockLimit()
+    }
+    setQuantity(clampQuantity(parsed))
+  }
+
+  const commitQuantityToApi = (next) => {
+    const clamped = clampQuantity(next)
+    setQuantity(clamped)
+    if (clamped !== Number(item.quantity)) {
+      onQuantityChange?.(item.id, clamped)
+    }
+  }
+
+  const handleChange = (event) => {
+    if (qtyBusy) return
+    const raw = event.target.value
+    if (raw === '') {
+      setQuantity('')
+      return
+    }
+
+    const value = Number.parseInt(raw, 10)
+    if (!Number.isFinite(value) || value < 0) {
+      return
+    }
+
+    applyLocalQuantity(value)
+  }
+
+  const handleFocus = (event) => {
+    event.target.select()
+  }
+
+  const handleMouseUp = (event) => {
+    const input = event.currentTarget
+    const rect = input.getBoundingClientRect()
+    const clickedStepper = rect.width - (event.clientX - rect.left) <= 22
+    if (clickedStepper) {
+      return
+    }
+    event.preventDefault()
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur()
+      return
+    }
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+      return
+    }
+
+    event.preventDefault()
+    if (qtyBusy) return
+    const parsed = Number(quantity)
+    const current = quantity === '' || !Number.isFinite(parsed) ? 0 : parsed
+    const delta = event.key === 'ArrowUp' ? 1 : -1
+    applyLocalQuantity(current + delta)
+  }
+
+  const handleBlur = () => {
+    if (quantity === '' || !Number.isFinite(Number(quantity)) || Number(quantity) < 1) {
+      commitQuantityToApi(1)
+      return
+    }
+    commitQuantityToApi(Number(quantity))
+  }
 
   return (
     <li className="carrito-card" data-cart-id={item.cartId ?? undefined} data-product-id={item.id}>
@@ -86,27 +174,37 @@ function CartCard({ item, catalogStock = 0, onQuantityChange, onRemove }) {
         <div className="carrito-card__footer">
           <input
             type="number"
+            inputMode="numeric"
             className="carrito-card__qty"
-            value={item.quantity}
+            value={quantity}
             min="1"
-            max={maxQty}
-            onChange={(event) => {
-              const nextQty = Number(event.target.value)
-              onQuantityChange(item.id, Number.isNaN(nextQty) ? item.quantity : nextQty)
-            }}
+            max={maxQuantity}
+            step="1"
+            disabled={qtyBusy}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onMouseUp={handleMouseUp}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             {...namedControl(`Cantidad de ${descriptionText || referenceText || 'producto'}`)}
           />
 
           <div className="carrito-card__prices">
             <span className="carrito-card__price">{formatPrice(unitPrice)}</span>
             <span className="carrito-card__price-sep" aria-hidden="true">|</span>
-            <span className="carrito-card__total">{formatPrice(unitPrice * item.quantity)}</span>
+            <span className="carrito-card__total">
+              {formatPrice(unitPrice * (Number(quantity) || Number(item.quantity) || 1))}
+            </span>
           </div>
 
           <button
             type="button"
             className="carrito-card__remove"
-            onClick={() => onRemove(item.id)}
+            disabled={qtyBusy}
+            onClick={() => {
+              if (qtyBusy) return
+              onRemove(item.id)
+            }}
             {...namedControl(`Eliminar ${descriptionText || referenceText || 'producto'}`)}
           >
             <span className="carrito-card__remove-icon" aria-hidden="true" />
@@ -123,6 +221,7 @@ export function CartDrawerContent() {
     removeFromCart,
     setCartItemQuantity,
     initiateCheckout,
+    isMutatingCartQty,
   } = useCart()
   const { products } = useCatalog()
   const { showToast } = useToast()
@@ -197,19 +296,24 @@ export function CartDrawerContent() {
                       key={item.cartId ?? item.id}
                       item={item}
                       catalogStock={catalogStockById.get(String(item.id)) ?? 0}
+                      qtyBusy={isMutatingCartQty(item.id)}
                       onQuantityChange={async (productId, quantity) => {
                         const result = await setCartItemQuantity(productId, quantity)
+                        if (result?.duplicate || result?.skipped) return
                         if (!result?.success) {
                           showToast(result?.error || 'No se pudo actualizar la cantidad', 'error')
                         }
                       }}
                       onRemove={async (productId) => {
-                        const result = await removeFromCart(productId)
+                        const result = await removeFromCart(productId, {
+                          onOptimistic: () => {
+                            showToast('Producto retirado del carrito', 'success')
+                          },
+                        })
+                        if (result?.duplicate || result?.skipped) return
                         if (!result?.success) {
                           showToast(result?.error || 'No se pudo retirar el producto', 'error')
-                          return
                         }
-                        showToast('Producto retirado del carrito', 'success')
                       }}
                     />
                   ))

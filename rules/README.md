@@ -54,6 +54,7 @@ Se activan al trabajar con archivos de prueba:
 - `testing-mocks.mdc` - Mocking y stubs
 - `testing-coverage.mdc` - Cobertura de pruebas
 - `testing-organization.mdc` - Organización de tests
+- `testing-api-cucumber.mdc` - Calidad/resiliencia API con Cucumber (rate-limit, red lenta, recovery)
 
 ### 🔧 legacy/ - Reglas de Código Legacy
 

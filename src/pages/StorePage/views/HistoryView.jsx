@@ -1,5 +1,6 @@
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import { useActionLock } from '@/shared/lib/useActionLock'
 import { resolveEstadoBadgeTone } from '@/features/orders/constants/orderSteps'
 import {
   getCreditRemainingForNewAbono,
@@ -14,10 +15,6 @@ function canCreateAbono(order) {
   return getCreditRemainingForNewAbono(total, payments) > 0
 }
 
-function hasAbonos(order) {
-  return (order?.payment?.payments ?? []).length > 0
-}
-
 function resolveOrderActionId(order) {
   const fromId = String(order?.id ?? '').trim()
   if (fromId) {
@@ -28,6 +25,55 @@ function resolveOrderActionId(order) {
     return fromVenta
   }
   return String(order?.claveVenta ?? order?.clave_venta ?? '').trim()
+}
+
+function HistoryRowActions({ order, actionOrderId, allowAbono, abonosCount, onCreateAbono, onViewAbonos }) {
+  const { busy, run } = useActionLock()
+
+  return (
+    <div className="historial-acciones">
+      <button
+        type="button"
+        className="historial-view-abonos-btn"
+        disabled={!actionOrderId || busy}
+        onClick={() => {
+          if (!actionOrderId) return
+          void run(async () => {
+            onViewAbonos?.(actionOrderId)
+          })
+        }}
+        {...namedControl(
+          abonosCount > 0
+            ? `Ver abonos pedido ${order.idventa} (${abonosCount})`
+            : `Ver información de pago pedido ${order.idventa}`,
+        )}
+      >
+        <img
+          src={eyeIcon}
+          className="historial-view-abonos-btn__icon"
+          {...namedImage('Ver abonos')}
+        />
+      </button>
+      <button
+        type="button"
+        className="historial-abono-btn"
+        disabled={!allowAbono || !actionOrderId || busy}
+        onClick={() => {
+          if (!allowAbono || !actionOrderId) return
+          void run(async () => {
+            onCreateAbono?.(actionOrderId)
+          })
+        }}
+        {...namedControl(
+          allowAbono
+            ? `Crear abono pedido ${order.idventa}`
+            : `No disponible crear abono pedido ${order.idventa}`,
+        )}
+      >
+        +
+      </button>
+    </div>
+  )
 }
 
 export function HistoryView({
@@ -45,30 +91,31 @@ export function HistoryView({
           <table className="landing__table landing__table--historial">
             <thead>
               <tr>
-                <th className="landing__table-col landing__table-col--priority">Pedido</th>
-                <th className="landing__table-col landing__table-col--priority">Fecha</th>
-                <th className="landing__table-col landing__table-col--secondary">Fecha límite</th>
-                <th className="landing__table-col landing__table-col--secondary">Medio pago</th>
-                <th className="landing__table-col landing__table-col--secondary">Valor</th>
+                {/* Prioridad visual: Pedido, Medio pago, Estado, Acción */}
+                <th className="landing__table-col landing__table-col--priority">ID Pedido</th>
+                <th className="landing__table-col landing__table-col--priority">Medio pago</th>
                 <th className="landing__table-col landing__table-col--priority">Estado</th>
+                <th className="landing__table-col landing__table-col--secondary">Fecha</th>
+                <th className="landing__table-col landing__table-col--secondary">Fecha límite</th>
+                <th className="landing__table-col landing__table-col--secondary">Valor</th>
                 <th className="landing__table-col landing__table-col--priority">Acción</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
+                <tr className="landing__table-row--status">
                   <td colSpan="7" className="landing__table-empty">Cargando cartera...</td>
                 </tr>
               ) : errorMessage ? (
-                <tr>
+                <tr className="landing__table-row--status">
                   <td colSpan="7" className="landing__table-empty">{errorMessage}</td>
                 </tr>
               ) : historyOrders.length === 0 ? (
-                <tr>
+                <tr className="landing__table-row--status">
                   <td colSpan="7" className="landing__table-empty">No hay créditos registrados.</td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
-                <tr>
+                <tr className="landing__table-row--status">
                   <td colSpan="7" className="landing__table-empty">Sin registros encontrados.</td>
                 </tr>
               ) : (
@@ -82,11 +129,19 @@ export function HistoryView({
                   const abonosCount = (order?.payment?.payments ?? []).length
 
                   return (
-                    <tr key={order.idventa ?? actionOrderId}>
-                      <td className="landing__table-col landing__table-col--priority" data-label="#Pedido">
+                    <tr key={order.idventa ?? actionOrderId} className="landing__table-row--order">
+                      <td className="landing__table-col landing__table-col--priority" data-label="id Pedido">
                         {order.idventa}
                       </td>
-                      <td className="landing__table-col landing__table-col--priority" data-label="Fecha">
+                      <td className="landing__table-col landing__table-col--priority" data-label="Medio pago">
+                        {order.metodo_pago}
+                      </td>
+                      <td className="landing__table-col landing__table-col--priority" data-label="Estado">
+                        <span className={`historial-estado-badge historial-estado-badge--${badgeTone}`}>
+                          {estadoLabel}
+                        </span>
+                      </td>
+                      <td className="landing__table-col landing__table-col--secondary" data-label="Fecha">
                         {order.fecha}
                       </td>
                       <td className="landing__table-col landing__table-col--secondary" data-label="Fecha límite">
@@ -100,57 +155,18 @@ export function HistoryView({
                           {dateLimitLabel}
                         </span>
                       </td>
-                      <td className="landing__table-col landing__table-col--secondary" data-label="Medio pago">
-                        {order.metodo_pago}
-                      </td>
                       <td className="landing__table-col landing__table-col--secondary" data-label="Valor">
                         {formatPrice(order.total)}
                       </td>
-                      <td className="landing__table-col landing__table-col--priority" data-label="Estado">
-                        <span className={`historial-estado-badge historial-estado-badge--${badgeTone}`}>
-                          {estadoLabel}
-                        </span>
-                      </td>
                       <td className="landing__table-col landing__table-col--priority" data-label="Acción">
-                        <div className="historial-acciones">
-                          <button
-                            type="button"
-                            className="historial-view-abonos-btn"
-                            disabled={!actionOrderId}
-                            onClick={() => {
-                              if (!actionOrderId) return
-                              // Drawer pedido + sección Información de pago (abonos)
-                              onViewAbonos?.(actionOrderId)
-                            }}
-                            {...namedControl(
-                              abonosCount > 0
-                                ? `Ver abonos pedido ${order.idventa} (${abonosCount})`
-                                : `Ver información de pago pedido ${order.idventa}`,
-                            )}
-                          >
-                            <img
-                              src={eyeIcon}
-                              className="historial-view-abonos-btn__icon"
-                              {...namedImage('Ver abonos')}
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            className="historial-abono-btn"
-                            disabled={!allowAbono || !actionOrderId}
-                            onClick={() => {
-                              if (!allowAbono || !actionOrderId) return
-                              onCreateAbono?.(actionOrderId)
-                            }}
-                            {...namedControl(
-                              allowAbono
-                                ? `Crear abono pedido ${order.idventa}`
-                                : `No disponible crear abono pedido ${order.idventa}`,
-                            )}
-                          >
-                            +
-                          </button>
-                        </div>
+                        <HistoryRowActions
+                          order={order}
+                          actionOrderId={actionOrderId}
+                          allowAbono={allowAbono}
+                          abonosCount={abonosCount}
+                          onCreateAbono={onCreateAbono}
+                          onViewAbonos={onViewAbonos}
+                        />
                       </td>
                     </tr>
                   )

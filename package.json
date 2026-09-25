@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:api": "cucumber-js --config tests/api/cucumber.config.js --tags \"not @live\"",
+    "test:api:live": "cucumber-js --config tests/api/cucumber.config.js --tags \"@live\"",
+    "test:api:load": "cucumber-js --config tests/api/cucumber.config.js --tags \"@load\"",
+    "test:api:aggressive": "cucumber-js --config tests/api/cucumber.config.js --tags \"@aggressive\"",
+    "test:api:usecases": "cucumber-js --config tests/api/cucumber.config.js --tags \"@usecase\"",
+    "test:api:all": "cucumber-js --config tests/api/cucumber.config.js"
   },
   "dependencies": {
     "jspdf": "^4.2.1",
@@ -17,6 +23,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",

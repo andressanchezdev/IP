@@ -76,8 +76,9 @@ origin: original
   "2.8 estilo: máximo 5 pasos y 8 líneas en explicaciones. Título con emoji, una acción por paso, confirmaciones [ Sí ] [ No ]. Si piden más detalle, una idea por mensaje.",
   "3.1: experto en repuestos sin inventar; jerga colombiana y typos (Levenshtein ≤2 en tokens ≥5); responde solo lo preguntado; mantiene el hilo y lo libera con mejor/otra cosa/cancelar/reiniciar sin perder el carrito; coincidencias numeradas categoria · modelo · marca · codigo · precio (máx. 5).",
   "llanta: si el token es llanta/llantas, no puntuar marca (salvo 'llanta marca …'); categoría de llantas +20; descripción 30.",
-  "Carrito single: POST /api/v1/inventory/carts JSON { id_producto, cantidad, precio_unitario } + Bearer. Un producto por llamada (Sí de agregar, código pegado, flujo uno a uno).",
-  "Carga masiva: NO hay POST de archivo. Se parsea el Excel en cliente (CODIGO|CANTIDAD), GET /search por código y POST /inventory/carts por cada fila válida.",
+  "Carrito single: POST /api/v1/inventory/carts JSON { id_producto, cantidad, precio_unitario, compra, exento, iva, aplicacion, fecha } + Bearer. id_producto = id de inventario (nunca codigo). Un producto por llamada (Sí de agregar, código pegado, flujo uno a uno).",
+  "Carga masiva: NO hay POST de archivo. Se parsea el Excel en cliente (CODIGO|CANTIDAD), GET /search por código, POST /carts/check-massive y POST /inventory/carts por cada fila válida (mismo body completo).",
+  "PUT /inventory/carts (cambiar cantidad en drawer): body con id_carrito + mismos campos de contenido. El bot no usa PUT; solo POST al agregar.",
   "Nunca enviar un ítem suelto como si fuera Excel. Nunca enviar un archivo a POST /carts. Nunca usar /products/filter ni /products/list para el carrito.",
   "Si no está claro si es archivo o un producto, preguntar. No inventar endpoints ni bodies.",
   "Si el mensaje es <= 3 palabras y contiene una familia escalonable y NO trae marca ni modelo -> iniciar scaffoldedSearch en awaitingBrand.",
@@ -104,15 +105,28 @@ origin: original
 
 Base: `VITE_API_BASE_URL`. Headers de API: `Authorization: Bearer <token>`, `Accept: application/json`. POST JSON también envía `Content-Type: application/json`.
 
-GET (lectura): `/api/v1/general` · `/inventory/products` · `/inventory/products/search?search=` (404=[]) · `/inventory/products/latest` (404=[]) · `/general/filter` (cache 3 min) · `/inventory/carts` · `/managment/sales`.
+**El bot llama directamente (lectura):**
+- `GET /api/v1/inventory/products/search?search=` (404 → lista vacía)
+- `GET /api/v1/inventory/products/latest` (404 → lista vacía)
+- `GET /api/v1/general/filter` (cache 3 min, léxico marcas/categorías/modelos)
+- Carga masiva: mismos `GET …/search` por código + `POST /api/v1/inventory/carts/check-massive` body `{ productos: [{ id_producto, cantidad }] }`
+
+**El bot NO llama (la app / drawer sí):** `GET /general`, `GET /inventory/products`, `GET /inventory/carts`, `GET|POST /managment/sales`. Estado de pedido y checkout son FAQ / UI del carrito.
+
+**Comandos UI del bot → host (StorePage):**
+- `add-cart` / `bulk-commit` → `POST /api/v1/inventory/carts` body completo `{ id_producto, cantidad, precio_unitario, compra, exento, iva, aplicacion, fecha }` (`id_producto` = id de inventario, nunca `codigo`)
+- `filter` → `POST /inventory/products/filter` (listado, no carrito)
+- `search` → mismo `GET …/search` vía catálogo de la tienda
 
 POST que NO tocan el carrito: `/inventory/products/filter` (drawer) · `/inventory/products/list` (PDF/Excel de precios).
 
-Agregar al carrito (un ítem): `POST /api/v1/inventory/carts` body `{ "id_producto": 7704790200048, "cantidad": 1, "precio_unitario": 28000 }`. Chat: comando `add-cart` tras [ Sí ].
+Agregar al carrito (un ítem): `POST /api/v1/inventory/carts` body `{ "id_producto": 2, "cantidad": 1, "precio_unitario": 28000, "compra": 16275.64, "exento": 1, "iva": 19, "aplicacion": "json", "fecha": "2026-09-25 10:15:00" }`. Chat: comando `add-cart` tras [ Sí ].
 
-Carga masiva: no existe un endpoint de archivo. Excel (CODIGO|CANTIDAD) se lee en el cliente; cada código se busca con GET `/search`; cada fila válida se agrega con el mismo `POST /inventory/carts`. Chat: comando `bulk-commit`. Drawer "Subir nuevo archivo" usa el mismo flujo.
+Actualizar cantidad (drawer, no bot): `PUT /api/v1/inventory/carts` body con `id_carrito` + mismos campos de contenido.
 
-Comparativa: archivo Excel → parse + search + N× POST carts. Confirmación de un producto → 1× POST carts. Filtro o listado de precios → nunca carrito. Si la acción no encaja, no llamar POST.
+Carga masiva: no existe un endpoint de archivo. Excel (CODIGO|CANTIDAD) se lee en el cliente; cada código se busca con GET `/search`; stock con POST `/carts/check-massive`; cada fila válida se agrega con el mismo `POST /inventory/carts` (body completo). Chat: comando `bulk-commit`. Drawer "Subir nuevo archivo" usa el mismo flujo.
+
+Comparativa: archivo Excel → parse + search + check-massive + N× POST carts. Confirmación de un producto → 1× POST carts. Filtro o listado de precios → nunca carrito. Si la acción no encaja, no llamar POST.
 
 ## Pipeline / fases
 

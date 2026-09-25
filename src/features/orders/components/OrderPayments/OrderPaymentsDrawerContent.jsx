@@ -20,6 +20,7 @@ import { formatOrderDateTime, formatRealAmount } from '@/features/orders/utils/o
 import { readFileAsDataUrl } from '@/shared/lib/readFileAsDataUrl'
 import eyeIcon from '@/assets/icons/eye.svg'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
+import { useActionLock } from '@/shared/lib/useActionLock'
 import { FieldHint } from '@/shared/ui/FieldHint/FieldHint'
 import '@/shared/ui/FieldHint/FieldHint.css'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
@@ -60,6 +61,7 @@ function AbonoProofLink({ entry }) {
 export function OrderPaymentsDrawerContent() {
   const { selectedOrder, formalizeOrderPayment } = useOrders()
   const { showToast } = useToast()
+  const { busy, run } = useActionLock()
   const [paymentType, setPaymentType] = useState(
     () => resolveInitialAbonoType(selectedOrder?.payment?.type),
   )
@@ -122,31 +124,33 @@ export function OrderPaymentsDrawerContent() {
   }
 
   const handleSubmit = () => {
-    if (!validation.isValid) {
-      showToast('Complete los datos de pago', 'error')
-      return
-    }
+    void run(async () => {
+      if (!validation.isValid) {
+        showToast('Complete los datos de pago', 'error')
+        return
+      }
 
-    const result = formalizeOrderPayment(selectedOrder.id, {
-      type: paymentType,
-      ...formValues,
-      ...(paymentType === 'transferencia'
-        ? {
-            account: TRANSFER_ACCOUNT.account,
-            bank: TRANSFER_ACCOUNT.bank,
-          }
-        : {}),
+      const result = formalizeOrderPayment(selectedOrder.id, {
+        type: paymentType,
+        ...formValues,
+        ...(paymentType === 'transferencia'
+          ? {
+              account: TRANSFER_ACCOUNT.account,
+              bank: TRANSFER_ACCOUNT.bank,
+            }
+          : {}),
+      })
+
+      if (!result.success) {
+        const message = result.reason === 'exceeds-balance'
+          ? `El abono supera el saldo disponible de ${formatRealAmount(result.remainingAmount)}`
+          : 'No fue posible registrar el pago'
+        showToast(message, 'error')
+        return
+      }
+
+      showToast('Abono enviado a revisión', 'success')
     })
-
-    if (!result.success) {
-      const message = result.reason === 'exceeds-balance'
-        ? `El abono supera el saldo disponible de ${formatRealAmount(result.remainingAmount)}`
-        : 'No fue posible registrar el pago'
-      showToast(message, 'error')
-      return
-    }
-
-    showToast('Abono enviado a revisión', 'success')
   }
 
   const selectedLabel = ABONO_PAYMENT_TYPES.find((entry) => entry.id === paymentType)?.label || ''
@@ -306,10 +310,10 @@ export function OrderPaymentsDrawerContent() {
           type="button"
           className="content-main-data-carrito__checkout"
           onClick={handleSubmit}
-          disabled={remainingAmount === 0 || !validation.isValid}
-          {...namedControl('Formalizar pago')}
+          disabled={remainingAmount === 0 || !validation.isValid || busy}
+          {...namedControl(busy ? 'Registrando pago…' : 'Formalizar pago')}
         >
-          Formalizar pago
+          {busy ? 'Registrando…' : 'Formalizar pago'}
         </button>
       </div>
     </div>

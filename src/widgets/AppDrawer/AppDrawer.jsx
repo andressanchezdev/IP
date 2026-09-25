@@ -49,7 +49,7 @@ export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } 
   const [cartMenuOpen, setCartMenuOpen] = useState(false)
   const [profileSubView, setProfileSubView] = useState(null)
   const [orderOpenSections, setOrderOpenSections] = useState([])
-  const [productsModalOrder, setProductsModalOrder] = useState(null)
+  const [productsModalOpen, setProductsModalOpen] = useState(false)
 
   useEffect(() => {
     if (!profileLaunchView || !drawerOpen || drawerType !== 'profile') {
@@ -98,6 +98,16 @@ export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } 
       setProfileSubView(null)
     }
   }, [drawerOpen, drawerType])
+
+  useEffect(() => {
+    if (!drawerOpen || drawerType !== 'order') {
+      setProductsModalOpen(false)
+    }
+  }, [drawerOpen, drawerType])
+
+  useEffect(() => {
+    setProductsModalOpen(false)
+  }, [selectedOrderId])
 
   const handleClose = () => {
     if (drawerType === 'cart' && cartMenuOpen) {
@@ -158,7 +168,7 @@ export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } 
           onCloseSection={(sectionId) => {
             setOrderOpenSections((current) => current.filter((id) => id !== sectionId))
           }}
-          onViewProducts={(order) => setProductsModalOrder(order)}
+          onViewProducts={() => setProductsModalOpen(true)}
         />
       )
     }
@@ -244,9 +254,9 @@ export function AppDrawer({ profileLaunchView = null, onProfileLaunchConsumed } 
       </Drawer>
 
       <OrderProductsModal
-        isOpen={Boolean(productsModalOrder)}
-        order={productsModalOrder}
-        onClose={() => setProductsModalOrder(null)}
+        isOpen={productsModalOpen}
+        order={selectedOrder}
+        onClose={() => setProductsModalOpen(false)}
       />
     </>
   )

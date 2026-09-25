@@ -228,6 +228,11 @@ export function StorePage() {
     clearCommittedProductSearch()
   }, [activeView, navigateToView, applyFiltersDirect, clearCommittedProductSearch])
 
+  const handleOpenPriceList = useCallback(() => {
+    setProfileLaunchView('price-list')
+    openDrawer('profile')
+  }, [openDrawer])
+
   const handleOpenBulkUpload = useCallback(() => {
     setProfileLaunchView('bulk-upload')
     openDrawer('profile')
@@ -246,11 +251,21 @@ export function StorePage() {
   const handleChatAddToCart = useCallback(async (row) => {
     const productId = row?.id
     const quantity = Number(row?.cantidad) || 1
+    let optimisticToast = false
     const result = await addToCart(productId, quantity, {
       id: productId,
       stock: row?.stock,
       precio: row?.precio,
       price: row?.precio,
+      compra: row?.compra,
+      iva: row?.iva,
+      exento: row?.exento,
+      aplicacion: row?.aplicacion,
+    }, {
+      onOptimistic: () => {
+        optimisticToast = true
+        showToast('Producto agregado al carrito', 'success')
+      },
     })
     if (!result?.success) {
       if (result?.duplicate) {
@@ -262,7 +277,9 @@ export function StorePage() {
       showToast(result?.error || 'No se pudo agregar al carrito', 'error')
       return
     }
-    showToast('Producto agregado al carrito', 'success')
+    if (!optimisticToast) {
+      showToast('Producto agregado al carrito', 'success')
+    }
   }, [addToCart, openAuthModal, showToast])
 
   const handleChatBulkCommit = useCallback(async () => {
@@ -286,6 +303,10 @@ export function StorePage() {
         getExistingQty: (productId) => {
           const existing = cartItems.find((item) => String(item.id) === String(productId))
           return existing ? Number(existing.quantity) || 0 : 0
+        },
+        getExistingCartId: (productId) => {
+          const existing = cartItems.find((item) => String(item.id) === String(productId))
+          return existing?.cartId ?? null
         },
       })
       if (result.emptySelection || result.posted.length === 0) {
@@ -473,7 +494,7 @@ export function StorePage() {
       <FloatingCart />
       <StoreChatWidget
         onLogin={() => openAuthModal()}
-        onOpenPriceList={() => openDrawer('profile')}
+        onOpenPriceList={handleOpenPriceList}
         onOpenStore={handleChatOpenStore}
         onFocusSearch={handleChatFocusSearch}
         onCatalogSearch={handleCatalogSearch}
@@ -500,7 +521,7 @@ export function StorePage() {
         product={detailProduct}
         isOpen={Boolean(detailProduct)}
         onClose={() => setDetailProductId(null)}
-        isInCart={detailProduct ? cartProductIds.has(detailProduct.id) : false}
+        isInCart={detailProduct ? cartProductIds.has(String(detailProduct.id)) : false}
         isOrdering={detailProduct ? orderingProductIds.has(String(detailProduct.id)) : false}
         onOrder={handleOrderProduct}
       />
