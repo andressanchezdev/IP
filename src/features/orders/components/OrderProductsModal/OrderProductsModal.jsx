@@ -6,6 +6,10 @@ import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import { useCatalog } from '@/app/providers'
+import {
+  buildCatalogIndex,
+  enrichOrderItemsFromCatalog,
+} from '@/features/orders/utils/enrichOrderItemsFromCatalog'
 import '@/features/auth/components/AuthModal/AuthModal.css'
 import '@/features/cart/components/CartDrawer/CartDrawer.css'
 import '@/features/cart/components/CartDrawer/CartDrawerExtra.css'
@@ -19,71 +23,6 @@ function normalizeItems(order) {
     return order.venta
   }
   return []
-}
-
-function catalogMatchKey(product) {
-  return [
-    product?.id,
-    product?.reference,
-    product?.codigo,
-  ]
-    .map((value) => String(value ?? '').trim().toLowerCase())
-    .filter(Boolean)
-}
-
-function buildCatalogIndex(products = []) {
-  const index = new Map()
-  products.forEach((product) => {
-    catalogMatchKey(product).forEach((key) => {
-      if (!index.has(key)) {
-        index.set(key, product)
-      }
-    })
-  })
-  return index
-}
-
-/** Completa descripción/imagen/marca desde catálogo cuando la venta solo trae idpr/cant/costo. */
-function enrichItemsFromCatalog(items, catalogIndex) {
-  if (!items.length || catalogIndex.size === 0) {
-    return items
-  }
-
-  return items.map((item) => {
-    const keys = [
-      item?.idpr,
-      item?.id,
-      item?.reference,
-      item?.codigo,
-    ]
-      .map((value) => String(value ?? '').trim().toLowerCase())
-      .filter(Boolean)
-
-    const product = keys.map((key) => catalogIndex.get(key)).find(Boolean)
-    if (!product) {
-      return item
-    }
-
-    const weakDescription = !item.description
-      || /^producto\s*#/i.test(String(item.description))
-
-    return {
-      ...item,
-      description: weakDescription
-        ? (product.description || product.model || item.description)
-        : item.description,
-      category: item.category || product.category || '',
-      brand: item.brand || product.brand || '',
-      model: item.model || product.model || '',
-      reference: item.reference || product.reference || product.codigo || item.id || '',
-      imageUrl: item.imageUrl || product.imageUrl || product.imageCardUrl || '',
-      brandLogo: item.brandLogo || item.brandLogoUrl || product.brandLogo || product.brandLogoUrl || '',
-      brandLogoUrl: item.brandLogoUrl || product.brandLogoUrl || product.brandLogo || '',
-      price: Number(item.price ?? item.costo) > 0
-        ? Number(item.price ?? item.costo)
-        : Number(product.precio ?? product.price) || 0,
-    }
-  })
 }
 
 function matchesProductSearch(item, query) {
@@ -123,7 +62,7 @@ export function OrderProductsModal({ isOpen, onClose, order }) {
   )
 
   const items = useMemo(
-    () => enrichItemsFromCatalog(normalizeItems(order), catalogIndex),
+    () => enrichOrderItemsFromCatalog(normalizeItems(order), catalogIndex),
     [order, catalogIndex],
   )
 

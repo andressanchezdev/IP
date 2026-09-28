@@ -257,6 +257,7 @@ export async function getLatestInventoryProducts({
   }
 }
 
+
 function generalFilterList(payload, key) {
   const data = payload?.data ?? payload
 

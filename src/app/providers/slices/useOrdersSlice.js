@@ -70,6 +70,24 @@ function pickOrderLineItems(order) {
   return []
 }
 
+function logDuplicatedSaleIds(orders, source) {
+  const seen = new Set()
+  const duplicated = new Set()
+  orders.forEach((order) => {
+    const key = String(order?.id ?? '').trim()
+    if (seen.has(key)) {
+      duplicated.add(key)
+    }
+    seen.add(key)
+  })
+  if (duplicated.size > 0) {
+    console.log(
+      'se estan obteniendo pedidos creados que repiten su identificador unico de venta',
+      { source, ids: [...duplicated] },
+    )
+  }
+}
+
 /** Conserva abonos locales y snapshot de ítems del checkout si la API no trae líneas. */
 function mergeLocalPayments(mappedOrders, previousOrders) {
   const localByKey = new Map()
@@ -220,6 +238,8 @@ export function useOrdersSlice({
       const response = await getManagementSales({ token, signal })
       const mappedPending = mapSalesToPendingOrders(response.data)
       const mappedCreditHistory = mapSalesToCreditHistoryOrders(response.data)
+      logDuplicatedSaleIds(mappedPending, 'historial')
+      logDuplicatedSaleIds(mappedCreditHistory, 'cartera')
       const apiIds = new Set(mappedPending.map((entry) => String(entry.id)))
 
       setPendingOrders((current) => {

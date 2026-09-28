@@ -18,7 +18,7 @@ import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 
 const SEARCH_DEBOUNCE_MS = 350
 /** Cap filtered landing results to avoid scroll/request storms after applying filters. */
-const FILTER_RESULT_LIMIT = PRODUCTS_PAGE_SIZE
+const FILTER_RESULT_LIMIT = PRODUCTS_PAGE_SIZE + 25
 
 function normalizeProduct(product) {
   return {

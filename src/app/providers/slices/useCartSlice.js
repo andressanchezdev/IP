@@ -17,6 +17,28 @@ import { resolveCheckoutPaymentType } from '@/features/orders/utils/resolveCheck
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
 
+/**
+ * El carrito del API guarda iva/exento/compra en 0 (gate del POST).
+ * Si el producto no está en catálogo, se conservan los fiscales del ítem previo.
+ */
+function keepPreviousFiscal(items, previousItems = [], catalogProducts = []) {
+  const catalogIds = new Set(catalogProducts.map((product) => String(product.id)))
+  const previousById = new Map(previousItems.map((item) => [String(item.id), item]))
+  return items.map((item) => {
+    const key = String(item.id)
+    const prev = previousById.get(key)
+    if (!prev || catalogIds.has(key)) {
+      return item
+    }
+    return {
+      ...item,
+      iva: prev.iva ?? item.iva,
+      exento: prev.exento ?? item.exento,
+      compra: prev.compra ?? item.compra,
+    }
+  })
+}
+
 export function useCartSlice({
   events,
   tokenAccess,
@@ -73,12 +95,22 @@ export function useCartSlice({
     ))
   }, [])
 
+  /** Filas API → ítems de carrito con fiscales del catálogo (o del ítem previo si no está en catálogo). */
+  const mapCartRowsWithFiscal = useCallback((carritos, previousItems, catalogProducts = null) => {
+    const catalog = catalogProducts ?? productsRef.current
+    return keepPreviousFiscal(
+      enrichCartItemsFiscalFromCatalog(
+        mapApiCartItems(carritos).map(normalizeCartItem),
+        catalog,
+      ),
+      previousItems,
+      catalog,
+    )
+  }, [productsRef])
+
   /** Upsert por id de producto: no borrar otros ítems si el API devolvió solo 1 línea. */
   const mergeCartFromApiRows = useCallback((currentItems, carritos = []) => {
-    const incoming = enrichCartItemsFiscalFromCatalog(
-      mapApiCartItems(carritos).map(normalizeCartItem),
-      productsRef.current,
-    )
+    const incoming = mapCartRowsWithFiscal(carritos, currentItems)
     if (incoming.length === 0) {
       return currentItems
     }
@@ -93,26 +125,20 @@ export function useCartSlice({
       byId.set(key, prev ? normalizeCartItem({ ...prev, ...item }) : item)
     }
     return Array.from(byId.values())
-  }, [productsRef])
+  }, [mapCartRowsWithFiscal])
 
   const applyCartFromApi = useCallback(async ({ token }) => {
     const { carritos } = await getCart({ token })
-    const apiCart = enrichCartItemsFiscalFromCatalog(
-      mapApiCartItems(carritos).map(normalizeCartItem),
-      productsRef.current,
-    )
+    const apiCart = mapCartRowsWithFiscal(carritos, cartItemsRef.current)
     setCartItems(apiCart)
     return apiCart
-  }, [productsRef])
+  }, [mapCartRowsWithFiscal])
 
   const applyCartFromPayload = useCallback((carritos = [], catalogProducts = null) => {
-    const apiCart = enrichCartItemsFiscalFromCatalog(
-      mapApiCartItems(carritos).map(normalizeCartItem),
-      catalogProducts ?? productsRef.current,
-    )
+    const apiCart = mapCartRowsWithFiscal(carritos, cartItemsRef.current, catalogProducts)
     setCartItems(apiCart)
     return apiCart
-  }, [productsRef])
+  }, [mapCartRowsWithFiscal])
 
   const refreshCartFromApi = useCallback(async ({ forceReplace = false } = {}) => {
     const token = tokenAccess
@@ -133,10 +159,7 @@ export function useCartSlice({
         setCartItems((current) => mergeCartFromApiRows(current, carritos))
         return { success: true, cartItems: cartItemsRef.current, merged: true }
       }
-      const apiCart = enrichCartItemsFiscalFromCatalog(
-        mapApiCartItems(carritos).map(normalizeCartItem),
-        productsRef.current,
-      )
+      const apiCart = mapCartRowsWithFiscal(carritos, cartItemsRef.current)
       setCartItems(apiCart)
       return { success: true, cartItems: apiCart }
     } catch (error) {
@@ -148,7 +171,7 @@ export function useCartSlice({
     } finally {
       cartHydratingRef.current = false
     }
-  }, [tokenAccess, hasInFlightCartMutation, mergeCartFromApiRows, productsRef])
+  }, [tokenAccess, hasInFlightCartMutation, mergeCartFromApiRows, mapCartRowsWithFiscal])
 
   /**
    * POST/PUT suelen devolver 1 línea (o lista parcial). Siempre MERGE.

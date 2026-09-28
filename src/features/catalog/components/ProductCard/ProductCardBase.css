@@ -52,7 +52,7 @@
 .product-card__description-text,
 .product-card__category {
   color: var(--color-gris-oscuro);
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   margin: 0 !important;
   min-width: 0;
@@ -177,7 +177,7 @@
 
 .product-card__price {
   color: var(--color-text-primary);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
 }
 

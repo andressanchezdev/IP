@@ -1,6 +1,10 @@
-import { useOrders } from '@/app/providers'
+import { useCatalog, useOrders } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { downloadOrderPdf } from '@/shared/lib/downloadOrderPdf'
+import {
+  buildCatalogIndex,
+  enrichOrderItemsFromCatalog,
+} from '@/features/orders/utils/enrichOrderItemsFromCatalog'
 import { DrawerAccordionSection } from '@/shared/ui/Drawer/DrawerAccordionSection'
 import {
   OrderDeliveryContent,
@@ -25,6 +29,7 @@ export function OrderDrawerContent({
   onViewProducts,
 }) {
   const { selectedOrder, setOrderSubView, verifyTransferProof } = useOrders()
+  const { products = [] } = useCatalog()
   const { showToast } = useToast()
 
   if (!selectedOrder) {
@@ -36,7 +41,11 @@ export function OrderDrawerContent({
   }
 
   const handleDownloadPdf = () => {
-    downloadOrderPdf(`Pedido ${selectedOrder.id}`, selectedOrder.items, selectedOrder.total, {
+    const baseItems = Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0
+      ? selectedOrder.items
+      : (Array.isArray(selectedOrder.venta) ? selectedOrder.venta : [])
+    const pdfItems = enrichOrderItemsFromCatalog(baseItems, buildCatalogIndex(products))
+    downloadOrderPdf(`Pedido ${selectedOrder.id}`, pdfItems, selectedOrder.total, {
       filename: `pedido-${selectedOrder.id}.pdf`,
       subtitle: 'Detalles del pedido',
       metaLines: [

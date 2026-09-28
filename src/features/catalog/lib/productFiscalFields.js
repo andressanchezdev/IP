@@ -101,7 +101,10 @@ export function pickProductFiscalFields(source) {
   return fiscal
 }
 
-/** Completa campos fiscales del ítem de carrito desde el producto de catálogo. */
+/**
+ * Completa campos fiscales del ítem de carrito desde el producto de catálogo.
+ * El catálogo manda: el carrito del API persiste iva/exento/compra en 0 tras el gate del POST.
+ */
 export function enrichCartItemFiscalFromCatalog(cartItem, catalogProduct) {
   if (!cartItem || typeof cartItem !== 'object') {
     return cartItem
@@ -115,9 +118,9 @@ export function enrichCartItemFiscalFromCatalog(cartItem, catalogProduct) {
 
   return {
     ...cartItem,
-    iva: fromCart.iva ?? fromCatalog.iva,
-    exento: fromCart.exento ?? fromCatalog.exento,
-    compra: fromCart.compra ?? fromCatalog.compra,
+    iva: fromCatalog.iva ?? fromCart.iva,
+    exento: fromCatalog.exento ?? fromCart.exento,
+    compra: fromCatalog.compra ?? fromCart.compra,
   }
 }
 

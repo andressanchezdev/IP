@@ -16,7 +16,7 @@ const BASE_COLS = [
   { key: 'description', label: 'Descripcion', width: 70, align: 'left' },
   { key: 'qty', label: 'Cant.', width: 14, align: 'right' },
   { key: 'unit', label: 'P. unit.', width: 28, align: 'right' },
-  { key: 'subtotal', label: 'Subtotal', width: 28, align: 'right' },
+  { key: 'subtotal', label: 'Total', width: 28, align: 'right' },
 ]
 
 const CART_COLS = [
@@ -26,7 +26,7 @@ const CART_COLS = [
   { key: 'description', label: 'Descripcion', width: 54, align: 'left' },
   { key: 'qty', label: 'Cant.', width: 12, align: 'right' },
   { key: 'unit', label: 'P. unit.', width: 26, align: 'right' },
-  { key: 'subtotal', label: 'Subtotal', width: 28, align: 'right' },
+  { key: 'subtotal', label: 'Total', width: 28, align: 'right' },
 ]
 
 function getColumns(includeCartId) {
