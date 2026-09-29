@@ -76,7 +76,7 @@ export const ProductCard = memo(function ProductCard({
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
   const notifyStockLimit = () => {
-    showToast('cantidad máxima alcanzada', 'error')
+    showToast(`Cantidad máxima alcanzada: ${maxQuantity} unidades.`, 'error')
   }
 
   const applyQuantity = (next) => {

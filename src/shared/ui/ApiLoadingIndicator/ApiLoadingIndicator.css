@@ -1,0 +1,37 @@
+.api-loading-indicator {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-bg-page) 78%, transparent);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 12000;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.api-loading-indicator__spinner {
+  animation: api-loading-spin 700ms linear infinite;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-text-primary);
+  border-radius: 50%;
+  flex: 0 0 25.6px;
+  height: 25.6px;
+  width: 25.6px;
+}
+
+@keyframes api-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .api-loading-indicator__spinner {
+    animation-duration: 1800ms;
+  }
+}

@@ -3,8 +3,8 @@ import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
 import '@/shared/ui/Toast/Toast.css'
 
 const ToastContext = createContext(null)
-const TOAST_DURATION_DESKTOP_MS = 1200
-const TOAST_DURATION_MOBILE_MS = 700
+const TOAST_DURATION_DESKTOP_MS = 2200
+const TOAST_DURATION_MOBILE_MS = 2200
 const MOBILE_TOAST_QUERY = '(max-width: 640px)'
 
 function getToastOptions() {

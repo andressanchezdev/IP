@@ -1,6 +1,19 @@
 import { API_BASE_URL } from './config'
 
 let authToken = null
+let activeApiRequests = 0
+const apiActivityListeners = new Set()
+
+export function subscribeApiActivity(listener) {
+  apiActivityListeners.add(listener)
+  listener(activeApiRequests)
+
+  return () => apiActivityListeners.delete(listener)
+}
+
+function notifyApiActivity() {
+  apiActivityListeners.forEach((listener) => listener(activeApiRequests))
+}
 
 export function setApiAuthToken(token) {
   authToken = token || null
@@ -55,24 +68,32 @@ export async function apiRequest(path, options = {}) {
     requestHeaders.Authorization = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal,
-  })
+  activeApiRequests += 1
+  notifyApiActivity()
 
-  const payload = await parseResponseBody(response)
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: requestHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
+    })
 
-  if (!response.ok) {
-    const message =
-      payload?.message ||
-      payload?.error ||
-      payload?.data?.message ||
-      `Error HTTP ${response.status}`
+    const payload = await parseResponseBody(response)
 
-    throw new ApiError(message, { status: response.status, payload })
+    if (!response.ok) {
+      const message =
+        payload?.message ||
+        payload?.error ||
+        payload?.data?.message ||
+        `Error HTTP ${response.status}`
+
+      throw new ApiError(message, { status: response.status, payload })
+    }
+
+    return payload
+  } finally {
+    activeApiRequests = Math.max(0, activeApiRequests - 1)
+    notifyApiActivity()
   }
-
-  return payload
 }

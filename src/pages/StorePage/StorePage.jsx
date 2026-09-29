@@ -13,6 +13,7 @@ import { HistoryView } from './views/HistoryView'
 import { PendingOrdersView } from './views/PendingOrdersView'
 import { ProductDetailModal } from '@/features/catalog/components/ProductDetailModal/ProductDetailModal'
 import { StoreChatWidget, takePendingChatBulk } from '@/features/chatbot'
+import { ApiLoadingIndicator } from '@/shared/ui/ApiLoadingIndicator/ApiLoadingIndicator'
 import './StorePage.css'
 
 export function StorePage() {
@@ -442,6 +443,8 @@ export function StorePage() {
         onLogin={() => openAuthModal()}
         onLogout={handleLogout}
       />
+
+      <ApiLoadingIndicator />
 
       <div className="landing__main">
         <Header

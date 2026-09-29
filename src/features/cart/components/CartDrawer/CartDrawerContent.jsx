@@ -64,7 +64,7 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
   const notifyStockLimit = () => {
-    showToast('cantidad máxima alcanzada', 'error')
+    showToast(`Cantidad máxima alcanzada: ${maxQuantity} unidades.`, 'error')
   }
 
   /** Solo actualiza UI local; agenda PUT debounced. Flush en blur. */
