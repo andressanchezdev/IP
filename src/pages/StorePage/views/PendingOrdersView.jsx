@@ -12,9 +12,7 @@ export function PendingOrdersView({
 
   return (
     <div className="content-main-espera">
-      {isLoading ? (
-        <div className="landing__empty-state">Cargando pedidos...</div>
-      ) : errorMessage ? (
+      {isLoading ? null : errorMessage ? (
         <div className="landing__empty-state">{errorMessage}</div>
       ) : pendingOrders.length === 0 ? (
         <div className="landing__empty-state">Aún no hay pedidos en espera.</div>

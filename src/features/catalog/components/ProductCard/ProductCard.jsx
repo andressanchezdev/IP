@@ -70,7 +70,7 @@ export const ProductCard = memo(function ProductCard({
   const metaText = `${String(brand || '').trim()} - ${String(model || '').trim()}`.replace(/^\s*-\s*|\s*-\s*$/g, '').trim()
   const referenceText = String(reference || '').trim()
   const productName = productDisplayName({ description, category, model, brand })
-  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? `Ordenando ${productName}` : `Ordenar ${productName}`
+  const orderLabel = isSoldOut ? 'Agotado' : isOrdering ? `Ordenando ${productName}` : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
@@ -263,7 +263,7 @@ export const ProductCard = memo(function ProductCard({
               disabled={isSoldOut || isOrdered || isOrdering}
               {...namedControl(orderLabel)}
             >
-              {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? 'Ordenando…' : 'Ordenar'}
+              {isSoldOut ? 'Agotado' : isOrdering ? 'Ordenando…' : isOrdered ? 'Ordenado' : 'Ordenar'}
             </button>
           </div>
         </div>

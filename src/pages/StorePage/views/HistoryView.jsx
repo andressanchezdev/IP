@@ -102,11 +102,7 @@ export function HistoryView({
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
-                <tr className="landing__table-row--status">
-                  <td colSpan="7" className="landing__table-empty">Cargando cartera...</td>
-                </tr>
-              ) : errorMessage ? (
+              {isLoading ? null : errorMessage ? (
                 <tr className="landing__table-row--status">
                   <td colSpan="7" className="landing__table-empty">{errorMessage}</td>
                 </tr>

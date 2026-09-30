@@ -16,6 +16,7 @@
 
 .swal2-container.toast-container--desktop.swal2-top {
   align-items: center !important;
+  z-index: 12001 !important;
 }
 
 .swal2-popup.swal2-toast.toast-popup--desktop {
@@ -26,6 +27,7 @@
   .swal2-container.toast-container--mobile.swal2-top {
     align-items: center !important;
     padding-top: 12px !important;
+    z-index: 12001 !important;
   }
 
   .swal2-popup.swal2-toast.toast-popup--mobile {

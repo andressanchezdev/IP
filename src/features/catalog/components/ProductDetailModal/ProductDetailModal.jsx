@@ -69,7 +69,7 @@ export function ProductDetailModal({
   const activeSrc = gallery[activeIndex] || gallery[0] || ''
   const loremText = pickProductLoremVersion(product.id)
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
-  const orderLabel = isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? `Ordenando ${productName}` : `Ordenar ${productName}`
+  const orderLabel = isSoldOut ? 'Agotado' : isOrdering ? `Ordenando ${productName}` : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
@@ -227,7 +227,7 @@ export function ProductDetailModal({
               disabled={isSoldOut || isOrdered || isOrdering}
               {...namedControl(orderLabel)}
             >
-              {isSoldOut ? 'Agotado' : isOrdered ? 'Ordenado' : isOrdering ? 'Ordenando…' : 'Ordenar'}
+              {isSoldOut ? 'Agotado' : isOrdering ? 'Ordenando…' : isOrdered ? 'Ordenado' : 'Ordenar'}
             </button>
           </div>
         </div>

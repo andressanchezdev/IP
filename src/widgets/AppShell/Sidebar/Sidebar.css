@@ -121,7 +121,7 @@
     min-height: 0;
     min-width: 54px;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
     padding: 10px 0 8px;
     width: 54px;
   }

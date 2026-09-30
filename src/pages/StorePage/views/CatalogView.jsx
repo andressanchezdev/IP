@@ -86,11 +86,7 @@ export function CatalogView({
   }, [canPaginateOnScroll, products.length])
 
   if (isLoadingLatest || (products.length === 0 && isLoadingProducts && !isCatalogSearchActive)) {
-    return (
-      <section className="landing__panel">
-        <div className="landing__empty-state">Cargando productos…</div>
-      </section>
-    )
+    return null
   }
 
   if (products.length === 0) {
@@ -132,13 +128,7 @@ export function CatalogView({
           Mostrando {products.length} producto{products.length === 1 ? '' : 's'}
         </p>
       ) : canPaginateOnScroll ? (
-        <div className="catalog-scroll-sentinel" ref={sentinelRef} aria-hidden="true">
-          {isLoadingProducts ? (
-            <span className="catalog-scroll-sentinel__label">Cargando más productos…</span>
-          ) : (
-            <span className="catalog-scroll-sentinel__label">Desplázate para cargar más</span>
-          )}
-        </div>
+        <div className="catalog-scroll-sentinel" ref={sentinelRef} aria-hidden="true" />
       ) : (
         <p className="catalog-scroll-sentinel__done">
           Mostrando {products.length} producto{products.length === 1 ? '' : 's'}
