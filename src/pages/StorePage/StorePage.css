@@ -64,6 +64,7 @@
   flex-direction: column;
   flex: 1;
   height: 100%;
+  margin-left: max(calc(var(--sidebar-width) - 22px), var(--sidebar-min-width));
   min-height: 0;
   min-width: 0;
   overflow: hidden;
@@ -311,6 +312,10 @@
 }
 
 @media (max-width: 768px) {
+  .landing__main {
+    margin-left: 54px;
+  }
+
   .landing__content {
     padding: var(--spacing-sm);
   }
