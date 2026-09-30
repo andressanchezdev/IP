@@ -51,8 +51,8 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
   const brandText = String(item.brand || '').trim()
   const modelText = String(item.model || '').trim()
   const referenceText = String(item.reference || item.id || '').trim()
-  // Stock disponible = catálogo (API inicial + WS) + unidades ya en esta línea (API carrito).
-  const maxQuantity = Math.max(1, (Number(catalogStock) || 0) + (Number(item.quantity) || 0))
+  // El límite real de la línea es el stock disponible del producto, no stock + cantidad ya en carrito.
+  const maxQuantity = Math.max(1, Number(catalogStock) || 1)
   const unitPrice = Number(item.price) || 0
   const [quantity, setQuantity] = useState(() => Number(item.quantity) || 1)
   const { showToast } = useToast()

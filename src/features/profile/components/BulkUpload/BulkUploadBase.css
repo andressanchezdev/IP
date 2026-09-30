@@ -34,7 +34,7 @@
 }
 
 .bulk-upload__btn {
-  background: var(--color-gris-oscuro);
+  background: #1b6519;
   border: none;
   border-radius: 10px;
   color: #ffffff;

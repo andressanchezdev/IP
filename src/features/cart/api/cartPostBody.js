@@ -238,13 +238,15 @@ export function planCartAdd({
   const stockNum = Math.max(0, Number(stock) || 0)
   const requested = Math.max(0, Number(requestedQty) || 0)
   const existing = Math.max(0, Number(existingQty) || 0)
-  const orderQty = Math.min(requested, stockNum)
+  const maxFinalQty = Math.max(0, stockNum)
+  const requestedCapped = Math.min(requested, maxFinalQty)
+  const finalQty = Math.min(existing + requestedCapped, maxFinalQty)
   const id = toCartProductId(idProducto)
 
   if (!Number.isFinite(id)) {
     return { ok: false, reason: 'id_producto inválido', orderQty: 0, body: null }
   }
-  if (orderQty <= 0) {
+  if (finalQty <= 0) {
     return { ok: false, reason: 'Sin stock disponible', orderQty: 0, body: null }
   }
   const unitPrice = toCartUnitPrice(precioUnitario)
@@ -254,10 +256,10 @@ export function planCartAdd({
 
   return {
     ok: true,
-    orderQty,
+    orderQty: finalQty,
     body: buildCartPostBody({
       idProducto: id,
-      cantidad: existing + orderQty,
+      cantidad: finalQty,
       precioUnitario: unitPrice,
       compra,
       exento,

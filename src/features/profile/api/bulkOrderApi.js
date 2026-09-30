@@ -286,6 +286,65 @@ export function mapCheckMassiveToComparison(items = [], resolvedByCode = new Map
 }
 
 /**
+ * Compatibilidad con el flujo legacy previo a check-massive:
+ * si el endpoint de validación masiva no está disponible o falla con 404/400,
+ * seguimos procesando la subida sin bloquear el pedido en el carrito.
+ */
+export function buildLegacyBulkComparison(items = [], resolvedByCode = new Map()) {
+  const results = (Array.isArray(items) ? items : []).map((item) => {
+    const codigo = String(item?.codigo ?? '')
+    const cantidad = Number(item?.cantidad) || 0
+    const resolved = resolvedByCode.get(codigo)
+    const id = resolved?.id != null ? String(resolved.id) : null
+    const precio = toMoneyNumber(resolved?.precio)
+    const fiscal = {
+      compra: resolved?.compra,
+      iva: resolved?.iva,
+      exento: resolved?.exento,
+      aplicacion: resolved?.aplicacion,
+    }
+
+    if (!id || cantidad <= 0) {
+      return {
+        codigo,
+        cantidad,
+        stock: 0,
+        estado: STOCK_STATUS.OUT,
+        id: id ?? null,
+        precio,
+        ...fiscal,
+      }
+    }
+
+    return {
+      codigo,
+      cantidad,
+      stock: Math.max(cantidad, 1),
+      estado: STOCK_STATUS.OK,
+      id,
+      precio,
+      ...fiscal,
+    }
+  })
+
+  return {
+    results,
+    summary: {
+      ok: results.filter((row) => row.estado === STOCK_STATUS.OK).length,
+      novedad: results.filter((row) => row.estado === STOCK_STATUS.SHORT).length,
+      agotado: results.filter((row) => row.estado === STOCK_STATUS.OUT).length,
+    },
+    checkRequest: {
+      productos: results.map((row) => ({
+        id_producto: Number(row.id) || row.id,
+        cantidad: row.cantidad,
+      })),
+    },
+    checkRaw: { legacyFallback: true },
+  }
+}
+
+/**
  * Flujo subida masiva:
  * 1) Excel códigos+cantidad
  * 2) Resolver id_producto por search
@@ -325,14 +384,31 @@ export async function compareBulkOrderWithCheckMassive(
     return mapCheckMassiveToComparison(list, resolvedByCode, { productos: [] })
   }
 
-  const checked = await postCartCheckMassive({
-    token,
-    productos,
-  })
+  try {
+    const checked = await postCartCheckMassive({
+      token,
+      productos,
+    })
 
-  const comparison = mapCheckMassiveToComparison(list, resolvedByCode, checked.raw)
-  comparison.checkRequest = checked.request
-  return comparison
+    const comparison = mapCheckMassiveToComparison(list, resolvedByCode, checked.raw)
+    comparison.checkRequest = checked.request
+    return comparison
+  } catch (error) {
+    const isLegacyFallback = (
+      error?.status === 404
+      || error?.status === 405
+      || error?.status === 400
+      || /404|not found|no encontrado/i.test(String(error?.message || ''))
+    )
+
+    if (!isLegacyFallback) {
+      throw error
+    }
+
+    const comparison = buildLegacyBulkComparison(list, resolvedByCode)
+    comparison.checkRequest = { productos }
+    return comparison
+  }
 }
 
 /**

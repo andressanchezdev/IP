@@ -426,7 +426,7 @@ export function useCartSlice({
       qtyPendingRef.current.get(qtyKey)?.baselineQty
       ?? target.quantity,
     ) || 0
-    const totalAvailable = catalogStock + baselineQty
+    const totalAvailable = Math.max(1, catalogStock)
     const nextQuantity = Math.max(
       1,
       Math.min(Number(quantity) || 1, totalAvailable || Number(quantity) || 1),
