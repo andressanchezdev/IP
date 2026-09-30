@@ -10,6 +10,7 @@
   }
 
   .header__main {
+    top: 0 !important;
     align-items: center;
     gap: clamp(6px, 1.5vw, var(--spacing-sm));
     min-height: clamp(52px, 8vw, var(--header-height));
