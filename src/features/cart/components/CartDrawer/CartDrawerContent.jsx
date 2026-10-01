@@ -52,7 +52,8 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
   const modelText = String(item.model || '').trim()
   const referenceText = String(item.reference || item.id || '').trim()
   // El límite real de la línea es el stock disponible del producto, no stock + cantidad ya en carrito.
-  const maxQuantity = Math.max(1, Number(catalogStock) || 1)
+  const maxQuantity = Math.max(0, Math.floor(Number(catalogStock) || 0))
+  const isSoldOut = maxQuantity === 0
   const unitPrice = Number(item.price) || 0
   const [quantity, setQuantity] = useState(() => Number(item.quantity) || 1)
   const { showToast } = useToast()
@@ -172,6 +173,9 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
         <span className="carrito-card__reference">
           {referenceText.toUpperCase()}
         </span>
+        {isSoldOut ? (
+          <span className="carrito-card__stock-status">Agotado</span>
+        ) : null}
 
         <div className="carrito-card__footer">
           <input
@@ -182,7 +186,7 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
             min="1"
             max={maxQuantity}
             step="1"
-            disabled={qtyBusy}
+            disabled={qtyBusy || isSoldOut}
             onChange={handleChange}
             onFocus={handleFocus}
             onMouseUp={handleMouseUp}
@@ -297,7 +301,7 @@ export function CartDrawerContent() {
                     <CartCard
                       key={item.cartId ?? item.id}
                       item={item}
-                      catalogStock={catalogStockById.get(String(item.id)) ?? 0}
+                      catalogStock={catalogStockById.get(String(item.id)) ?? (Number(item.stock) || 0)}
                       qtyBusy={isMutatingCartQty(item.id)}
                       onQuantityChange={async (productId, quantity, options) => {
                         const result = await setCartItemQuantity(productId, quantity, options)

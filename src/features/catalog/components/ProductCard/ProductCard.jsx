@@ -42,7 +42,7 @@ export const ProductCard = memo(function ProductCard({
 
   // Prioriza el campo API `precio`; `price` queda como alias interno.
   const displayPrice = precio ?? price
-  const maxQuantity = useMemo(() => Math.max(1, stock), [stock])
+  const maxQuantity = useMemo(() => Math.max(0, Math.floor(Number(stock) || 0)), [stock])
   const isOrdered = isInCart
   const isSoldOut = stock <= 0
   const resolvedBrandLogo = brandLogo || brandLogoUrl

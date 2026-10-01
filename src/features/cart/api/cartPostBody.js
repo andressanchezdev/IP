@@ -235,9 +235,9 @@ export function planCartAdd({
   fecha,
   product,
 } = {}) {
-  const stockNum = Math.max(0, Number(stock) || 0)
-  const requested = Math.max(0, Number(requestedQty) || 0)
-  const existing = Math.max(0, Number(existingQty) || 0)
+  const stockNum = Math.max(0, Math.floor(Number(stock) || 0))
+  const requested = Math.max(0, Math.floor(Number(requestedQty) || 0))
+  const existing = Math.max(0, Math.floor(Number(existingQty) || 0))
   const maxFinalQty = Math.max(0, stockNum)
   const requestedCapped = Math.min(requested, maxFinalQty)
   const finalQty = Math.min(existing + requestedCapped, maxFinalQty)

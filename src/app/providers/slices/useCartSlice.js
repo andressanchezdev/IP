@@ -422,15 +422,24 @@ export function useCartSlice({
 
     const qtyKey = String(productId)
     const product = productsRef.current.find((item) => String(item.id) === String(productId))
-    const catalogStock = Number(product?.stock) || 0
+    const catalogStock = Number(product?.stock ?? target.stock)
+    if (!Number.isFinite(catalogStock) || catalogStock <= 0) {
+      return Promise.resolve({
+        success: false,
+        error: catalogStock === 0 ? 'Producto agotado' : 'No se pudo validar el stock actual',
+      })
+    }
     const baselineQty = Number(
       qtyPendingRef.current.get(qtyKey)?.baselineQty
       ?? target.quantity,
     ) || 0
-    const totalAvailable = Math.max(1, catalogStock)
+    const totalAvailable = Math.floor(catalogStock)
+    if (totalAvailable < 1) {
+      return Promise.resolve({ success: false, error: 'Producto agotado' })
+    }
     const nextQuantity = Math.max(
       1,
-      Math.min(Number(quantity) || 1, totalAvailable || Number(quantity) || 1),
+      Math.min(Math.floor(Number(quantity) || 1), totalAvailable),
     )
     const previousQty = baselineQty
 

@@ -152,6 +152,12 @@
   font-size: 12px;
 }
 
+.carrito-card__stock-status {
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .carrito-card__remove {
   align-items: center;
   background: transparent;

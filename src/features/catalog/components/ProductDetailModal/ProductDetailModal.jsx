@@ -56,7 +56,7 @@ export function ProductDetailModal({
 
   const displayPrice = product.precio ?? product.price
   const stock = Number(product.stock) || 0
-  const maxQuantity = Math.max(1, stock)
+  const maxQuantity = Math.max(0, Math.floor(stock))
   const isSoldOut = stock <= 0
   const isOrdered = isInCart
   const descriptionText = String(product.description || '').trim()
