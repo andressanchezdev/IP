@@ -3,6 +3,7 @@ import { useAuth, useCart } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { getApiAuthToken } from '@/shared/api'
 import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
+import { CART_UNIT_PRICE_ERROR } from '@/features/cart/api/cartPostBody'
 import { MIN_PRODUCT_CODES } from '@/features/profile/lib/excelCore'
 import { useExcelTemplate } from './useExcelTemplate'
 
@@ -192,13 +193,6 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
         return
       }
 
-      if (posted.length === 0) {
-        showToast('No se pudo agregar ningún producto al carrito', 'error')
-        return
-      }
-
-      await refreshCartFromApi()
-
       setProcessState((current) => ({
         ...current,
         decision: {
@@ -210,10 +204,24 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
         },
       }))
 
-      if (failed.length > 0) {
+      if (posted.length === 0) {
+        const hasPriceError = failed.some((entry) => entry.reason === CART_UNIT_PRICE_ERROR)
         showToast(
-          `Carrito: ${posted.length} agregado(s), ${failed.length} con error`,
-          'warning',
+          hasPriceError ? CART_UNIT_PRICE_ERROR : 'No se pudo agregar ningún producto al carrito',
+          'error',
+        )
+        return
+      }
+
+      await refreshCartFromApi()
+
+      if (failed.length > 0) {
+        const hasPriceError = failed.some((entry) => entry.reason === CART_UNIT_PRICE_ERROR)
+        showToast(
+          hasPriceError
+            ? CART_UNIT_PRICE_ERROR
+            : `Carrito: ${posted.length} agregado(s), ${failed.length} con error`,
+          hasPriceError ? 'error' : 'warning',
         )
       } else {
         showToast(`Pedido enviado al carrito (${posted.length} producto(s))`, 'success')

@@ -121,8 +121,14 @@ export function InfoPanel({
               {decision ? (
                 <div className="bulk-upload__decision" role="status">
                   <p className="bulk-upload__decision-main">
-                    <span className="bulk-upload__ok">Ok</span>
-                    {' '}200 · Enviados al carrito: {decision.items.length} producto(s)
+                    {decision.items.length > 0 ? (
+                      <>
+                        <span className="bulk-upload__ok">Ok</span>
+                        {' '}200 · Enviados al carrito: {decision.items.length} producto(s)
+                      </>
+                    ) : (
+                      'No se agregaron productos al carrito.'
+                    )}
                     {decision.type === 'sin-novedad' ? ' (solo Ok)' : ''}
                   </p>
 
