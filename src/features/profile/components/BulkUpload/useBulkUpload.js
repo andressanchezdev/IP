@@ -204,28 +204,23 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
         },
       }))
 
-      if (posted.length === 0) {
-        const hasPriceError = failed.some((entry) => entry.reason === CART_UNIT_PRICE_ERROR)
-        showToast(
-          hasPriceError ? CART_UNIT_PRICE_ERROR : 'No se pudo agregar ningún producto al carrito',
-          'error',
-        )
-        return
+      if (posted.length > 0) {
+        await refreshCartFromApi()
       }
 
-      await refreshCartFromApi()
+      const hasPriceError = failed.some((entry) => entry.reason === CART_UNIT_PRICE_ERROR)
+      const totalProcessed = posted.length + failed.length
+      const toastMessage = [
+        `Carrito: ${posted.length} de ${totalProcessed} producto(s) agregado(s).`,
+        failed.length > 0 ? `${failed.length} no agregado(s).` : '',
+        hasPriceError ? CART_UNIT_PRICE_ERROR : '',
+      ].filter(Boolean).join(' ')
+      showToast(
+        toastMessage,
+        failed.length > 0 ? (hasPriceError ? 'error' : 'warning') : 'success',
+      )
 
-      if (failed.length > 0) {
-        const hasPriceError = failed.some((entry) => entry.reason === CART_UNIT_PRICE_ERROR)
-        showToast(
-          hasPriceError
-            ? CART_UNIT_PRICE_ERROR
-            : `Carrito: ${posted.length} agregado(s), ${failed.length} con error`,
-          hasPriceError ? 'error' : 'warning',
-        )
-      } else {
-        showToast(`Pedido enviado al carrito (${posted.length} producto(s))`, 'success')
-      }
+      if (posted.length === 0) return
 
       onOrderSent?.()
     } catch (error) {
