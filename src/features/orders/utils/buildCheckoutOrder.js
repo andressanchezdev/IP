@@ -1,4 +1,5 @@
 import { ORDER_STEP_DEFS } from '@/features/orders/constants/orderSteps'
+import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
 import { enrichOrder } from './enrichOrder'
 import {
   paymentTypeLabel,
@@ -67,13 +68,16 @@ export function buildCheckoutOrder({
     salesRequest: salesRequest ?? null,
   }
 
+  const clientAddress = normalizeDeliveryAddressForApi(
+    clientData?.address || clientData?.profileAddress || '',
+  )
   const client = {
     fullName: clientData?.fullName || '',
     email: clientData?.email || '',
     phone: clientData?.phone || clientData?.mobile || '',
     mobile: clientData?.mobile || clientData?.phone || '',
     documentId: clientData?.documentId || '',
-    address: clientData?.address || clientData?.profileAddress || '',
+    address: clientAddress,
     profileAddress: clientData?.profileAddress || '',
     notes: clientData?.notes || '',
     city: clientData?.city || '',

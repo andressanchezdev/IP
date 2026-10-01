@@ -12,6 +12,7 @@ import { summarizeCartItems, getIvaBreakdownLabel } from '@/shared/lib/money'
 import { namedControl } from '@/shared/lib/namedControl'
 import { validateAddressLine } from '@/shared/lib/fieldValidation'
 import { formatAddressDisplay } from '@/features/auth/utils/mapAboutAddresses'
+import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
 import { TRANSFER_ACCOUNT } from '@/features/orders/constants/transferAccount'
 
 const MAX_ADDRESSES = 3
@@ -126,7 +127,7 @@ export function CartCheckoutDrawerContent() {
       showToast('Seleccione una dirección registrada', 'error')
       return
     }
-    setDeliveryAddress(selected.displayLine || selected.address)
+    setDeliveryAddress(normalizeDeliveryAddressForApi(selected.displayLine || selected.address))
     setEditingDelivery(false)
     showToast('Dirección de entrega establecida', 'success')
   }
@@ -140,7 +141,7 @@ export function CartCheckoutDrawerContent() {
     if (registeredAddresses.length >= MAX_ADDRESSES) {
       showToast('Máximo 3 direcciones por usuario', 'error')
     }
-    setDeliveryAddress(newAddress.trim())
+    setDeliveryAddress(normalizeDeliveryAddressForApi(newAddress.trim()))
     setEditingDelivery(false)
     showToast('Nueva dirección establecida', 'success')
   }
@@ -150,7 +151,7 @@ export function CartCheckoutDrawerContent() {
       showToast('Seleccione un punto en el mapa', 'error')
       return
     }
-    setDeliveryAddress(mapLocation.address)
+    setDeliveryAddress(normalizeDeliveryAddressForApi(mapLocation.address))
     setEditingDelivery(false)
     showToast('Ubicación de mapa establecida', 'success')
   }

@@ -14,6 +14,7 @@ import { mapApiCartItems } from '@/features/catalog/mappers/mapCartItems'
 import { enrichCartItemsFiscalFromCatalog } from '@/features/catalog/lib/productFiscalFields'
 import { summarizeCartItems } from '@/shared/lib/money'
 import { resolveCheckoutPaymentType } from '@/features/orders/utils/resolveCheckoutPaymentType'
+import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
 
@@ -596,11 +597,11 @@ export function useCartSlice({
     const resolvedType = resolveCheckoutPaymentType(paymentType, paymentDetails)
     const totals = summarizeCartItems(cartItems)
     const total = Number(paymentDetails?.amount) || totals.total
-    const direccion = String(
+    const direccion = normalizeDeliveryAddressForApi(
       clientData?.address
       || clientData?.profileAddress
       || '',
-    ).trim()
+    )
 
     if (!direccion) {
       return { success: false, error: 'Dirección de entrega requerida' }

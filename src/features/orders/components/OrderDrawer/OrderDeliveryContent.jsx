@@ -49,7 +49,13 @@ export function OrderDeliveryContent({ order }) {
   const fullName = text(client.fullName) || loginName || '—'
   const email = text(client.email) || loginEmail || '—'
   const phone = text(client.phone) || text(client.mobile) || loginPhone || '—'
-  const address = text(delivery.address) || text(client.address) || loginAddress || '—'
+  const address =
+    text(delivery.address)
+    || text(order?.direccion)
+    || text(order?.address)
+    || text(client.address)
+    || loginAddress
+    || '—'
 
   return (
     <>

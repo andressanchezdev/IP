@@ -10,6 +10,7 @@ import {
   resolvePaymentDeadlineFromDate,
   resolvePaymentLimitDays,
 } from '@/features/orders/utils/resolvePaymentDeadline'
+import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
 
 function toSafeNumber(value, fallback = 0) {
   const numeric = Number(value)
@@ -124,6 +125,27 @@ export function mapSaleToHistoryOrder(entry) {
   const estado = String(entry?.estado ?? '').trim()
   const fecha = entry?.fecha ?? ''
   const total = toSafeNumber(entry?.total, 0)
+  const rawAddress = (
+    entry?.direccion
+    ?? entry?.address
+    ?? entry?.direccion_entrega
+    ?? entry?.delivery?.address
+    ?? entry?.cliente?.direccion
+    ?? entry?.client?.address
+    ?? entry?.usuario?.direccion
+    ?? entry?.usuario?.address
+    ?? ''
+  )
+  const addressLine = normalizeDeliveryAddressForApi(rawAddress)
+  const addressParts = [
+    entry?.barrio,
+    entry?.ciudad,
+    entry?.departamento,
+    entry?.pais,
+  ].map((part) => String(part ?? '').trim()).filter(Boolean)
+  const deliveryAddress = addressLine
+    ? [addressLine, ...addressParts].join(', ')
+    : addressParts.join(', ')
   const pagos = Array.isArray(entry?.pagos) ? entry.pagos : []
   const estado_factura = entry?.estado_factura ?? null
   const status = resolveOrderStepFromEstado(estado)
@@ -162,6 +184,15 @@ export function mapSaleToHistoryOrder(entry) {
     paymentLimitDays: deadline.days,
     dateLimit: deadline.deadlineIso,
     dateLimitLabel: deadline.dateLimitLabel,
+    direccion: deliveryAddress,
+    delivery: {
+      address: deliveryAddress,
+      mapLocation: null,
+    },
+    client: {
+      ...(entry?.client ?? {}),
+      address: deliveryAddress,
+    },
   }
 }
 

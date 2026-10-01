@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { subscribeApiActivity } from '@/shared/api'
 import './ApiLoadingIndicator.css'
 
-const SHOW_DELAY_MS = 650
+const SHOW_DELAY_MS = 500
 
 export function ApiLoadingIndicator() {
   const [isVisible, setIsVisible] = useState(false)
