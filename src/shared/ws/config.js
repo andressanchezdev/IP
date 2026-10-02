@@ -1,5 +1,10 @@
-export const WS_URL =
-  import.meta.env.VITE_WS_URL || 'wss://api.importadorapremium.com/wss2/'
+import { runtimeConfig } from '@/shared/runtimeConfig'
+
+export const WS_URL = String(
+  runtimeConfig.WS_URL
+  ?? import.meta.env.VITE_WS_URL
+  ?? 'wss://api.importadorapremium.com/wss2/',
+).trim()
 
 /** Si idBodega viene como 0 / "0", se reemplaza por este valor. */
 export const ZERO_WAREHOUSE_FALLBACK_ID = '6'
