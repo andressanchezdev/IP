@@ -61,7 +61,13 @@ export function mapApiCartItem(entry) {
   const brandLogoUrl = resolveAssetUrl(entry.imagen)
   const imageUrl = pickProductImageUrl(pickCartProductImageField(entry))
   const imageCardUrl = resolveProductCardImageUrl(imageUrl, entry)
-  const stock = entry.stock != null ? parseStock(entry.stock) : 0
+  const stock = entry.stock != null && entry.stock !== ''
+    ? parseStock(entry.stock)
+    : undefined
+  const cartIdValue = Number(entry.id_carrito)
+  const cartId = Number.isFinite(cartIdValue) && cartIdValue > 0
+    ? entry.id_carrito
+    : undefined
   const fiscal = pickProductFiscalFields(entry)
 
   return {
@@ -73,14 +79,14 @@ export function mapApiCartItem(entry) {
     brand,
     model: text(entry.modelo),
     reference: text(entry.codigo) || productId,
-    stock,
+    ...(stock !== undefined ? { stock } : {}),
     searching: text(entry.searching),
     imageUrl,
     imageCardUrl,
     brandLogo: brandLogoUrl,
     brandLogoUrl,
     quantity: Math.max(1, Number(entry.cantidad) || 1),
-    cartId: entry.id_carrito ?? null,
+    ...(cartId !== undefined ? { cartId } : {}),
     userId: entry.id_usuario ?? null,
     discount: Number(entry.descuento) || 0,
     aplicacion: text(entry.aplicacion),

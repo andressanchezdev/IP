@@ -349,6 +349,22 @@ export function useCartSlice({
       }
 
       await syncCartAfterMutation(persisted)
+
+      const responseHasCartId = persisted.carritos?.some((row) => (
+        String(row.id_producto) === orderKey
+        && Number(row.id_carrito) > 0
+      ))
+      if (!cartId && !responseHasCartId) {
+        try {
+          const { carritos } = await getCart({ token: tokenAccess })
+          if (carritos.length > 0) {
+            commitCart((items) => mergeCartFromApiRows(items, carritos))
+          }
+        } catch (error) {
+          console.warn('[cart] No se pudo recuperar id_carrito después del POST', error)
+        }
+      }
+
       return { success: true, quantity: planned.body.cantidad, previousQty, request: planned.body }
     } finally {
       orderingIdsRef.current.delete(orderKey)
