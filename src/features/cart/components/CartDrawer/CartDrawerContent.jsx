@@ -173,10 +173,6 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
         <span className="carrito-card__reference">
           {referenceText.toUpperCase()}
         </span>
-        {isSoldOut ? (
-          <span className="carrito-card__stock-status">Agotado</span>
-        ) : null}
-
         <div className="carrito-card__footer">
           <input
             type="number"
