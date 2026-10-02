@@ -438,25 +438,14 @@ export function useCartSlice({
 
     const qtyKey = String(productId)
     const product = productsRef.current.find((item) => String(item.id) === String(productId))
-    const catalogStock = Number(product?.stock ?? target.stock)
-    if (!Number.isFinite(catalogStock) || catalogStock <= 0) {
-      return Promise.resolve({
-        success: false,
-        error: catalogStock === 0 ? 'Producto agotado' : 'No se pudo validar el stock actual',
-      })
-    }
     const baselineQty = Number(
       qtyPendingRef.current.get(qtyKey)?.baselineQty
       ?? target.quantity,
     ) || 0
-    const totalAvailable = Math.floor(catalogStock)
-    if (totalAvailable < 1) {
-      return Promise.resolve({ success: false, error: 'Producto agotado' })
-    }
-    const nextQuantity = Math.max(
-      1,
-      Math.min(Math.floor(Number(quantity) || 1), totalAvailable),
-    )
+    const requestedQuantity = Number(quantity)
+    const nextQuantity = Number.isFinite(requestedQuantity)
+      ? Math.max(1, Math.floor(requestedQuantity))
+      : 1
     const previousQty = baselineQty
 
     // Totales/UI al instante (sin esperar PUT).

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useCart, useCatalog } from '@/app/providers'
+import { useCart } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { formatPrice } from '@/shared/lib/formatPrice'
 import { summarizeCartItems, getIvaBreakdownLabel } from '@/shared/lib/money'
@@ -45,28 +45,18 @@ function CartItemMedia({ item }) {
 }
 
 /** Mismo comportamiento de incrementador que ProductCard (landing). */
-function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, onRemove }) {
+function CartCard({ item, qtyBusy = false, onQuantityChange, onRemove }) {
   const categoryText = String(item.category || '').trim()
   const descriptionText = String(item.description || '').trim()
   const brandText = String(item.brand || '').trim()
   const modelText = String(item.model || '').trim()
   const referenceText = String(item.reference || item.id || '').trim()
-  // El límite real de la línea es el stock disponible del producto, no stock + cantidad ya en carrito.
-  const maxQuantity = Math.max(0, Math.floor(Number(catalogStock) || 0))
-  const isSoldOut = maxQuantity === 0
   const unitPrice = Number(item.price) || 0
   const [quantity, setQuantity] = useState(() => Number(item.quantity) || 1)
-  const { showToast } = useToast()
 
   useEffect(() => {
     setQuantity(Number(item.quantity) || 1)
   }, [item.quantity, item.cartId])
-
-  const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
-
-  const notifyStockLimit = () => {
-    showToast(`Cantidad máxima alcanzada: ${maxQuantity} unidades.`, 'error')
-  }
 
   /** Solo actualiza UI local; agenda PUT debounced. Flush en blur. */
   const applyLocalQuantity = (next) => {
@@ -74,20 +64,17 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
     if (!Number.isFinite(parsed)) {
       return
     }
-    if (parsed >= maxQuantity) {
-      notifyStockLimit()
-    }
-    const clamped = clampQuantity(parsed)
-    setQuantity(clamped)
-    if (clamped !== Number(item.quantity)) {
-      onQuantityChange?.(item.id, clamped, { debounce: true })
+    const nextQuantity = Math.max(1, Math.floor(parsed))
+    setQuantity(nextQuantity)
+    if (nextQuantity !== Number(item.quantity)) {
+      onQuantityChange?.(item.id, nextQuantity, { debounce: true })
     }
   }
 
   const commitQuantityToApi = (next) => {
-    const clamped = clampQuantity(next)
-    setQuantity(clamped)
-    onQuantityChange?.(item.id, clamped, { flush: true })
+    const nextQuantity = Math.max(1, Math.floor(Number(next) || 1))
+    setQuantity(nextQuantity)
+    onQuantityChange?.(item.id, nextQuantity, { flush: true })
   }
 
   const handleChange = (event) => {
@@ -180,9 +167,8 @@ function CartCard({ item, catalogStock = 0, qtyBusy = false, onQuantityChange, o
             className="carrito-card__qty"
             value={quantity}
             min="1"
-            max={maxQuantity}
             step="1"
-            disabled={qtyBusy || isSoldOut}
+            disabled={qtyBusy}
             onChange={handleChange}
             onFocus={handleFocus}
             onMouseUp={handleMouseUp}
@@ -225,17 +211,8 @@ export function CartDrawerContent() {
     initiateCheckout,
     isMutatingCartQty,
   } = useCart()
-  const { products } = useCatalog()
   const { showToast } = useToast()
   const [cartSearchValue, setCartSearchValue] = useState('')
-
-  const catalogStockById = useMemo(() => {
-    const map = new Map()
-    products.forEach((product) => {
-      map.set(String(product.id), Number(product.stock) || 0)
-    })
-    return map
-  }, [products])
 
   const cartTotals = useMemo(() => summarizeCartItems(cartItems), [cartItems])
   const ivaLabel = useMemo(() => getIvaBreakdownLabel(cartItems), [cartItems])
@@ -293,11 +270,10 @@ export function CartDrawerContent() {
                 {filteredItems.length === 0 ? (
                   <li className="content-main-carrito__empty">Sin coincidencias en el carrito</li>
                 ) : (
-                  filteredItems.map((item) => (
+                  filteredItems.map((item) => (                    
                     <CartCard
                       key={item.cartId ?? item.id}
                       item={item}
-                      catalogStock={catalogStockById.get(String(item.id)) ?? (Number(item.stock) || 0)}
                       qtyBusy={isMutatingCartQty(item.id)}
                       onQuantityChange={async (productId, quantity, options) => {
                         const result = await setCartItemQuantity(productId, quantity, options)
