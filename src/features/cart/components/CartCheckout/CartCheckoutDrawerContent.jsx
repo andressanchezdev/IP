@@ -38,6 +38,7 @@ export function CartCheckoutDrawerContent() {
   const [deliveryOpen, setDeliveryOpen] = useState(true)
   const [paymentOpen, setPaymentOpen] = useState(true)
   const [isConfirmingOrder, setIsConfirmingOrder] = useState(false)
+  const [isCheckingCredit, setIsCheckingCredit] = useState(false)
 
   const personal = profileSettings?.personal ?? {}
   const credit = profileSettings?.credit ?? profile?.credit ?? {
@@ -94,7 +95,7 @@ export function CartCheckoutDrawerContent() {
   const totalToPay = cartTotals.total + shippingCost
 
   const hasDelivery = Boolean(deliveryAddress.trim())
-  const canConfirmOrder = hasDelivery && paymentConfirmed && !isConfirmingOrder
+  const canConfirmOrder = hasDelivery && paymentConfirmed && !isConfirmingOrder && !isCheckingCredit
   // Visible solo mientras faltan datos o se está editando ese bloque.
   const showDeliverySection = !hasDelivery || editingDelivery
   const showPaymentSection = hasDelivery
@@ -206,25 +207,41 @@ export function CartCheckoutDrawerContent() {
     showToast('Pago en efectivo seleccionado', 'success')
   }
 
-  const handleConfirmCredit = () => {
-    if (!hasCredit) {
-      showToast('El usuario no cuenta con crédito disponible', 'error')
-      return
+  const handleConfirmCredit = async () => {
+    if (isCheckingCredit) return
+
+    setIsCheckingCredit(true)
+    try {
+      const refresh = await loadProfileFromAboutApi()
+      if (!refresh.success) {
+        showToast(refresh.error || 'No se pudo actualizar el crédito', 'error')
+        return
+      }
+
+      const freshCredit = refresh.profileSettings?.credit
+      const freshCreditAvailable = Number(freshCredit?.available) || 0
+      if (!freshCredit?.hasCredit || freshCreditAvailable <= 0) {
+        showToast('El usuario no cuenta con crédito disponible', 'error')
+        return
+      }
+      if (totalToPay > freshCreditAvailable) {
+        showToast('El pedido supera el cupo de crédito disponible', 'error')
+        return
+      }
+
+      setPaymentMethod('credito')
+      setPaymentConfirmed(true)
+      setPaymentDetails({
+        availableCredit: freshCreditAvailable,
+        paymentLimitDays: freshCredit.paymentLimitDays ?? null,
+        amount: totalToPay,
+      })
+      setPaymentPanel(null)
+      setEditingPayment(false)
+      showToast('Crédito seleccionado', 'success')
+    } finally {
+      setIsCheckingCredit(false)
     }
-    if (totalToPay > creditAvailable) {
-      showToast('El pedido supera el cupo de crédito', 'error')
-      return
-    }
-    setPaymentMethod('credito')
-    setPaymentConfirmed(true)
-    setPaymentDetails({
-      availableCredit: creditAvailable,
-      paymentLimitDays: creditPaymentLimitDays,
-      amount: totalToPay,
-    })
-    setPaymentPanel(null)
-    setEditingPayment(false)
-    showToast('Crédito seleccionado', 'success')
   }
 
   const handleConfirmOrder = async () => {
@@ -264,6 +281,14 @@ export function CartCheckoutDrawerContent() {
       if (!result?.success) {
         showToast(result?.error || 'No se pudo crear el pedido', 'error')
         return
+      }
+
+      if (paymentMethod === 'credito') {
+        const creditRefresh = await loadProfileFromAboutApi()
+        if (!creditRefresh.success) {
+          showToast('Pedido creado, pero no se pudo actualizar el saldo de crédito', 'warning')
+          return
+        }
       }
 
       showToast('Pedido creado. Puede seguirlo en Historial.', 'success')
@@ -318,6 +343,7 @@ export function CartCheckoutDrawerContent() {
             creditAvailable={creditAvailable}
             creditPaymentLimitDays={creditPaymentLimitDays}
             hasCredit={hasCredit}
+            isCheckingCredit={isCheckingCredit}
             paymentPanel={paymentPanel}
             onSelectPanel={setPaymentPanel}
             paymentMethod={paymentMethod}

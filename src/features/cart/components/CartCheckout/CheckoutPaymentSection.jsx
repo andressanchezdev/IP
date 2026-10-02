@@ -24,6 +24,7 @@ export function CheckoutPaymentSection({
   creditAvailable,
   creditPaymentLimitDays = null,
   hasCredit = false,
+  isCheckingCredit = false,
   paymentPanel,
   onSelectPanel,
   paymentMethod,
@@ -145,10 +146,10 @@ export function CheckoutPaymentSection({
               type="button"
               className="content-main-data-carrito__checkout"
               onClick={onConfirmCredit}
-              disabled={Boolean(creditHint)}
+              disabled={isCheckingCredit}
               {...namedControl('Seleccionar crédito')}
             >
-              Seleccionar
+              {isCheckingCredit ? 'Validando crédito...' : 'Seleccionar'}
             </button>
           </div>
         )}
