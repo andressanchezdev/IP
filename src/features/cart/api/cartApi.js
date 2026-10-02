@@ -1,8 +1,10 @@
 import { apiRequest } from '@/shared/api'
 import { auditProductFiscalFields } from '@/features/catalog/lib/auditProductFiscalFields'
 import { applyCartPostFiscalGate, buildCartPostBody } from './cartPostBody'
+import { collectCartPages } from './cartPagination'
 
 const CART_PAGE_SIZE = 50
+export const MAX_CART_ITEMS = 600
 const CARTS_PATH = '/api/v1/inventory/carts'
 const CARTS_PATH_MASSIVE = '/api/v1/inventory/carts/massive'
 const CARTS_PATH_CHECK_MASSIVE = '/api/v1/inventory/carts/check-massive'
@@ -59,6 +61,7 @@ export async function getCart({
   token,
   lastId = null,
   limit = CART_PAGE_SIZE,
+  signal,
 } = {}) {
   const query = buildQuery({
     limit,
@@ -68,20 +71,41 @@ export async function getCart({
   const payload = await apiRequest(`${CARTS_PATH}${query}`, {
     method: 'GET',
     token,
+    signal,
   })
 
   const carritos = extractCarts(payload)
   auditProductFiscalFields(carritos, 'cart')
-  const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
+  const metaCandidate = payload?.meta ?? payload?.data?.meta
+  const meta = metaCandidate && typeof metaCandidate === 'object' ? metaCandidate : {}
+  const hasMore = typeof meta.has_more === 'boolean' ? meta.has_more : undefined
 
   return {
     carritos,
     meta,
-    hasMore: Boolean(meta.has_more),
-    nextCursor: meta.next_cursor ?? null,
+    hasMore,
+    nextCursor: meta.next_cursor ?? meta.nextCursor ?? null,
     limit: meta.limit ?? limit,
     raw: payload,
   }
+}
+
+/** Recupera hasta 600 líneas siguiendo el cursor publicado por el endpoint. */
+export async function getAllCart({
+  token,
+  limit = CART_PAGE_SIZE,
+  maxItems = MAX_CART_ITEMS,
+  signal,
+} = {}) {
+  return collectCartPages(
+    ({ lastId, limit: pageLimit }) => getCart({
+      token,
+      lastId,
+      limit: pageLimit,
+      signal,
+    }),
+    { pageSize: limit, maxItems },
+  )
 }
 
 /**

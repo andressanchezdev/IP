@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { buildCheckoutOrder } from '@/features/orders/utils/buildCheckoutOrder'
 import { formatSalesFecha } from '@/features/orders/api/salesApi'
 import { postManagementSalesSafe } from '@/features/orders/api/salesApiSafe'
-import { getCart } from '@/features/cart/api/cartApi'
+import { getAllCart } from '@/features/cart/api/cartApi'
 import { persistCartItemSafe, removeCartItemSafe, clearCartMassiveSafe, updateCartItemSafe } from '@/features/cart/api/cartApiSafe'
 import {
   planCartAdd,
@@ -128,11 +128,19 @@ export function useCartSlice({
     return Array.from(byId.values())
   }, [mapCartRowsWithFiscal])
 
-  const applyCartFromApi = useCallback(async ({ token }) => {
-    const { carritos } = await getCart({ token })
-    const apiCart = mapCartRowsWithFiscal(carritos, cartItemsRef.current)
+  const applyCartFromApi = useCallback(async ({
+    token,
+    previousItems = cartItemsRef.current,
+    catalogProducts = null,
+    signal,
+  } = {}) => {
+    const { carritos, complete } = await getAllCart({ token, signal })
+    if (signal?.aborted) {
+      return { cartItems: previousItems, complete: false, aborted: true }
+    }
+    const apiCart = mapCartRowsWithFiscal(carritos, previousItems, catalogProducts)
     setCartItems(apiCart)
-    return apiCart
+    return { cartItems: apiCart, complete }
   }, [mapCartRowsWithFiscal])
 
   const applyCartFromPayload = useCallback((carritos = [], catalogProducts = null) => {
@@ -151,18 +159,18 @@ export function useCartSlice({
 
     try {
       cartHydratingRef.current = true
-      const { carritos } = await getCart({ token })
+      const { carritos, complete } = await getAllCart({ token })
       // Respuesta vieja o hay mutaciones en vuelo: no pisar UI optimista.
       if (gen !== cartSyncGenRef.current) {
         return { success: true, stale: true }
       }
       if (!forceReplace && hasInFlightCartMutation()) {
         setCartItems((current) => mergeCartFromApiRows(current, carritos))
-        return { success: true, cartItems: cartItemsRef.current, merged: true }
+        return { success: true, cartItems: cartItemsRef.current, merged: true, complete }
       }
       const apiCart = mapCartRowsWithFiscal(carritos, cartItemsRef.current)
       setCartItems(apiCart)
-      return { success: true, cartItems: apiCart }
+      return { success: true, cartItems: apiCart, complete }
     } catch (error) {
       console.error('[cart] No se pudo cargar GET /api/v1/inventory/carts', error)
       return {
@@ -250,7 +258,7 @@ export function useCartSlice({
     // Si la línea ya existe pero sin id_carrito, un GET evita POST 400.
     if (existing && (cartId == null || cartId === '')) {
       try {
-        const { carritos } = await getCart({ token: tokenAccess })
+        const { carritos } = await getAllCart({ token: tokenAccess })
         const fromApi = mapApiCartItems(carritos).find((item) => String(item.id) === orderKey)
         commitCart((current) => mergeCartFromApiRows(current, carritos))
         if (fromApi?.cartId != null && fromApi.cartId !== '') {
@@ -356,7 +364,7 @@ export function useCartSlice({
       ))
       if (!cartId && !responseHasCartId) {
         try {
-          const { carritos } = await getCart({ token: tokenAccess })
+          const { carritos } = await getAllCart({ token: tokenAccess })
           if (carritos.length > 0) {
             commitCart((items) => mergeCartFromApiRows(items, carritos))
           }

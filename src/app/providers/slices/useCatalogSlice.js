@@ -177,6 +177,7 @@ export function useCatalogSlice({
     }
 
     let cancelled = false
+    const cartController = new AbortController()
 
     async function hydrateFromApiSession() {
       productsLoadingRef.current = true
@@ -194,7 +195,24 @@ export function useCatalogSlice({
           rememberLastProductId(mappedProducts)
           setHasMoreProducts(result.hasMore)
           // Pasar productos mapeados: productsRef aún no refleja setProducts.
-          applyCartFromPayload(result.carritos, mappedProducts)
+          const initialCartItems = applyCartFromPayload(result.carritos, mappedProducts)
+          try {
+            const cartResult = await applyCartFromApi({
+              token: tokenAccess,
+              previousItems: initialCartItems,
+              catalogProducts: mappedProducts,
+              signal: cartController.signal,
+            })
+            if (!cartResult.complete && !cancelled) {
+              console.warn('[hydrate] Carrito cargado de forma parcial', {
+                count: cartResult.cartItems.length,
+              })
+            }
+          } catch (cartError) {
+            if (!cancelled) {
+              console.error('[hydrate] No se pudo completar GET /api/v1/inventory/carts', cartError)
+            }
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -214,8 +232,9 @@ export function useCatalogSlice({
 
     return () => {
       cancelled = true
+      cartController.abort()
     }
-  }, [tokenAccess, userId, applyCartFromPayload, cartHydratingRef])
+  }, [tokenAccess, userId, applyCartFromApi, applyCartFromPayload, cartHydratingRef])
 
   const applyCatalogFiltersAndClose = useCallback(() => {
     commitFilterDraft()
