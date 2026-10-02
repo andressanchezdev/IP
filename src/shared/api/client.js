@@ -2,17 +2,36 @@ import { API_BASE_URL } from './config'
 
 let authToken = null
 let activeApiRequests = 0
+let apiLoadingSuppressionCount = 0
 const apiActivityListeners = new Set()
+
+function getVisibleApiActivityCount() {
+  return apiLoadingSuppressionCount > 0 ? 0 : activeApiRequests
+}
 
 export function subscribeApiActivity(listener) {
   apiActivityListeners.add(listener)
-  listener(activeApiRequests)
+  listener(getVisibleApiActivityCount())
 
   return () => apiActivityListeners.delete(listener)
 }
 
 function notifyApiActivity() {
-  apiActivityListeners.forEach((listener) => listener(activeApiRequests))
+  const count = getVisibleApiActivityCount()
+  apiActivityListeners.forEach((listener) => listener(count))
+}
+
+export function suppressApiLoadingIndicator() {
+  apiLoadingSuppressionCount += 1
+  notifyApiActivity()
+
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    apiLoadingSuppressionCount = Math.max(0, apiLoadingSuppressionCount - 1)
+    notifyApiActivity()
+  }
 }
 
 export function setApiAuthToken(token) {

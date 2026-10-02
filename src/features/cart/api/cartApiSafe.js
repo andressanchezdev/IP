@@ -94,7 +94,10 @@ export async function updateCartItemSafe({
     console.error('[cart] No se pudo actualizar PUT /api/v1/inventory/carts', error)
     return {
       success: false,
-      error: error?.message || 'No se pudo actualizar la cantidad',
+      error: error?.status === 500
+        ? 'Cantidad aumentada no disponible, supera stock'
+        : error?.message || 'No se pudo actualizar la cantidad',
+      status: error?.status,
     }
   }
 }

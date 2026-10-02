@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useToast } from '@/app/providers/ToastProvider'
 import {
   PRODUCTS_PAGE_SIZE,
   getLatestInventoryProducts,
@@ -79,6 +80,7 @@ export function useStorePageFilters({
   beginCatalogSearch,
   endCatalogSearch,
 }) {
+  const { showToast } = useToast()
   const debouncedSearchValue = useDebouncedValue(searchValue, SEARCH_DEBOUNCE_MS)
   const isStoreView = activeView === 'tienda'
 
@@ -264,6 +266,7 @@ export function useStorePageFilters({
     if (isFilterSelectionBlocked(filterModes)) {
       setFilteredProductsFromApi([])
       setIsLoadingFilteredProducts(false)
+      showToast('No se encontraron productos para estos filtros aplicados', 'warning')
       return undefined
     }
 
@@ -291,6 +294,9 @@ export function useStorePageFilters({
         if (cancelled) return
         const mapped = mapApiProducts(result.productos).map(normalizeProduct)
         setFilteredProductsFromApi(mapped)
+        if (mapped.length === 0) {
+          showToast('No se encontraron productos para estos filtros aplicados', 'warning')
+        }
       })
       .catch((error) => {
         if (cancelled || isAbortError(error) || controller.signal.aborted) {
@@ -317,6 +323,7 @@ export function useStorePageFilters({
     filters.categories,
     filters.models,
     withStock,
+    showToast,
   ])
 
   const filteredProducts = useMemo(() => {

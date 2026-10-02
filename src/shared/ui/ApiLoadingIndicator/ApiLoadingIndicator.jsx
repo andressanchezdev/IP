@@ -15,6 +15,7 @@ export function ApiLoadingIndicator() {
     const unsubscribe = subscribeApiActivity((count) => {
       activeCount = count
 
+      
       if (count === 0) {
         if (timerId !== null) {
           window.clearTimeout(timerId)

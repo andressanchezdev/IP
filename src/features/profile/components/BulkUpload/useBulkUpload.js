@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useAuth, useCart } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
-import { getApiAuthToken } from '@/shared/api'
+import { getApiAuthToken, suppressApiLoadingIndicator } from '@/shared/api'
 import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
 import { CART_UNIT_PRICE_ERROR } from '@/features/cart/api/cartPostBody'
 import { MIN_PRODUCT_CODES } from '@/features/profile/lib/excelCore'
@@ -113,6 +113,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
       decision: null,
     })
 
+    const releaseApiLoadingIndicator = suppressApiLoadingIndicator()
     try {
       const { compareBulkOrderWithCheckMassive } = await import('@/features/profile/api/bulkOrderApi')
       const token = tokenAccessRef.current || getApiAuthToken()
@@ -136,6 +137,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     } catch (error) {
       showToast(error?.message || 'No se pudo consultar el stock', 'error')
     } finally {
+      releaseApiLoadingIndicator()
       setProcessState((current) => ({ ...current, isProcessing: false }))
     }
   }
@@ -155,6 +157,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     }
 
     setProcessState((current) => ({ ...current, isSending: true }))
+    const releaseApiLoadingIndicator = suppressApiLoadingIndicator()
 
     try {
       const { submitBulkOrderSelection } = await import('@/features/profile/api/bulkContinue')
@@ -226,6 +229,7 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
     } catch (error) {
       showToast(error?.message || 'No se pudo enviar el pedido al carrito', 'error')
     } finally {
+      releaseApiLoadingIndicator()
       setProcessState((current) => ({ ...current, isSending: false }))
     }
   }
