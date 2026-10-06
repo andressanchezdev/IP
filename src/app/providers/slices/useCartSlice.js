@@ -15,6 +15,9 @@ import { enrichCartItemsFiscalFromCatalog } from '@/features/catalog/lib/product
 import { summarizeCartItems } from '@/shared/lib/money'
 import { resolveCheckoutPaymentType } from '@/features/orders/utils/resolveCheckoutPaymentType'
 import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
+import { noteRealtimeMutation } from '@/features/realtime/pendingMutations'
+import { useRealtimeRef, useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
+import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
 
@@ -55,6 +58,8 @@ export function useCartSlice({
   const [mutatingQtyIds, setMutatingQtyIds] = useState(() => new Set())
   const [isClearingCart, setIsClearingCart] = useState(false)
   const cartItemsRef = useRef(cartItems)
+  useRealtimeSlot('cart', setCartItems)
+  useRealtimeRef('cartItems', cartItemsRef)
   const orderingIdsRef = useRef(new Set())
   const mutatingQtyRef = useRef(new Set())
   const clearingCartRef = useRef(false)
@@ -357,6 +362,14 @@ export function useCartSlice({
       }
 
       await syncCartAfterMutation(persisted)
+      noteRealtimeMutation({
+        action: cartId ? 'put' : 'post',
+        productId: orderKey,
+        cartId,
+        quantity: planned.body.cantidad,
+        warehouseId: getSessionWarehouseId(),
+        userId: currentUserId,
+      })
 
       const responseHasCartId = persisted.carritos?.some((row) => (
         String(row.id_producto) === orderKey
@@ -378,7 +391,7 @@ export function useCartSlice({
       orderingIdsRef.current.delete(orderKey)
       syncOrderingProductIds()
     }
-  }, [tokenAccess, events, persistCartItemToApi, productsRef, syncCartAfterMutation, syncOrderingProductIds, commitCart, mergeCartFromApiRows])
+  }, [tokenAccess, currentUserId, events, persistCartItemToApi, productsRef, syncCartAfterMutation, syncOrderingProductIds, commitCart, mergeCartFromApiRows])
 
   const removeFromCart = useCallback(async (productId, options = {}) => {
     if (!tokenAccess) {
@@ -417,12 +430,19 @@ export function useCartSlice({
       }
 
       await syncCartAfterMutation(removed, { allowEmpty: true })
+      noteRealtimeMutation({
+        action: 'delete',
+        productId: removeKey,
+        cartId: item.cartId,
+        warehouseId: getSessionWarehouseId(),
+        userId: currentUserId,
+      })
       return { success: true }
     } finally {
       mutatingQtyRef.current.delete(removeKey)
       syncMutatingQtyIds()
     }
-  }, [tokenAccess, syncCartAfterMutation, removeCartItemFromApi, commitCart, syncMutatingQtyIds])
+  }, [tokenAccess, currentUserId, syncCartAfterMutation, removeCartItemFromApi, commitCart, syncMutatingQtyIds])
 
   const QTY_PUT_DEBOUNCE_MS = 250
 
@@ -534,6 +554,14 @@ export function useCartSlice({
         }
 
         await syncCartAfterMutation(updated)
+        noteRealtimeMutation({
+          action: 'put',
+          productId,
+          cartId: pending.cartId,
+          quantity: pending.nextQuantity,
+          warehouseId: getSessionWarehouseId(),
+          userId: currentUserId,
+        })
         const ok = {
           success: true,
           quantity: pending.nextQuantity,
@@ -572,7 +600,7 @@ export function useCartSlice({
       }, QTY_PUT_DEBOUNCE_MS)
       qtyDebounceTimersRef.current.set(qtyKey, timer)
     })
-  }, [tokenAccess, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds])
+  }, [tokenAccess, currentUserId, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds])
   const clearCart = useCallback(async () => {
     if (!tokenAccess) {
       commitCart([])
@@ -595,12 +623,17 @@ export function useCartSlice({
         commitCart(previousItems)
         return cleared
       }
+      noteRealtimeMutation({
+        action: 'delete-massive',
+        warehouseId: getSessionWarehouseId(),
+        userId: currentUserId,
+      })
       return { success: true }
     } finally {
       clearingCartRef.current = false
       setIsClearingCart(false)
     }
-  }, [tokenAccess, commitCart])
+  }, [tokenAccess, currentUserId, commitCart])
 
   const createOrderFromCheckout = useCallback(async ({
     clientData,
@@ -655,10 +688,22 @@ export function useCartSlice({
       }
     }
 
+    noteRealtimeMutation({
+      action: 'sale',
+      warehouseId: getSessionWarehouseId(),
+      userId: currentUserId,
+    })
+
     // Pedido creado en servidor: vaciar carrito API (best effort).
     const cleared = await clearCartMassiveSafe({ token: tokenAccess })
     if (!cleared.success) {
       console.error('[checkout] Pedido creado pero no se pudo vaciar el carrito', cleared.error)
+    } else {
+      noteRealtimeMutation({
+        action: 'delete-massive',
+        warehouseId: getSessionWarehouseId(),
+        userId: currentUserId,
+      })
     }
 
     const order = buildCheckoutOrder({

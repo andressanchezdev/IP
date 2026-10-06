@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { savePersistedState, clearAppCache } from '@/shared/lib/storage'
+import { setSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 import {
   createEmptyProfileView,
   defaultProfileSettings,
@@ -10,8 +11,7 @@ import {
   mergeApiProfileWithWorkspace,
 } from '@/features/auth/utils/mapLoginUserToProfile'
 import { clearApiAuthToken } from '@/shared/api'
-import { connectStockSocket, subscribeStockSocket } from '@/shared/ws'
-import { readAbonoCredit } from '@/features/orders/ws/applyAbonoFromWs'
+import { useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
 import { clearAuthSession } from '@/features/auth/utils/authStorage'
 import { APP_EVENTS } from '../appEvents'
 import { PROFILE_SETTINGS_TTL, sanitizeProfileSettings } from '../helpers'
@@ -25,10 +25,11 @@ export function useProfileSlice({
   const [profileSettings, setProfileSettings] = useState(() => initialProfileSettings)
   const [isLoadingAbout, setIsLoadingAbout] = useState(false)
   const [aboutError, setAboutError] = useState('')
-  const warehouseIdRef = useRef(null)
   const aboutRequestRef = useRef(0)
   const aboutAbortRef = useRef(null)
-  warehouseIdRef.current = profileSettings?.personal?.warehouseId ?? null
+  const warehouseId = profileSettings?.personal?.warehouseId ?? null
+  // Bodega del cliente: define qué stock se muestra y el `id_bodega` de cada petición.
+  setSessionWarehouseId(warehouseId)
 
   useEffect(() => {
     savePersistedState(
@@ -38,32 +39,17 @@ export function useProfileSlice({
     )
   }, [profileSettings])
 
-  const sessionUserId = profileSettings?.personal?.userId || ''
-
-  useEffect(() => {
-    if (!tokenAccess || !sessionUserId) {
-      return undefined
-    }
-
-    connectStockSocket()
-    return subscribeStockSocket((event) => {
-      if (event.type !== 'ws:message' || !event.message) {
-        return
-      }
-      const available = readAbonoCredit(event.message, sessionUserId)
-      if (available == null) {
-        return
-      }
-      setProfileSettings((current) => ({
-        ...current,
-        credit: {
-          ...(current.credit ?? {}),
-          available,
-          hasCredit: available > 0 || Boolean(current.credit?.hasCredit),
-        },
-      }))
-    })
-  }, [sessionUserId, tokenAccess])
+  const applyRealtimeCredit = useCallback((available) => {
+    setProfileSettings((current) => ({
+      ...current,
+      credit: {
+        ...(current.credit ?? {}),
+        available,
+        hasCredit: available > 0 || Boolean(current.credit?.hasCredit),
+      },
+    }))
+  }, [])
+  useRealtimeSlot('credit', applyRealtimeCredit)
 
   const profile = useMemo(() => ({
     ...createEmptyProfileView(profileSettings),
@@ -206,7 +192,7 @@ export function useProfileSlice({
     profile,
     profileSettings,
     setProfileSettings,
-    warehouseIdRef,
+    warehouseId,
     saveProfilePersonal,
     saveProfileCompany,
     saveProfileAccess,

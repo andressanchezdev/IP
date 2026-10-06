@@ -1,3 +1,4 @@
+import { noteRealtimeMutation } from '@/features/realtime/pendingMutations'
 import { getApiAuthToken } from '@/shared/api'
 import { postCartItem, putCartItem, readCartPostBackendMessage } from '@/features/cart/api/cartApi'
 import { planCartAdd } from '@/features/cart/api/cartPostBody'
@@ -132,6 +133,12 @@ export async function postBulkOrderToCart(
           product,
         })
       }
+      noteRealtimeMutation({
+        action: existingCartId ? 'put' : 'post',
+        productId,
+        cartId: existingCartId,
+        quantity: requestBody.cantidad,
+      })
       posted.push({
         codigo: row.codigo,
         cantidad: planned.orderQty,

@@ -1,5 +1,6 @@
 import { getCatalogProductId } from '@/features/catalog/mappers/mapProduct'
-import { stockTotal } from '@/features/catalog/mappers/parseUbicacionStock'
+import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
+import { buildStockFields } from '@/shared/lib/stockDetail'
 
 function overlayProduct(current, source) {
   const id = getCatalogProductId(source)
@@ -27,7 +28,10 @@ function overlayProduct(current, source) {
 
   const stockSource = source.stocking ?? source.stock
   if (stockSource != null && stockSource !== '') {
-    next.stock = stockTotal(stockSource)
+    // Misma regla que el resto: stock = cantidadAux de la bodega del cliente + detalle por ubicación.
+    Object.assign(next, buildStockFields(stockSource, getSessionWarehouseId()), {
+      stockUpdatedAt: Date.now(),
+    })
   }
 
   return next
@@ -69,14 +73,25 @@ function replaceListedProducts(setProducts, sources) {
  * `nuevoControl` de ficha o promoción: solo pisa productos que ya están en pantalla.
  * `nuevoProducto` no se inserta en la página actual.
  */
-export function applyCatalogNoticeFromWs(message, { setProducts } = {}) {
+export function applyCatalogNoticeFromWs(
+  message,
+  { setProducts, setSearchProducts, setLatestProducts } = {},
+) {
   const control = String(message?.info?.control ?? '').trim()
   if (control === 'nuevoProducto') {
     return { action: 'omitido', control }
   }
 
+  /** Catálogo + resultados de búsqueda (si no hay búsqueda su estado es null y se respeta). */
+  const replaceEverywhere = (sources) => {
+    const updated = replaceListedProducts(setProducts, sources)
+    replaceListedProducts(setSearchProducts, sources)
+    replaceListedProducts(setLatestProducts, sources)
+    return updated
+  }
+
   if (control === 'productoAct') {
-    const updated = replaceListedProducts(setProducts, message?.info?.producto)
+    const updated = replaceEverywhere(message?.info?.producto)
     return {
       action: updated.length ? 'producto actualizado' : 'sin producto en pantalla',
       control,
@@ -85,7 +100,7 @@ export function applyCatalogNoticeFromWs(message, { setProducts } = {}) {
   }
 
   if (control === 'nuevaPromocion') {
-    const updated = replaceListedProducts(setProducts, message?.info?.productos)
+    const updated = replaceEverywhere(message?.info?.productos)
     return {
       action: updated.length ? 'promocion actualizada' : 'sin producto en pantalla',
       control,

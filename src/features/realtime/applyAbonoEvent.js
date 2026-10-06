@@ -213,7 +213,7 @@ function appendAbono(setOrders, orderId, entry) {
       return {
         ...order,
         payment: {
-          ...(order.payment ?? {}),
+          ...order.payment,
           type: order.payment?.type ?? 'credito',
           payments: nextPayments,
           paymentsMade: nextPayments.length,

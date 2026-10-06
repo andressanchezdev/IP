@@ -4,6 +4,7 @@ import { BrandLogo } from '@/shared/ui/BrandLogo/BrandLogo'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import { ProductImageMagnify } from '../ProductImageMagnify/ProductImageMagnify'
 import { isWeakDescription, productDisplayName } from '@/features/catalog/lib/catalogMatch'
+import { productOrderLabel, resolveProductOrderState } from '@/features/catalog/lib/productOrderState'
 import { PRODUCT_SELLOS, pickProductLoremVersion } from './productDetailCopy'
 import '@/features/auth/components/AuthModal/AuthModal.css'
 import './ProductDetailModal.css'
@@ -57,8 +58,10 @@ export function ProductDetailModal({
   const displayPrice = product.precio ?? product.price
   const stock = Number(product.stock) || 0
   const maxQuantity = Math.max(0, Math.floor(stock))
-  const isSoldOut = stock <= 0
-  const isOrdered = isInCart
+  const orderState = resolveProductOrderState({ stock, isInCart, isOrdering })
+  const isSoldOut = orderState === 'soldout'
+  const isOrdered = orderState === 'ordered'
+  const stateLabel = productOrderLabel(orderState)
   const descriptionText = String(product.description || '').trim()
   const categoryText = String(product.category || '').trim()
   const modelText = String(product.model || '').trim()
@@ -69,7 +72,9 @@ export function ProductDetailModal({
   const activeSrc = gallery[activeIndex] || gallery[0] || ''
   const loremText = pickProductLoremVersion(product.id)
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
-  const orderLabel = isSoldOut ? 'Agotado' : isOrdering ? `Ordenando ${productName}` : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
+  const orderLabel = orderState === 'order' || orderState === 'ordering'
+    ? `${stateLabel.replace('…', '')} ${productName}`.trim()
+    : stateLabel
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
 
@@ -227,7 +232,7 @@ export function ProductDetailModal({
               disabled={isSoldOut || isOrdered || isOrdering}
               {...namedControl(orderLabel)}
             >
-              {isSoldOut ? 'Agotado' : isOrdering ? 'Ordenando…' : isOrdered ? 'Ordenado' : 'Ordenar'}
+              {stateLabel}
             </button>
           </div>
         </div>

@@ -29,17 +29,6 @@ const API_ESTADO_TO_INDEX = {
   envio: 5,
 }
 
-const WS_TIPO_TO_INDEX = {
-  tomapedido: 0,
-  'toma pedido': 0,
-  picking: 1,
-  'picking cambio corroborar': 1,
-  packing: 2,
-  venta: 3,
-  despacho: 4,
-  traslado: 5,
-}
-
 function normalizeKey(value) {
   return String(value ?? '')
     .trim()
@@ -97,14 +86,6 @@ export function getOrderStepIndex(statusOrEstado) {
 export function resolveOrderStepFromEstado(estado) {
   const index = getOrderStepIndex(estado)
   return ORDER_STEP_DEFS[index]?.currentLabel ?? ORDER_STEP_DEFS[0].currentLabel
-}
-
-export function resolveOrderStepFromWsTipo(tipo) {
-  const key = normalizeKey(tipo)
-  if (WS_TIPO_TO_INDEX[key] != null) {
-    return ORDER_STEP_DEFS[WS_TIPO_TO_INDEX[key]].currentLabel
-  }
-  return resolveOrderStepFromEstado(tipo)
 }
 
 /**

@@ -1,7 +1,9 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
-import { parseImageArray, stockTotal } from './parseUbicacionStock'
+import { parseImageArray } from './parseUbicacionStock'
 import { resolveProductCardImageUrl } from './productImageThumb'
 import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
+import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
+import { buildStockFields } from '@/shared/lib/stockDetail'
 
 const PLACEHOLDER_IMAGE_HINTS = [
   'blanco.png',
@@ -135,7 +137,8 @@ export function mapApiProduct(product) {
     brand,
     model: String(product.modelo ?? '').trim(),
     reference: String(product.codigo ?? '').trim(),
-    stock: stockTotal(product.stock),
+    // stock = cantidadAux de la bodega del cliente; stockReal = cantidad; stockDetail = bodega → ubicaciones.
+    ...buildStockFields(product.stock, getSessionWarehouseId()),
     searching: String(product.searching ?? '').trim(),
     imageUrl,
     imageCardUrl,

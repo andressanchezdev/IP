@@ -12,7 +12,7 @@ import {
   mapSalesToCreditHistoryOrders,
   mapSalesToPendingOrders,
 } from '@/features/orders/mappers/mapSalesHistory'
-import { useOrderFlowWebSocket } from '@/features/orders/ws/useOrderFlowWebSocket'
+import { useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
 import { APP_EVENTS } from '../appEvents'
 
 const HISTORY_TTL_MS = 45_000
@@ -164,8 +164,6 @@ export function useOrdersSlice({
   events,
   initialPendingOrders,
   initialHistoryOrders,
-  tokenAccess = null,
-  userId = null,
 }) {
   const [pendingOrders, setPendingOrders] = useState(() => initialPendingOrders)
   const [historyOrders, setHistoryOrders] = useState(() => initialHistoryOrders)
@@ -181,12 +179,8 @@ export function useOrdersSlice({
   pendingOrdersRef.current = pendingOrders
   historyOrdersRef.current = historyOrders
 
-  useOrderFlowWebSocket({
-    enabled: Boolean(tokenAccess),
-    userId,
-    setPendingOrders,
-    setHistoryOrders,
-  })
+  useRealtimeSlot('pendingOrders', setPendingOrders)
+  useRealtimeSlot('historyOrders', setHistoryOrders)
 
   const resetOrderDrawer = useCallback(() => {
     setSelectedOrderId(null)

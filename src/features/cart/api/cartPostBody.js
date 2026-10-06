@@ -5,6 +5,7 @@ import {
   readProductIvaRate,
 } from '@/features/catalog/lib/productFiscalFields'
 import { upperStringFields } from '@/shared/lib/upperText'
+import { withWarehouse } from '@/shared/lib/sessionWarehouse'
 
 /** Campos de texto del body que viajan en MAYÚSCULA (las claves siguen en minúscula). */
 export const CART_POST_UPPER_FIELDS = ['aplicacion']
@@ -19,7 +20,8 @@ export const CART_POST_UPPER_FIELDS = ['aplicacion']
  *   exento,
  *   iva,
  *   aplicacion,
- *   fecha             // "YYYY-MM-DD HH:mm:ss"
+ *   fecha,            // "YYYY-MM-DD HH:mm:ss"
+ *   id_bodega         // bodega del cliente (perfil; 0 → 6), si se conoce
  * }
  *
  * No se envía `codigo`. id_producto ≠ codigo.
@@ -191,7 +193,8 @@ export function buildCartPostBody({
     )
   }
 
-  return upperStringFields(body, CART_POST_UPPER_FIELDS)
+  // Todo lo que envía el cliente indica su bodega (id_bodega), igual que los mensajes del WS.
+  return withWarehouse(upperStringFields(body, CART_POST_UPPER_FIELDS))
 }
 
 /**

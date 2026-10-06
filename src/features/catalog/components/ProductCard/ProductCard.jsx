@@ -4,6 +4,7 @@ import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import { copyTextToClipboard } from '@/shared/lib/copyTextToClipboard'
 import { useToast } from '@/app/providers/ToastProvider'
 import { isWeakDescription, productDisplayName } from '@/features/catalog/lib/catalogMatch'
+import { productOrderLabel, resolveProductOrderState } from '@/features/catalog/lib/productOrderState'
 import './ProductCard.css'
 
 function formatPrice(price) {
@@ -43,8 +44,10 @@ export const ProductCard = memo(function ProductCard({
   // Prioriza el campo API `precio`; `price` queda como alias interno.
   const displayPrice = precio ?? price
   const maxQuantity = useMemo(() => Math.max(0, Math.floor(Number(stock) || 0)), [stock])
-  const isOrdered = isInCart
-  const isSoldOut = stock <= 0
+  const orderState = resolveProductOrderState({ stock, isInCart, isOrdering })
+  const isOrdered = orderState === 'ordered'
+  const isSoldOut = orderState === 'soldout'
+  const stateLabel = productOrderLabel(orderState)
   const resolvedBrandLogo = brandLogo || brandLogoUrl
   // Card: thumb liviana (*_card.webp). Fallback: full → logo marca.
   const mediaSrc = (() => {
@@ -70,7 +73,9 @@ export const ProductCard = memo(function ProductCard({
   const metaText = `${String(brand || '').trim()} - ${String(model || '').trim()}`.replace(/^\s*-\s*|\s*-\s*$/g, '').trim()
   const referenceText = String(reference || '').trim()
   const productName = productDisplayName({ description, category, model, brand })
-  const orderLabel = isSoldOut ? 'Agotado' : isOrdering ? `Ordenando ${productName}` : isOrdered ? 'Ordenado' : `Ordenar ${productName}`
+  const orderLabel = orderState === 'order' || orderState === 'ordering'
+    ? `${stateLabel.replace('…', '')} ${productName}`.trim()
+    : stateLabel
   const orderQuantity = Math.max(1, Math.min(maxQuantity, Number(quantity) || 1))
 
   const clampQuantity = (value) => Math.max(1, Math.min(maxQuantity, value))
@@ -263,7 +268,7 @@ export const ProductCard = memo(function ProductCard({
               disabled={isSoldOut || isOrdered || isOrdering}
               {...namedControl(orderLabel)}
             >
-              {isSoldOut ? 'Agotado' : isOrdering ? 'Ordenando…' : isOrdered ? 'Ordenado' : 'Ordenar'}
+              {stateLabel}
             </button>
           </div>
         </div>

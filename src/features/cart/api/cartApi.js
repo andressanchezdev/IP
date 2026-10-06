@@ -2,6 +2,7 @@ import { apiRequest } from '@/shared/api'
 import { auditProductFiscalFields } from '@/features/catalog/lib/auditProductFiscalFields'
 import { applyCartPostFiscalGate, buildCartPostBody } from './cartPostBody'
 import { collectCartPages } from './cartPagination'
+import { withWarehouse } from '@/shared/lib/sessionWarehouse'
 
 const CART_PAGE_SIZE = 50
 export const MAX_CART_ITEMS = 600
@@ -307,9 +308,9 @@ export async function deleteCartItem({
     throw new Error('id_carrito inválido')
   }
 
-  const body = {
+  const body = withWarehouse({
     id_carrito: cartId,
-  }
+  })
 
   const payload = await apiRequest(CARTS_PATH, {
     method: 'DELETE',
@@ -338,9 +339,9 @@ export async function deleteCartItem({
 export async function deleteMassiveCartItems({
   token,
 } = {}) {
-  const body = {
+  const body = withWarehouse({
     type: 'all',
-  }
+  })
   const payload = await apiRequest(CARTS_PATH_MASSIVE, {
     method: 'DELETE',
     token,

@@ -1,6 +1,8 @@
 import { resolveAssetUrl } from './resolveAssetUrl'
-import { parseImageArray, parseStock } from './parseUbicacionStock'
+import { parseImageArray } from './parseUbicacionStock'
 import { resolveProductCardImageUrl } from './productImageThumb'
+import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
+import { buildStockFields } from '@/shared/lib/stockDetail'
 import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
 
 const PLACEHOLDER_IMAGE_HINTS = [
@@ -61,9 +63,10 @@ export function mapApiCartItem(entry) {
   const brandLogoUrl = resolveAssetUrl(entry.imagen)
   const imageUrl = pickProductImageUrl(pickCartProductImageField(entry))
   const imageCardUrl = resolveProductCardImageUrl(imageUrl, entry)
-  const stock = entry.stock != null && entry.stock !== ''
-    ? parseStock(entry.stock)
-    : undefined
+  // Mismo modelo que catálogo y WS: stock = cantidadAux de la bodega del cliente.
+  const stockFields = entry.stock != null && entry.stock !== ''
+    ? buildStockFields(entry.stock, getSessionWarehouseId())
+    : null
   const cartIdValue = Number(entry.id_carrito)
   const cartId = Number.isFinite(cartIdValue) && cartIdValue > 0
     ? entry.id_carrito
@@ -79,7 +82,7 @@ export function mapApiCartItem(entry) {
     brand,
     model: text(entry.modelo),
     reference: text(entry.codigo) || productId,
-    ...(stock !== undefined ? { stock } : {}),
+    ...stockFields,
     searching: text(entry.searching),
     imageUrl,
     imageCardUrl,

@@ -12,4 +12,3 @@ export {
   extraerProductos,
   invalidateGeneralFilterCache,
 } from './api/generalApi'
-export { useStockWebSocket } from './ws/useStockWebSocket'
