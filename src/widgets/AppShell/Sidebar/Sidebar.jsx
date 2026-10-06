@@ -4,6 +4,7 @@ import waitIcon from '@/assets/icons/wait.svg'
 import historyIcon from '@/assets/icons/history.svg'
 import logoutIcon from '@/assets/icons/logout.svg'
 import loginIcon from '@/assets/icons/login.svg'
+import helpIcon from '@/assets/icons/help.svg'
 import { namedControl, namedImage } from '@/shared/lib/namedControl'
 import './Sidebar.css'
 
@@ -41,7 +42,10 @@ export function Sidebar({
       </button>
 
       <nav className="sidebar__nav" {...namedControl('Menú de vistas')}>
-        {NAV_ITEMS.map(({ id, label, icon }) => {
+        {(isAuthenticated
+          ? [...NAV_ITEMS, { id: 'dudas', label: 'Dudas', icon: helpIcon }]
+          : NAV_ITEMS
+        ).map(({ id, label, icon }) => {
           const isActive = activeItem === id
           return (
             <button

@@ -22,6 +22,7 @@ export function StorePage() {
     tienda: 'tienda',
     espera: 'Historial',
     historial: 'Cartera',
+    dudas: 'dudas',
   }
 
   const {
@@ -500,12 +501,12 @@ export function StorePage() {
         />
 
         <main className="landing__content">
-          {isAuthenticated ? (
+          {!isAuthenticated || activeView === 'dudas' ? (
+            <ManualWelcome />
+          ) : (
             <div className="landing__view" ref={catalogViewRef}>
               {renderContent()}
             </div>
-          ) : (
-            <ManualWelcome />
           )}
         </main>
       </div>

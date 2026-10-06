@@ -343,7 +343,7 @@ export function ManualWelcome() {
               <div className="progress__bar" style={{ width: `${percent}%` }} />
             </div>
             <div className="manual-cliente__header-line">
-            <span>{watched}/{STEPS.length} · {percent}%</span>
+            <span>{watched}/{STEPS.length} · {percent}% Realizado </span>
           </div>
           </div>
         </div>
