@@ -1,4 +1,5 @@
 import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
+import { cleanProductField } from '@/shared/lib/productText'
 
 function toKeys(values) {
   return values
@@ -40,19 +41,21 @@ export function enrichOrderItemsFromCatalog(items = [], catalogIndex = new Map()
       return item
     }
 
-    const weakDescription = !item.description
-      || /^producto\s*#/i.test(String(item.description))
+    // "Producto #id" es un placeholder heredado: cuenta como descripción vacía.
+    const weakDescription = !cleanProductField(item.description)
     const itemFiscal = pickProductFiscalFields(item)
     const catalogFiscal = pickProductFiscalFields(product)
 
     return {
       ...item,
+      // Cada campo por separado: el texto final (descripcion · categoria · marca · modelo)
+      // lo arma buildProductDetailText en cada archivo generado.
       description: weakDescription
-        ? (product.description || product.model || item.description)
+        ? (cleanProductField(product.description) || '')
         : item.description,
-      category: item.category || product.category || '',
-      brand: item.brand || product.brand || '',
-      model: item.model || product.model || '',
+      category: cleanProductField(item.category) || cleanProductField(product.category) || '',
+      brand: cleanProductField(item.brand) || cleanProductField(product.brand) || '',
+      model: cleanProductField(item.model) || cleanProductField(product.model) || '',
       reference: item.reference || product.reference || product.codigo || item.id || '',
       imageUrl: item.imageUrl || product.imageUrl || product.imageCardUrl || '',
       brandLogo: item.brandLogo || item.brandLogoUrl || product.brandLogo || product.brandLogoUrl || '',

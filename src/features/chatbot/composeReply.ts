@@ -36,7 +36,8 @@ import {
 } from './intents'
 import { livePublishedTeam } from './botip/liveData'
 import { matchLandingTeam, wantsAdvisorContact } from './teamLookup'
-import { classifyTurn, isAdvisorAsk, mergeFocusTokens } from './conversationThread'
+import { isAdvisorAsk, mergeFocusTokens } from './conversationThread'
+import { effectiveTurnKind } from './followLine'
 
 export type HandlerFn = (tokens: readonly string[], ctx: SessionContext) => ChatReply
 
@@ -87,7 +88,7 @@ export function runHandler(intent: string, tokens: readonly string[], ctx: Sessi
   const handler = HANDLERS[intent]
   if (!handler) return { text: applyBotText('fallback', 'No relacioné la consulta.', { term: intent }), actions: [] }
   try {
-    const kind = classifyTurn(tokens, ctx.lastUserText || '', ctx)
+    const kind = effectiveTurnKind(tokens, ctx.lastUserText || '', ctx)
     const nextTokens =
       kind === 'continue' &&
       (intent === 'quote' || intent === 'product' || intent === 'namedPart' || intent === 'accessory')

@@ -2572,7 +2572,7 @@ Comparativa: archivo Excel → parse + search + check-massive + N× POST carts. 
       "phoneDisplay": "+57 320 5023499",
       "whatsappDigits": "573205023499",
       "group": "asesor",
-      "status": "archivado",
+      "status": "publicado",
       "sortOrder": 7
     },
     {

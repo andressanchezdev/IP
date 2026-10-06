@@ -4,6 +4,10 @@ import {
   readProductExento,
   readProductIvaRate,
 } from '@/features/catalog/lib/productFiscalFields'
+import { upperStringFields } from '@/shared/lib/upperText'
+
+/** Campos de texto del body que viajan en MAYÚSCULA (las claves siguen en minúscula). */
+export const CART_POST_UPPER_FIELDS = ['aplicacion']
 
 /**
  * Contrato POST /api/v1/inventory/carts:
@@ -136,7 +140,7 @@ export function resolveCartPostExtras(source = {}) {
  *   "compra": 16275.64,
  *   "exento": 1,
  *   "iva": 19,
- *   "aplicacion": "json",
+ *   "aplicacion": "JSON",   // textos en MAYÚSCULA (upperStringFields)
  *   "fecha": "2026-09-25 10:15:00"
  * }
  */
@@ -187,7 +191,7 @@ export function buildCartPostBody({
     )
   }
 
-  return body
+  return upperStringFields(body, CART_POST_UPPER_FIELDS)
 }
 
 /**

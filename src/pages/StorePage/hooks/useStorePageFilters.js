@@ -4,10 +4,10 @@ import {
   PRODUCTS_PAGE_SIZE,
   getLatestInventoryProducts,
   postInventoryProductsFilter,
-  searchInventoryProducts,
 } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
-import { cleanSearchNoise, rankCatalogProducts, searchTextFromQuery } from '@/features/catalog/lib/catalogMatch'
+import { rankCatalogProducts } from '@/features/catalog/lib/catalogMatch'
+import { searchInventoryRelaxed } from '@/features/catalog/lib/searchRelaxed'
 import {
   buildProductsFilterBody,
   isFilterSelectionBlocked,
@@ -162,24 +162,21 @@ export function useStorePageFilters({
     const controller = new AbortController()
     let cancelled = false
     const search = committedProductSearch
-    const exactCode = !search.includes(' ')
-      && /^[A-Za-z0-9\-_]+$/.test(search)
-      && /[0-9]/.test(search)
-    const cleanedSearch = exactCode ? search : (cleanSearchNoise(search) || search)
-    const searchQuery = exactCode ? search : (searchTextFromQuery(cleanedSearch) || cleanedSearch)
 
     beginCatalogSearch?.()
 
-    searchInventoryProducts({
+    // Corrige errores de escritura y, si el texto completo no trae productos,
+    // reintenta solo con categoría/marca/modelo reconocidos.
+    searchInventoryRelaxed({
       token,
-      search: searchQuery,
+      query: search,
       signal: controller.signal,
     })
       .then((result) => {
         if (cancelled) return
         const mapped = rankCatalogProducts(
           mapApiProducts(result.productos).map(normalizeProduct),
-          cleanedSearch,
+          result.cleaned || search,
           undefined,
           { keepAll: true },
         )

@@ -1,4 +1,9 @@
 import { peekGeneralFilterMemory } from '@/features/catalog/api/generalApi'
+import {
+  buildRelaxedAttempts,
+  correctQueryTokens,
+  editDistance as levenshtein,
+} from '@/features/catalog/lib/searchFuzzy'
 
 const ARTICLES = new Set([
   'de', 'del', 'para', 'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
@@ -42,67 +47,89 @@ const COMMON_SEARCH_FIXES = {
   liberoo: 'libero',
 }
 
-function collectLocalSearchVocab() {
-  const vocab = new Set(PART_FAMILY_TOKENS)
-  Object.values(COMMON_SEARCH_FIXES).forEach((value) => vocab.add(value))
+/**
+ * Vocabulario de búsqueda con rol por palabra: categoría, marca y modelo salen de
+ * /general/filter (memoria de sesión); piezas y alias, de las listas locales.
+ */
+function collectSearchLexicon() {
+  const words = new Set()
+  const roles = new Map()
+  const add = (token, role) => {
+    if (!token) return
+    words.add(token)
+    const current = roles.get(token) || new Set()
+    current.add(role)
+    roles.set(token, current)
+  }
+
+  PART_FAMILY_TOKENS.forEach((token) => add(token, 'pieza'))
+  Object.values(COMMON_SEARCH_FIXES).forEach((value) => add(value, 'conocido'))
+
   const memory = peekGeneralFilterMemory()
   const bags = [
-    memory?.categorias,
-    memory?.marcas,
-    memory?.modelos,
+    [memory?.categorias, 'categoria'],
+    [memory?.marcas, 'marca'],
+    [memory?.modelos, 'modelo'],
   ]
-  for (const bag of bags) {
+  for (const [bag, role] of bags) {
     if (!Array.isArray(bag)) continue
     for (const item of bag) {
       const label = foldMatchText(item?.label || item?.categoria || item?.nombre || item?.marca || item?.modelo || '')
       if (!label) continue
       label.split(/[^a-z0-9]+/).forEach((token) => {
-        if (token.length >= 3 && !ARTICLES.has(token)) vocab.add(token)
+        if (token.length >= 3 && !ARTICLES.has(token)) add(token, role)
       })
     }
   }
-  return vocab
-}
-
-function maxEditDistance(tokenLength) {
-  if (tokenLength >= 8) return 2
-  if (tokenLength >= 5) return 1
-  return 0
-}
-
-function nearestVocabToken(token, vocab) {
-  const fixed = COMMON_SEARCH_FIXES[token]
-  if (fixed) return fixed
-  if (vocab.has(token)) return token
-  const maxDist = maxEditDistance(token.length)
-  if (!maxDist) return token
-
-  let best = token
-  let bestDist = maxDist + 1
-  for (const candidate of vocab) {
-    if (Math.abs(candidate.length - token.length) > maxDist) continue
-    const dist = levenshtein(token, candidate)
-    if (dist < bestDist || (dist === bestDist && candidate.length === token.length && best !== candidate)) {
-      bestDist = dist
-      best = candidate
-    }
-  }
-  return bestDist <= maxDist ? best : token
+  return { words, roles, fixes: COMMON_SEARCH_FIXES }
 }
 
 /**
  * Limpia ruido tipográfico del query (1 vez por Enter).
+ * Corrige letras de más/menos, transposiciones y pronunciación ("mortiguador liberi" →
+ * "amortiguador libero"), separa palabras pegadas y no toca códigos ni medidas.
  * No dispara requests extra: solo prepara el string que va al GET.
  */
 export function cleanSearchNoise(raw = '') {
   const normalized = normalizarQuery(raw)
   if (!normalized) return ''
-  const vocab = collectLocalSearchVocab()
-  return normalized
-    .split(' ')
-    .filter(Boolean)
-    .map((token) => nearestVocabToken(token, vocab))
-    .join(' ')
+  const lexicon = collectSearchLexicon()
+  return correctQueryTokens(normalized.split(' '), lexicon).join(' ')
+}
+
+/** Código/barcode pegado: sin espacios, alfanumérico y con algún dígito. */
+export function isExactCodeQuery(search = '') {
+  const value = String(search).trim()
+  return Boolean(value)
+    && !value.includes(' ')
+    && /^[A-Za-z0-9\-_]+$/.test(value)
+    && /[0-9]/.test(value)
+}
+
+/**
+ * Plan de búsqueda para el GET /products/search.
+ * `attempts[0]` es lo que se enviaba antes; los siguientes solo se usan si el anterior vino vacío.
+ * Ej.: "espejos LIBERO 215" → ["espejos libero 215", "espejos libero"].
+ */
+export function buildSearchAttempts(raw = '', categorias) {
+  const search = String(raw || '').trim()
+  if (!search) return { cleaned: '', attempts: [], exactCode: false }
+
+  if (isExactCodeQuery(search)) {
+    const lexicon = collectSearchLexicon()
+    const split = correctQueryTokens([foldMatchText(search)], lexicon).join(' ')
+    const attempts = [search]
+    if (split && split !== foldMatchText(search)) attempts.push(split)
+    return { cleaned: search, attempts, exactCode: true }
+  }
+
+  const cleaned = cleanSearchNoise(search) || search
+  const primary = searchTextFromQuery(cleaned, [], categorias) || cleaned
+  const attempts = buildRelaxedAttempts({ primary, cleaned, lexicon: collectSearchLexicon() })
+  // Red de seguridad: si una corrección se equivocó y nada coincide, se prueba lo que escribió el usuario.
+  const literal = normalizarQuery(search)
+  if (literal && !attempts.includes(literal)) attempts.push(literal)
+  return { cleaned, attempts, exactCode: false }
 }
 
 export function foldMatchText(value = '') {
@@ -151,28 +178,6 @@ function fieldTokens(value) {
   return foldMatchText(value)
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length >= 2 && !ARTICLES.has(token))
-}
-
-function levenshtein(left, right) {
-  if (left === right) return 0
-  if (!left.length) return right.length
-  if (!right.length) return left.length
-  const rows = left.length + 1
-  const cols = right.length + 1
-  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0))
-  for (let row = 0; row < rows; row += 1) matrix[row][0] = row
-  for (let col = 0; col < cols; col += 1) matrix[0][col] = col
-  for (let row = 1; row < rows; row += 1) {
-    for (let col = 1; col < cols; col += 1) {
-      const cost = left[row - 1] === right[col - 1] ? 0 : 1
-      matrix[row][col] = Math.min(
-        matrix[row - 1][col] + 1,
-        matrix[row][col - 1] + 1,
-        matrix[row - 1][col - 1] + cost,
-      )
-    }
-  }
-  return matrix[left.length][right.length]
 }
 
 function tokensLookLikeLlanta(q) {

@@ -9,11 +9,18 @@ import {
   getPdfPageMetrics,
 } from '@/shared/lib/pdf/pdfDocument'
 import { pdfText, pdfTruncate } from '@/shared/lib/pdf/pdfText'
+import { buildProductDetailSegments, buildProductDetailText } from '@/shared/lib/productText'
+import { toUpperText } from '@/shared/lib/upperText'
+
+/** La descripción se parte en líneas (no se trunca) hasta este máximo. */
+const MAX_DESC_LINES = 3
+const DESC_LINE_H = 3.4
+const MIN_ROW_H = 7.2
 
 const BASE_COLS = [
   { key: 'index', label: '#', width: 8, align: 'left' },
   { key: 'reference', label: 'Ref.', width: 28, align: 'left' },
-  { key: 'description', label: 'Descripcion', width: 70, align: 'left' },
+  { key: 'description', label: 'Descripcion', width: 72, align: 'left' },
   { key: 'qty', label: 'Cant.', width: 14, align: 'right' },
   { key: 'unit', label: 'P. unit.', width: 28, align: 'right' },
   { key: 'subtotal', label: 'Total', width: 28, align: 'right' },
@@ -21,9 +28,9 @@ const BASE_COLS = [
 
 const CART_COLS = [
   { key: 'index', label: '#', width: 8, align: 'left' },
-  { key: 'cartId', label: 'id_carrito', width: 24, align: 'left' },
+  { key: 'cartId', label: 'id_carrito', width: 20, align: 'left' },
   { key: 'reference', label: 'Ref.', width: 24, align: 'left' },
-  { key: 'description', label: 'Descripcion', width: 54, align: 'left' },
+  { key: 'description', label: 'Descripcion', width: 62, align: 'left' },
   { key: 'qty', label: 'Cant.', width: 12, align: 'right' },
   { key: 'unit', label: 'P. unit.', width: 26, align: 'right' },
   { key: 'subtotal', label: 'Total', width: 28, align: 'right' },
@@ -39,11 +46,13 @@ function normalizeItems(items = [], { includeCartId = false } = {}) {
     const price = Number(item.price) || 0
     const row = {
       index: String(index + 1),
-      reference: pdfTruncate(item.reference || item.id || '-', 18),
-      description: pdfTruncate(
-        [item.description, item.brand, item.model].filter(Boolean).join(' · ') || 'Producto',
-        includeCartId ? 36 : 48,
-      ),
+      reference: pdfTruncate(toUpperText(item.reference || item.id || '-'), 18),
+      // descripcion · categoria · marca · modelo (misma regla que todos los archivos generados)
+      description: buildProductDetailText(item, { upper: true }),
+      detailSegments: buildProductDetailSegments(item).map((segment) => ({
+        ...segment,
+        value: segment.value.toLocaleUpperCase('es'),
+      })),
       qty: String(quantity),
       unit: formatPrice(price),
       subtotal: formatPrice(price * quantity),
@@ -79,9 +88,49 @@ function drawTableHeader(doc, y, columns) {
   return y + rowH
 }
 
+/**
+ * Parte "descripcion · categoria · marca · modelo" en líneas.
+ * Si no cabe en MAX_DESC_LINES se acorta solo la descripción: categoría, marca y modelo
+ * siempre se conservan.
+ */
+function wrapProductDetail(doc, row, width) {
+  const wrap = (text) => doc.splitTextToSize(pdfText(text), width)
+  const join = (segments) => segments.map((segment) => segment.value).join(' \u00B7 ')
+  const segments = row.detailSegments?.length
+    ? row.detailSegments
+    : [{ key: 'fallback', value: row.description }]
+
+  let lines = wrap(join(segments))
+  if (lines.length <= MAX_DESC_LINES) return lines
+
+  const [head, ...tail] = segments
+  if (head.key === 'description' && tail.length > 0) {
+    let shortened = head.value
+    while (shortened.length > 3) {
+      shortened = shortened.slice(0, -1).trimEnd()
+      lines = wrap(join([{ ...head, value: `${shortened}...` }, ...tail]))
+      if (lines.length <= MAX_DESC_LINES) return lines
+    }
+  }
+
+  lines = wrap(join(segments)).slice(0, MAX_DESC_LINES)
+  lines[MAX_DESC_LINES - 1] = `${lines[MAX_DESC_LINES - 1].slice(0, -3).trimEnd()}...`
+  return lines
+}
+
+/** Calcula las líneas de la descripción según el ancho de su columna y la altura de fila. */
+function layoutItemRow(doc, row, columns) {
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  const descriptionCol = columns.find((col) => col.key === 'description')
+  const lines = wrapProductDetail(doc, row, descriptionCol.width - 3)
+  const rowH = Math.max(MIN_ROW_H, 3.4 + lines.length * DESC_LINE_H)
+  return { ...row, descriptionLines: lines, rowH }
+}
+
 function drawItemRow(doc, row, y, alt, columns) {
   const { marginX } = getPdfPageMetrics(doc)
-  const rowH = 7.2
+  const rowH = row.rowH ?? MIN_ROW_H
   const tableWidth = columns.reduce((sum, col) => sum + col.width, 0)
 
   if (alt) {
@@ -99,12 +148,15 @@ function drawItemRow(doc, row, y, alt, columns) {
 
   let x = marginX + 1.5
   columns.forEach((col) => {
-    const value = row[col.key] ?? ''
     const textY = y + 4.8
-    if (col.align === 'right') {
-      doc.text(pdfText(value), x + col.width - 3, textY, { align: 'right' })
+    if (col.key === 'description' && Array.isArray(row.descriptionLines)) {
+      row.descriptionLines.forEach((line, lineIndex) => {
+        doc.text(pdfText(line), x, textY + lineIndex * DESC_LINE_H)
+      })
+    } else if (col.align === 'right') {
+      doc.text(pdfText(row[col.key] ?? ''), x + col.width - 3, textY, { align: 'right' })
     } else {
-      doc.text(pdfText(value), x, textY)
+      doc.text(pdfText(row[col.key] ?? ''), x, textY)
     }
     x += col.width
   })
@@ -183,8 +235,9 @@ export async function downloadOrderPdf(title, items = [], total = 0, options = {
     y += 14
   } else {
     rows.forEach((row, index) => {
-      y = ensurePdfSpace(doc, y, 8, startTable)
-      y = drawItemRow(doc, row, y, index % 2 === 1, columns)
+      const laidOut = layoutItemRow(doc, row, columns)
+      y = ensurePdfSpace(doc, y, laidOut.rowH + 1, startTable)
+      y = drawItemRow(doc, laidOut, y, index % 2 === 1, columns)
     })
   }
 

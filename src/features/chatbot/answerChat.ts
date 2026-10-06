@@ -73,7 +73,8 @@ import { clearLastOffers } from './inventory'
 import { pushPhaseLog } from './pipelineLog'
 import { matchLandingTeam } from './teamLookup'
 import { parseUserFrame, isTeamNameLookupAllowed } from './userFrame'
-import { classifyTurn, focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, isCreditAsk, isHoursAsk, isLocationAsk, isShippingAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
+import { confirmFollowLine, effectiveTurnKind } from './followLine'
+import { focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, isCreditAsk, isHoursAsk, isLocationAsk, isShippingAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
 import { isScaffoldActive, openScaffold, resetScaffold, resumeScaffoldQuestion, runScaffoldTurn, scaffoldAsideReply } from './scaffoldSearch'
 import { isOrderFlowActive, resetOrderFlow, runOrderFlowTurn, beginAddFromLastOffer, orderProcessGuideReply } from './createOrderFlow'
 import { tryFastLaneReply } from './agentLane'
@@ -537,7 +538,7 @@ function routeClearFrame(
 }
 
 function resolveFromContext(tokens: readonly string[], ctx: SessionContext, cfg: ReturnType<typeof configOf>, raw = ''): Candidate | null {
-  const kind = classifyTurn(tokens, raw, ctx)
+  const kind = effectiveTurnKind(tokens, raw, ctx)
   if (kind === 'switch' || kind === 'social' || kind === 'aside') return null
   const last = [...ctx.lastIntents].reverse().find((item) => !keepConversationFocus(item.intent)) || ctx.lastIntents[ctx.lastIntents.length - 1]
   const focusIntent = ctx.conversationFocus?.intent || last?.intent
@@ -564,7 +565,7 @@ function fastLane(prepared: PreparedInput, ctx: SessionContext, cfg: ReturnType<
     ctx.entities.userName = frame.userName
     return finalize(ctx, userNameAckReply(frame.userName), 'greeting', 5, cfg)
   }
-  const shortKind = classifyTurn([token, rawToken].filter(Boolean), prepared.text, ctx)
+  const shortKind = effectiveTurnKind([token, rawToken].filter(Boolean), prepared.text, ctx)
   if (shortKind === 'switch' && !findTerm([token, rawToken], [...liveCatalogParts(), ...liveOtherParts(), ...liveAccessoryTerms()])) {
     ctx.conversationFocus = null
     ctx.entities.pieza = undefined
@@ -785,7 +786,7 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     if (prepared.quality === 'VERY_SHORT') {
       const rawToken = prepared.significant[0] || prepared.allTokens[0] || ''
       const token = correctTokensContextual([rawToken], dictionary(ctx), preferredTerms(ctx.entities))[0] || rawToken
-      const shortKind = classifyTurn([token, rawToken].filter(Boolean), prepared.text, ctx)
+      const shortKind = effectiveTurnKind([token, rawToken].filter(Boolean), prepared.text, ctx)
       await hydrateChatProducts({
         tokens: expandPartSynonyms([token, rawToken].filter(Boolean), prepared.text),
         raw: prepared.text,
@@ -798,7 +799,10 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     detectRepeated(ctx, cfg)
 
     const kindHintTokens = prepared.tokens.map((item) => item.value)
-    const kind = classifyTurn(kindHintTokens, raw, ctx)
+    // confirmFollowLine: sigue la línea, se desvía leve o la rompe. Se aplica en silencio.
+    const follow = confirmFollowLine(kindHintTokens, raw, ctx)
+    const kind = follow.effectiveKind
+    log(ctx, 'decision', `follow ${follow.line}:${follow.reason}`)
     if (kind === 'switch' && !mentionedFamily(kindHintTokens) && /(otra cosa|otro tema|cambiemos|cambiar de tema)/.test(foldText(raw))) {
       ctx.conversationFocus = null
       ctx.pendingConfirmation = null
@@ -877,11 +881,6 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     ctx.entities = extracted.next
     log(ctx, 'entities', Object.keys(ctx.entities).join(','))
 
-    if (kind === 'switch') {
-      const name = ctx.entities.pieza || ctx.entities.producto || ctx.entities.accesorio || ctx.entities.namedPart
-      if (name) ctx.ackPrefix = `Pasamos a ${name}.`
-    }
-
     const userFrame = parseUserFrame(raw, corrected)
     if (userFrame.userName) ctx.entities.userName = userFrame.userName
     const lookup = userFrame.lookupTokens.filter((token) => !isStopToken(token) && token.length > 2)
@@ -904,7 +903,7 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
     }
 
     if (!ranked.top1 || ranked.top1.score < cfg.UMBRAL_MINIMO) {
-      const missKind = classifyTurn(lookup.length ? lookup : corrected, raw, ctx)
+      const missKind = effectiveTurnKind(lookup.length ? lookup : corrected, raw, ctx)
       if (missKind === 'switch') {
         ctx.errorCount += 1
         ctx.metrics.unmatched += 1

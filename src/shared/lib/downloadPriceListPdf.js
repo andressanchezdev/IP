@@ -11,6 +11,8 @@ import {
 } from '@/shared/lib/pdf/pdfDocument'
 import { loadPdfImageFromSrc, loadPdfImagesFromUrls } from '@/shared/lib/pdf/pdfImages'
 import { pdfText, pdfTruncate } from '@/shared/lib/pdf/pdfText'
+import { buildProductDetailSegments, buildProductDetailText } from '@/shared/lib/productText'
+import { toUpperText } from '@/shared/lib/upperText'
 
 /** Mismo criterio de ancho que pdfListaLogosV1 (margin con +35px). */
 const PX_TO_MM = 25.4 / 96
@@ -23,8 +25,35 @@ const COL_DEFS = [
   { key: 'price', label: 'Precio', weight: 34, align: 'right' },
 ]
 
-function toUpperDisplay(value) {
-  return String(value ?? '').trim().toLocaleUpperCase('es')
+const toUpperDisplay = toUpperText
+
+/** Recorta con "..." solo si el texto no cabe en el ancho real de la columna. */
+function fitPdfText(doc, value, maxWidth) {
+  const text = pdfText(value)
+  if (doc.getTextWidth(text) <= maxWidth) return text
+  let cut = text
+  while (cut.length > 1 && doc.getTextWidth(`${cut}...`) > maxWidth) {
+    cut = cut.slice(0, -1)
+  }
+  return `${cut.trimEnd()}...`
+}
+
+/** Una línea: si no cabe se acorta solo la descripción (categoría y modelo se conservan). */
+function fitProductDetail(doc, row, maxWidth) {
+  const segments = row.catalogSegments
+  if (!Array.isArray(segments) || segments.length < 2 || segments[0].key !== 'description') {
+    return fitPdfText(doc, row.catalogDetail, maxWidth)
+  }
+  const [head, ...tail] = segments
+  const join = (description) => [description, ...tail.map((segment) => segment.value)].join(' \u00B7 ')
+  if (doc.getTextWidth(pdfText(join(head.value))) <= maxWidth) return pdfText(join(head.value))
+  let shortened = head.value
+  while (shortened.length > 3) {
+    shortened = shortened.slice(0, -1).trimEnd()
+    const candidate = pdfText(join(`${shortened}...`))
+    if (doc.getTextWidth(candidate) <= maxWidth) return candidate
+  }
+  return fitPdfText(doc, row.catalogDetail, maxWidth)
 }
 
 function getPriceListColumns(contentWidth) {
@@ -42,14 +71,12 @@ function getPriceListMetrics(doc) {
 function normalizeProducts(products = []) {
   return products.map((product) => ({
     reference: pdfTruncate(toUpperDisplay(product.reference || product.id || '—'), 16),
-    catalogDetail: pdfTruncate(
-      [
-        toUpperDisplay(product.category || '—'),
-        toUpperDisplay(product.description || '—'),
-        toUpperDisplay(product.model || '—'),
-      ].join(' '),
-      90,
-    ),
+    // descripcion · categoria · modelo (la marca va en su propia columna)
+    catalogDetail: buildProductDetailText(product, { upper: true, omit: ['brand'] }),
+    catalogSegments: buildProductDetailSegments(product, { omit: ['brand'] }).map((segment) => ({
+      ...segment,
+      value: toUpperDisplay(segment.value),
+    })),
     brand: pdfTruncate(toUpperDisplay(product.brand || '—'), 16),
     price: formatPrice(Number(product.price) || 0),
   }))
@@ -127,7 +154,10 @@ function drawProductRow(doc, row, y, alt, columns) {
     if (col.align === 'right') {
       doc.text(pdfText(value), x + col.width - 3, textY, { align: 'right' })
     } else {
-      doc.text(pdfText(value), x, textY)
+      const text = col.key === 'catalogDetail'
+        ? fitProductDetail(doc, row, col.width - 3)
+        : fitPdfText(doc, value, col.width - 3)
+      doc.text(text, x, textY)
     }
     x += col.width
   })

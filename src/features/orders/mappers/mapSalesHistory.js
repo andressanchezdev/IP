@@ -83,12 +83,13 @@ function toHistoryItems(rawLines = []) {
       0,
     )
     const rel = toSafeNumber(item?.rel, 0)
+    // Sin descripción queda vacío (no "Producto #id"): así categoría/marca/modelo ocupan su lugar.
     const description = String(
       item?.description
       ?? item?.descripcion
       ?? item?.nombre
       ?? '',
-    ).trim() || `Producto #${idpr ?? index + 1}`
+    ).trim()
     const reference = String(
       item?.reference ?? item?.codigo ?? item?.referencia ?? idpr ?? '',
     ).trim()

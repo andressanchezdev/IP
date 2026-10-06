@@ -1,18 +1,16 @@
+import { buildProductDetailText } from '@/shared/lib/productText'
+import { toUpperText } from '@/shared/lib/upperText'
+
 async function loadXlsx() {
   const mod = await import('xlsx')
   return mod.default ?? mod
 }
 
-function toUpperDisplay(value) {
-  return String(value ?? '').trim().toLocaleUpperCase('es')
-}
+const toUpperDisplay = toUpperText
 
+/** descripcion · categoria · modelo (la marca va en su propia columna), igual que el PDF. */
 function catalogDetail(product) {
-  return [
-    toUpperDisplay(product.category || '—'),
-    toUpperDisplay(product.description || '—'),
-    toUpperDisplay(product.model || '—'),
-  ].join(' ')
+  return buildProductDetailText(product, { upper: true, omit: ['brand'] })
 }
 
 function buildFilterLine(filters = {}) {

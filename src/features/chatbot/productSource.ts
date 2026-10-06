@@ -2,8 +2,8 @@ import {
   getLatestInventoryProducts,
   getGeneralFilter,
   readGeneralFilterMemory,
-  searchInventoryProducts,
 } from '@/features/catalog/api/generalApi'
+import { searchInventoryRelaxed } from '@/features/catalog/lib/searchRelaxed'
 import { getApiAuthToken } from '@/shared/api'
 import type { SessionContext } from './sessionContext'
 import type { ProductRecord } from './types'
@@ -801,9 +801,9 @@ export async function hydrateChatProducts({
         return
       }
       cachedProducts = rankCatalogProducts(
-        await loadMapped(() => searchInventoryProducts({
+        await loadMapped(() => searchInventoryRelaxed({
           token,
-          search: fallback,
+          query: fallback,
           signal: controller.signal,
         })),
         fallback,
@@ -822,9 +822,9 @@ export async function hydrateChatProducts({
     }
 
     cachedProducts = rankCatalogProducts(
-      await loadMapped(() => searchInventoryProducts({
+      await loadMapped(() => searchInventoryRelaxed({
         token,
-        search: resolvedSearch,
+        query: resolvedSearch,
         signal: controller.signal,
       })),
       raw || resolvedSearch,
