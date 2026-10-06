@@ -4,6 +4,7 @@ import {
   WS_MESSAGE_TYPES,
 } from '@/shared/ws/config'
 import { applyProductStockFromListado } from './applyProductStock'
+import { applyCatalogNoticeFromWs } from './applyCatalogProductFromWs'
 
 function text(value) {
   return String(value ?? '').trim()
@@ -47,6 +48,31 @@ export function applyStockFromWsMessage(message, {
     }
   }
 
+  const tipoHead = tipo.split(/\s+/)[0]
+  if (tipoHead === 'nuevoControl') {
+    const control = text(message?.info?.control)
+    if (control === 'stock' || control === 'ubic') {
+      const applied = applyProductStockFromListado({
+        setProducts,
+        productId,
+        listado: message?.info?.lista ?? message?.lista,
+        preferredWarehouseId,
+        messageWarehouseId: message.idBodega,
+      })
+      return {
+        tipo,
+        action: applied ? 'stock actualizado' : 'sin listado',
+        productId: productId || null,
+        idBodega: applied?.warehouseId ?? message.idBodega ?? null,
+        stock: applied?.stock ?? null,
+        stockByWarehouse: applied?.stockByWarehouse ?? null,
+      }
+    }
+
+    const catalogNotice = applyCatalogNoticeFromWs(message, { setProducts })
+    return { tipo, ...catalogNotice }
+  }
+
   if (tipo === WS_MESSAGE_TYPES.STOCK_DELETE_ALL) {
     const productos = Array.isArray(message.productos) ? message.productos : []
     const updated = []
@@ -77,7 +103,7 @@ export function applyStockFromWsMessage(message, {
     }
   }
 
-  if (isOrderFlowWsTipo(tipo)) {
+  if (isOrderFlowWsTipo(tipo) || tipoHead === 'abonoData') {
     return {
       tipo,
       action: 'flujo pedido (delegado a orders)',

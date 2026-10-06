@@ -1022,7 +1022,7 @@ export async function processChatExcelFile(ctx: SessionContext, file: File): Pro
     return loginReply()
   }
 
-  // Mismo flujo que drawer: search (codigo→id) + POST /carts/check-massive
+  // Mismo flujo que drawer: search (codigo→id). El carrito se envía con POST /inventory/carts.
   const comparison = await compareBulkOrderWithCheckMassive(items, { token })
   comparison.results.forEach((row, index) => {
     const source = items[index] as { line?: number } | undefined

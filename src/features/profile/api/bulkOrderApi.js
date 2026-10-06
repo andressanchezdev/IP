@@ -3,9 +3,8 @@ import { toMoneyNumber, wait } from './bulkShared'
 import { getCatalogProductId } from '@/features/catalog/mappers/mapProduct'
 import { stockTotal } from '@/features/catalog/mappers/parseUbicacionStock'
 import { pickProductFiscalFields } from '@/features/catalog/lib/productFiscalFields'
-import { postCartCheckMassive } from '@/features/cart/api/cartApi'
 
-/** Lotes de resolución codigo→id (search). El stock lo define check-massive. */
+/** Lotes de resolución codigo→id (search). El stock lo confirma el POST al carrito. */
 export const STOCK_BATCH_SIZE = 20
 /** Ventana de ritmo: 20 peticiones repartidas en 15s (~750ms entre cada una). */
 export const STOCK_BATCH_WINDOW_MS = 15_000
@@ -26,7 +25,7 @@ function extractProducts(payload) {
 
 /**
  * Resuelve codigo → { id, precio } vía search.
- * El stock autoritativo viene después de check-massive (no de este GET).
+ * El stock lo confirma después el POST al carrito.
  */
 async function resolveProductByCode(codigo, { token } = {}) {
   const code = String(codigo ?? '').trim()
@@ -112,7 +111,7 @@ export async function resolveProductIdsByCodes(
   return byCode
 }
 
-/** @deprecated Prefer resolveProductIdsByCodes + check-massive. */
+/** @deprecated Prefer resolveProductIdsByCodes. */
 export async function fetchStockByCodes(codes, options = {}) {
   return resolveProductIdsByCodes(codes, options)
 }
@@ -348,8 +347,8 @@ export function buildLegacyBulkComparison(items = [], resolvedByCode = new Map()
  * Flujo subida masiva:
  * 1) Excel códigos+cantidad
  * 2) Resolver id_producto por search
- * 3) POST check-massive { productos: [{ id_producto, cantidad }] }
- * 4) Comparación Ok / con novedad / agotado
+ * 3) Comparación local: código resuelto → Ok; sin id → agotado
+ * El envío al carrito lo hace POST /api/v1/inventory/carts al continuar.
  */
 export async function compareBulkOrderWithCheckMassive(
   items = [],
@@ -364,51 +363,7 @@ export async function compareBulkOrderWithCheckMassive(
     { token, onProgress },
   )
 
-  const productos = list
-    .map((item) => {
-      const codigo = String(item?.codigo ?? '')
-      const resolved = resolvedByCode.get(codigo)
-      const id = resolved?.id
-      if (id == null || id === '') {
-        return null
-      }
-      return {
-        id_producto: id,
-        cantidad: Number(item?.cantidad) || 0,
-        codigo,
-      }
-    })
-    .filter((entry) => entry && entry.cantidad > 0)
-
-  if (productos.length === 0) {
-    return mapCheckMassiveToComparison(list, resolvedByCode, { productos: [] })
-  }
-
-  try {
-    const checked = await postCartCheckMassive({
-      token,
-      productos,
-    })
-
-    const comparison = mapCheckMassiveToComparison(list, resolvedByCode, checked.raw)
-    comparison.checkRequest = checked.request
-    return comparison
-  } catch (error) {
-    const isLegacyFallback = (
-      error?.status === 404
-      || error?.status === 405
-      || error?.status === 400
-      || /404|not found|no encontrado/i.test(String(error?.message || ''))
-    )
-
-    if (!isLegacyFallback) {
-      throw error
-    }
-
-    const comparison = buildLegacyBulkComparison(list, resolvedByCode)
-    comparison.checkRequest = { productos }
-    return comparison
-  }
+  return buildLegacyBulkComparison(list, resolvedByCode)
 }
 
 /**

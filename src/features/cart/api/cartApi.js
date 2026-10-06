@@ -7,7 +7,26 @@ const CART_PAGE_SIZE = 50
 export const MAX_CART_ITEMS = 600
 const CARTS_PATH = '/api/v1/inventory/carts'
 const CARTS_PATH_MASSIVE = '/api/v1/inventory/carts/massive'
-const CARTS_PATH_CHECK_MASSIVE = '/api/v1/inventory/carts/check-massive'
+
+/** Texto que el backend manda en un POST /carts fallido, por ejemplo "stock insuficiente". */
+export function readCartPostBackendMessage(error) {
+  const payload = error?.payload
+  const data = payload?.data
+  if (typeof data === 'string' && data.trim()) {
+    return data.trim()
+  }
+  if (data && typeof data === 'object') {
+    const nested = data.message || data.error
+    if (typeof nested === 'string' && nested.trim()) {
+      return nested.trim()
+    }
+  }
+  const top = payload?.message || payload?.error
+  if (typeof top === 'string' && top.trim()) {
+    return top.trim()
+  }
+  return ''
+}
 
 function buildQuery(params = {}) {
   const search = new URLSearchParams()
@@ -348,6 +367,7 @@ export async function deleteMassiveCartItems({
  *   ]
  * }
  */
+/*
 export function buildCartCheckMassiveBody(productos = []) {
   const list = (Array.isArray(productos) ? productos : [])
     .map((entry) => {
@@ -376,7 +396,7 @@ export async function postCartCheckMassive({
     throw new Error('Sin productos válidos para check-massive')
   }
 
-  const payload = await apiRequest(CARTS_PATH_CHECK_MASSIVE, {
+  const payload = await apiRequest('/api/v1/inventory/carts/check-massive', {
     method: 'POST',
     token,
     body,
@@ -393,3 +413,4 @@ export async function postCartCheckMassive({
     data: payload?.data ?? payload,
   }
 }
+*/

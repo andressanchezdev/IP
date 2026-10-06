@@ -108,6 +108,17 @@ export function normalizeWsMessage(rawData) {
   const lista = payload.lista != null
     ? parseMaybeJson(payload.lista, payload.lista)
     : null
+  const info = payload.info && typeof payload.info === 'object' && !Array.isArray(payload.info)
+    ? {
+        ...payload.info,
+        lista: payload.info.lista != null
+          ? parseMaybeJson(payload.info.lista, payload.info.lista)
+          : null,
+      }
+    : null
+  const contenido = payload.contenido && typeof payload.contenido === 'object'
+    ? payload.contenido
+    : parseMaybeJson(payload.contenido, null)
 
   return {
     ...payload,
@@ -129,7 +140,8 @@ export function normalizeWsMessage(rawData) {
     previousQty: payload.previousQty ?? null,
     cajas: Array.isArray(payload.cajas) ? payload.cajas : [],
     productos: Array.isArray(payload.productos) ? payload.productos : [],
-    info: payload.info && typeof payload.info === 'object' ? payload.info : null,
+    info,
+    contenido: contenido && typeof contenido === 'object' && !Array.isArray(contenido) ? contenido : null,
     carrito,
     carritoList,
   }

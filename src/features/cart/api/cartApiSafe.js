@@ -1,4 +1,4 @@
-import { deleteCartItem, deleteMassiveCartItems, postCartItem, putCartItem } from './cartApi'
+import { deleteCartItem, deleteMassiveCartItems, postCartItem, putCartItem, readCartPostBackendMessage } from './cartApi'
 
 /**
  * Wrappers que nunca lanzan: devuelven { success, error?, needsAuth? }
@@ -40,13 +40,13 @@ export async function persistCartItemSafe({
       status: error?.status,
       payload: error?.payload,
     })
-    const detail = error?.payload?.message
-      || error?.payload?.error
+    const backendMessage = readCartPostBackendMessage(error)
+    const detail = backendMessage
       || error?.message
       || 'No se pudo guardar el carrito'
     return {
       success: false,
-      error: error?.status ? `HTTP ${error.status}: ${detail}` : detail,
+      error: backendMessage || (error?.status ? `HTTP ${error.status}: ${detail}` : detail),
       status: error?.status,
       payload: error?.payload,
     }

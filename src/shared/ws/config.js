@@ -67,6 +67,24 @@ export function isStockWsTipo(tipo) {
   return STOCK_TIPOS.has(String(tipo || '').trim())
 }
 
+/**
+ * `despacho pedido` es el aviso viejo de pedidon: mismo estado que `despacho`.
+ * El resto de tipos de pedido se comparan completos.
+ */
+export function resolveOrderFlowTipo(tipo) {
+  const raw = String(tipo || '').trim()
+  if (!raw) {
+    return ''
+  }
+
+  const [head, second] = raw.split(/\s+/)
+  if (head === 'despacho' && second === 'pedido') {
+    return WS_MESSAGE_TYPES.DESPACHO
+  }
+
+  return ORDER_FLOW_TIPOS.has(raw) ? raw : ''
+}
+
 export function isOrderFlowWsTipo(tipo) {
-  return ORDER_FLOW_TIPOS.has(String(tipo || '').trim())
+  return Boolean(resolveOrderFlowTipo(tipo))
 }

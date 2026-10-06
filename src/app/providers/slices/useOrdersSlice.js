@@ -165,6 +165,7 @@ export function useOrdersSlice({
   initialPendingOrders,
   initialHistoryOrders,
   tokenAccess = null,
+  userId = null,
 }) {
   const [pendingOrders, setPendingOrders] = useState(() => initialPendingOrders)
   const [historyOrders, setHistoryOrders] = useState(() => initialHistoryOrders)
@@ -182,7 +183,9 @@ export function useOrdersSlice({
 
   useOrderFlowWebSocket({
     enabled: Boolean(tokenAccess),
+    userId,
     setPendingOrders,
+    setHistoryOrders,
   })
 
   const resetOrderDrawer = useCallback(() => {

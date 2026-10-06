@@ -10,6 +10,8 @@ import {
   mergeApiProfileWithWorkspace,
 } from '@/features/auth/utils/mapLoginUserToProfile'
 import { clearApiAuthToken } from '@/shared/api'
+import { connectStockSocket, subscribeStockSocket } from '@/shared/ws'
+import { readAbonoCredit } from '@/features/orders/ws/applyAbonoFromWs'
 import { clearAuthSession } from '@/features/auth/utils/authStorage'
 import { APP_EVENTS } from '../appEvents'
 import { PROFILE_SETTINGS_TTL, sanitizeProfileSettings } from '../helpers'
@@ -35,6 +37,33 @@ export function useProfileSlice({
       PROFILE_SETTINGS_TTL,
     )
   }, [profileSettings])
+
+  const sessionUserId = profileSettings?.personal?.userId || ''
+
+  useEffect(() => {
+    if (!tokenAccess || !sessionUserId) {
+      return undefined
+    }
+
+    connectStockSocket()
+    return subscribeStockSocket((event) => {
+      if (event.type !== 'ws:message' || !event.message) {
+        return
+      }
+      const available = readAbonoCredit(event.message, sessionUserId)
+      if (available == null) {
+        return
+      }
+      setProfileSettings((current) => ({
+        ...current,
+        credit: {
+          ...(current.credit ?? {}),
+          available,
+          hasCredit: available > 0 || Boolean(current.credit?.hasCredit),
+        },
+      }))
+    })
+  }, [sessionUserId, tokenAccess])
 
   const profile = useMemo(() => ({
     ...createEmptyProfileView(profileSettings),

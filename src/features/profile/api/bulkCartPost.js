@@ -1,5 +1,5 @@
 import { getApiAuthToken } from '@/shared/api'
-import { postCartItem, putCartItem } from '@/features/cart/api/cartApi'
+import { postCartItem, putCartItem, readCartPostBackendMessage } from '@/features/cart/api/cartApi'
 import { planCartAdd } from '@/features/cart/api/cartPostBody'
 import { runWithConcurrency } from './bulkShared'
 
@@ -140,9 +140,11 @@ export async function postBulkOrderToCart(
         method: existingCartId ? 'PUT' : 'POST',
       })
     } catch (error) {
+      const backendMessage = existingCartId ? '' : readCartPostBackendMessage(error)
       failed.push({
         codigo: row?.codigo,
-        reason: error?.message || 'Error al agregar al carrito',
+        reason: backendMessage || error?.message || 'Error al agregar al carrito',
+        backendMessage,
         request: requestBody,
       })
     }

@@ -212,11 +212,17 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
       }
 
       const hasPriceError = failed.some((entry) => entry.reason === CART_UNIT_PRICE_ERROR)
+      const backendReasons = [...new Set(
+        failed
+          .map((entry) => String(entry.backendMessage || '').trim())
+          .filter(Boolean),
+      )]
       const totalProcessed = posted.length + failed.length
       const toastMessage = [
         `Carrito: ${posted.length} de ${totalProcessed} producto(s) agregado(s).`,
         failed.length > 0 ? `${failed.length} no agregado(s).` : '',
         hasPriceError ? CART_UNIT_PRICE_ERROR : '',
+        ...backendReasons,
       ].filter(Boolean).join(' ')
       showToast(
         toastMessage,

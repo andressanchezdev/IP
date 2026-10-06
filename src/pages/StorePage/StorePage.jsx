@@ -10,6 +10,7 @@ import { useStorePageActions } from './hooks/useStorePageActions'
 import { useStorePageFilters } from './hooks/useStorePageFilters'
 import { CatalogView } from './views/CatalogView'
 import { HistoryView } from './views/HistoryView'
+import { ManualWelcome } from './views/ManualWelcome/ManualWelcome'
 import { PendingOrdersView } from './views/PendingOrdersView'
 import { ProductDetailModal } from '@/features/catalog/components/ProductDetailModal/ProductDetailModal'
 import { StoreChatWidget, takePendingChatBulk } from '@/features/chatbot'
@@ -310,12 +311,23 @@ export function StorePage() {
           return existing?.cartId ?? null
         },
       })
+      const backendReasons = [...new Set(
+        (result.failed || [])
+          .map((entry) => String(entry.backendMessage || '').trim())
+          .filter(Boolean),
+      )]
+      const reasonText = backendReasons.join(' ')
       if (result.emptySelection || result.posted.length === 0) {
-        showToast('No se pudo agregar ningún producto al carrito', 'error')
+        showToast(reasonText || 'No se pudo agregar ningún producto al carrito', 'error')
         return
       }
       await refreshCartFromApi()
-      showToast(`${result.posted.length} producto(s) al carrito`, 'success')
+      showToast(
+        reasonText
+          ? `${result.posted.length} producto(s) al carrito. ${reasonText}`
+          : `${result.posted.length} producto(s) al carrito`,
+        reasonText ? 'warning' : 'success',
+      )
     } catch (error) {
       showToast(error?.message || 'No se pudo agregar al carrito', 'error')
     }
@@ -488,9 +500,13 @@ export function StorePage() {
         />
 
         <main className="landing__content">
-          <div className="landing__view" ref={catalogViewRef}>
-            {renderContent()}
-          </div>
+          {isAuthenticated ? (
+            <div className="landing__view" ref={catalogViewRef}>
+              {renderContent()}
+            </div>
+          ) : (
+            <ManualWelcome />
+          )}
         </main>
       </div>
 

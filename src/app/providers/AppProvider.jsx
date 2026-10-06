@@ -42,6 +42,7 @@ export function AppProvider({ children }) {
     initialPendingOrders: initialUserData.pendingOrders,
     initialHistoryOrders: initialUserData.historyOrders,
     tokenAccess: auth.authSession?.tokenAccess,
+    userId: auth.authSession?.userId,
   })
 
   const profile = useProfileSlice({

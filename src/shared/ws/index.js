@@ -10,6 +10,7 @@ export {
   isSpanishCartActionTipo,
   isStockWsTipo,
   isOrderFlowWsTipo,
+  resolveOrderFlowTipo,
 } from './config'
 export { normalizeWarehouseId, normalizeWsMessage } from './normalizeMessage'
 export {
