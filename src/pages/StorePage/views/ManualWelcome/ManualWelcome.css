@@ -572,7 +572,7 @@ flex: 1;
 }
 
 .manual-cliente .pill {
-  align-self: center;
+  align-self: end;
   background: var(--color-visto-bg);
   border-radius: 999px;
   box-sizing: border-box;
@@ -580,10 +580,9 @@ flex: 1;
   flex-shrink: 0;
   font-size: 12px;
   font-weight: 700;
-  max-width: 80%;
   padding: 4px 8px;
   text-align: center;
-  width: 80%;
+  width: 10%;
 }
 
 .manual-cliente__lesson .pill {

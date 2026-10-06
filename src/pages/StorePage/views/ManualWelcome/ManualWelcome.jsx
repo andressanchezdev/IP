@@ -27,97 +27,98 @@ const STEPS = [
     id: 'iniciar',
     groupId: 'sesion',
     question: '¿Cómo inicio sesión?',
-    src: 'contenidomanual/cierre-inicio sesion/iniciosesion.mp4',
+    src: 'iniciosesion.mp4',
   },
   {
     id: 'buscar',
     groupId: 'inicio',
     question: '¿Cómo uso la barra de búsqueda?',
-    src: 'contenidomanual/home/usobarradebusqueda.mp4',
+    src: 'usobarradebusqueda.mp4',
   },
   {
     id: 'filtros',
     groupId: 'inicio',
     question: '¿Cómo aplico filtros combinados?',
-    src: 'contenidomanual/home/filtrocombinado.mp4',
+    src: 'filtrocombinado.mp4',
   },
   {
     id: 'agregar',
     groupId: 'carrito',
     question: '¿Cómo agrego un producto al carrito?',
-    src: 'contenidomanual/carrito/agregarproductocarrito.mp4',
+    src: 'agregarproductocarrito.mp4',
   },
   {
     id: 'buscar-carrito',
     groupId: 'carrito',
     question: '¿Cómo busco un producto dentro del carrito?',
-    src: 'contenidomanual/carrito/buscaproductocarrito.mp4',
+    src: 'buscaproductocarrito.mp4',
   },
   {
     id: 'cantidad',
     groupId: 'carrito',
     question: '¿Cómo modifico la cantidad en el carrito?',
-    src: 'contenidomanual/carrito/modificarcantidadencarrito.mp4',
+    src: 'modificarcantidadencarrito.mp4',
   },
   {
     id: 'retirar',
     groupId: 'carrito',
     question: '¿Cómo retiro un producto del carrito?',
-    src: 'contenidomanual/carrito/retirarproductocarrito.mp4',
+    src: 'retirarproductocarrito.mp4',
   },
   {
     id: 'limpiar',
     groupId: 'carrito',
     question: '¿Cómo limpio el carrito?',
-    src: 'contenidomanual/carrito/limpiarcarrito.mp4',
+    src: 'limpiarcarrito.mp4',
   },
   {
     id: 'crear-pedido',
     groupId: 'crear',
     question: '¿Cómo creo mi pedido correctamente?',
-    src: 'contenidomanual/crear pedido/crearpedido.mp4',
+    src: 'crearpedido.mp4',
   },
   {
     id: 'gestionar-pedido',
     groupId: 'gestionar',
     question: '¿Cómo gestiono un pedido?',
-    src: 'contenidomanual/gestionar pedido/gestiondepedido.mp4',
+    src: 'gestiondepedido.mp4',
   },
   {
     id: 'pago-pedido',
     groupId: 'abono',
     question: '¿Cómo creo un pago a un pedido?',
-    src: 'contenidomanual/crear abono-anticipo/crearpagoapedido.mp4',
+    src: 'crearpagoapedido.mp4',
   },
   {
     id: 'pago-cartera',
     groupId: 'abono',
     question: '¿Cómo creo un pago de pedido desde cartera?',
-    src: 'contenidomanual/crear abono-anticipo/crearpagopedidocartera.mp4',
+    src: 'crearpagopedidocartera.mp4',
   },
   {
     id: 'pedido-masivo',
     groupId: 'masivo',
     question: '¿Cómo gestiono un pedido masivo?',
-    src: 'contenidomanual/subir pedido masivo/gestionsobreelpedido.mp4',
+    src: 'gestionsobreelpedido.mp4',
   },
   {
     id: 'informacion',
     groupId: 'informacion',
     question: '¿Cómo veo y gestiono mi información?',
-    src: 'contenidomanual/verinfousuario/gestioninfousuario.mp4',
+    src: 'gestioninfousuario.mp4',
   },
   {
     id: 'cerrar',
     groupId: 'sesion',
     question: '¿Cómo cierro sesión?',
-    src: 'contenidomanual/cierre-inicio sesion/cierresesion.mp4',
+    src: 'cierresesion.mp4',
   },
 ]
 
 function loadSeen() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    localStorage.removeItem(STORAGE_KEY)
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]')
     return new Set(Array.isArray(saved) ? saved : [])
   } catch {
     return new Set()
@@ -130,11 +131,14 @@ function markSeen(id) {
     return
   }
   seen.add(id)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...seen]))
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...seen]))
 }
 
+const TUTORIALES_URL = 'https://storage.googleapis.com/importadorapremiumonline/dependencias/tutoriales/'
+
 function mediaUrl(src) {
-  return `/${src.split('/').map((part) => encodeURIComponent(part)).join('/')}`
+  const file = src.split('/').pop()
+  return `${TUTORIALES_URL}${encodeURIComponent(file)}`
 }
 
 function groupTitle(groupId) {
@@ -379,7 +383,7 @@ export function ManualWelcome() {
           <h2 id="manual-video-title">{activeStep?.question}</h2>
           <div className="player">
             {videoError ? (
-              <p className="player__error">No se pudo cargar el video. Revisa que el archivo siga en contenidomanual.</p>
+              <p className="player__error">No se pudo cargar el video. Revisa que el archivo siga en la carpeta de tutoriales.</p>
             ) : (
               <div className="metadatacontainer">
                 <div className="metadata">
