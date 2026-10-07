@@ -17,9 +17,9 @@ import { resolveCheckoutPaymentType } from '@/features/orders/utils/resolveCheck
 import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
 import {
   buildStockCartMessage,
-  buildStockDeleteAllMessage,
+  buildStockDeleteAllMessages,
   buildStockDeleteMessage,
-  WS_PRODUCT_WAREHOUSE_ID,
+  warehouseListing,
 } from '@/shared/ws/stockMessages'
 import { publishProductMessage } from '@/shared/ws/publishMessage'
 import { useWebSocketStateSlot } from '@/shared/ws/stateSlots'
@@ -106,48 +106,56 @@ export function useCartSlice({
     ))
   }, [])
 
-  const publishCartAdd = useCallback(({ product, productId, quantity, previousQuantity, cart }) => {
-    const message = buildStockCartMessage({
-      product,
-      productId,
-      userId: webSocketUserId,
-      cart: {
-        ...cart,
-        id_producto: productId,
-        id_usuario: cart?.id_usuario ?? webSocketUserId,
-        id_bodega: WS_PRODUCT_WAREHOUSE_ID,
-        cantidad: cart?.cantidad ?? quantity,
-        precio_unitario: cart?.precio_unitario ?? cart?.price ?? product?.precio ?? product?.price,
-      },
-      quantityChange: quantity - previousQuantity,
-    })
-    if (!message) {
-      console.error('[ws] No se pudo crear stock carrito: falta listado del producto', productId)
+  const publishCartAdd = useCallback(({ response, cart, product }) => {
+    const result = buildStockCartMessage({ response, cart, product })
+    if (!result.message) {
+      console.error(`[ws] No se pudo crear stock carrito: ${result.reason}`, cart?.id_producto)
       return false
     }
-    return publishProductMessage(message, webSocketUserId)
+    return publishProductMessage(result.message, cart.id_usuario)
+  }, [])
+
+  const publishCartIncrease = useCallback(({ response, cart, product }) => {
+    const result = buildStockCartMessage({ response, cart, product })
+    if (!result.message) {
+      console.error(`[ws] No se pudo crear stock carrito: ${result.reason}`, cart?.id_producto)
+      return false
+    }
+    return publishProductMessage(result.message, cart.id_usuario)
+  }, [])
+
+  const publishCartDelete = useCallback((response, product) => {
+    const cartId = response?.request?.id_carrito
+    const fromResponse = response?.carritos?.find(
+      (line) => String(line?.id_carrito) === String(cartId),
+    ) ?? (
+      String(response?.item?.id_carrito) === String(cartId)
+        ? response.item
+        : null
+    )
+    const cart = fromResponse && product?.apiData
+      ? { ...product.apiData, ...fromResponse }
+      : (fromResponse ?? product?.apiData)
+    const result = buildStockDeleteMessage({
+      response: response?.raw,
+      cart,
+      product,
+    })
+    if (!result.message) {
+      console.error(`[ws] No se pudo crear stock eliminar: ${result.reason}`, cartId)
+      return false
+    }
+    return publishProductMessage(result.message, cart.id_usuario ?? webSocketUserId)
   }, [webSocketUserId])
 
-  const publishCartDelete = useCallback((item) => {
-    const product = productsRef.current.find((row) => String(row.id) === String(item.id)) ?? item
-    const message = buildStockDeleteMessage({
-      product,
-      productId: item.id,
-      cart: item.apiData ?? {
-        id_carrito: item.cartId,
-        id_bodega: WS_PRODUCT_WAREHOUSE_ID,
-        cantidad: item.quantity,
-      },
-    })
-    if (!message) {
-      console.error('[ws] No se pudo crear stock eliminar: falta listado del producto', item.id)
+  const publishCartDeleteAll = useCallback((items, response) => {
+    const result = buildStockDeleteAllMessages(items, response)
+    if (!result.messages?.length) {
+      console.error(`[ws] No se pudo crear stock eliminarTodo: ${result.reason}`)
       return false
     }
-    return publishProductMessage(message, webSocketUserId)
-  }, [productsRef, webSocketUserId])
-
-  const publishCartDeleteAll = useCallback((items) => {
-    return publishProductMessage(buildStockDeleteAllMessage(items), webSocketUserId)
+    const userId = result.messages[0]?.carrito?.id_usuario ?? webSocketUserId
+    return result.messages.every((message) => publishProductMessage(message, userId))
   }, [webSocketUserId])
 
   /** Filas API → ítems de carrito con fiscales del catálogo (o del ítem previo si no está en catálogo). */
@@ -293,6 +301,13 @@ export function useCartSlice({
           ...listed,
           ...sourceProduct,
           id: listed.id ?? sourceProduct.id,
+          stockData: warehouseListing(
+            sourceProduct.stockData,
+            sourceProduct.stock,
+            listed.stockData,
+            listed.stock,
+          ),
+          stockDetail: sourceProduct.stockDetail ?? listed.stockDetail,
           stock: sourceProduct.stock ?? listed.stock,
           precio: sourceProduct.precio ?? sourceProduct.price ?? listed.precio ?? listed.price,
           price: sourceProduct.precio ?? sourceProduct.price ?? listed.price ?? listed.precio,
@@ -423,15 +438,9 @@ export function useCartSlice({
       await syncCartAfterMutation(persisted)
       const cartLine = persisted.carritos?.find((row) => String(row.id_producto) === orderKey)
       publishCartAdd({
+        response: persisted.raw,
+        cart: cartLine,
         product,
-        productId: planned.body.id_producto,
-        quantity: planned.body.cantidad,
-        previousQuantity: previousQty,
-        cart: cartLine ?? {
-          id_carrito: cartId,
-          precio_unitario: planned.body.precio_unitario,
-          ...planned.body,
-        },
       })
 
       const responseHasCartId = persisted.carritos?.some((row) => (
@@ -493,7 +502,7 @@ export function useCartSlice({
       }
 
       await syncCartAfterMutation(removed, { allowEmpty: true })
-      publishCartDelete(item)
+      publishCartDelete(removed, item)
       return { success: true }
     } finally {
       mutatingQtyRef.current.delete(removeKey)
@@ -611,22 +620,11 @@ export function useCartSlice({
         }
 
         await syncCartAfterMutation(updated)
-        const productForWs = productsRef.current.find((entry) => String(entry.id) === qtyKey) ?? target
         const updatedLine = updated.carritos?.find((row) => String(row.id_producto) === qtyKey)
-        publishCartAdd({
-          product: productForWs,
-          productId: pending.idProducto,
-          quantity: pending.nextQuantity,
-          previousQuantity: pending.previousQty,
-          cart: updatedLine ?? {
-            ...target.apiData,
-            id_carrito: pending.cartId,
-            id_producto: pending.idProducto,
-            id_usuario: webSocketUserId,
-            id_bodega: WS_PRODUCT_WAREHOUSE_ID,
-            cantidad: pending.nextQuantity,
-            precio_unitario: pending.precioUnitario,
-          },
+        publishCartIncrease({
+          response: updated.raw,
+          cart: updatedLine,
+          product: pending.fiscalSource,
         })
         const ok = {
           success: true,
@@ -666,7 +664,7 @@ export function useCartSlice({
       }, QTY_PUT_DEBOUNCE_MS)
       qtyDebounceTimersRef.current.set(qtyKey, timer)
     })
-  }, [tokenAccess, currentUserId, webSocketUserId, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds, publishCartAdd])
+  }, [tokenAccess, currentUserId, webSocketUserId, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds, publishCartIncrease])
   const clearCart = useCallback(async () => {
     if (!tokenAccess) {
       commitCart([])
@@ -689,7 +687,7 @@ export function useCartSlice({
         commitCart(previousItems)
         return cleared
       }
-      publishCartDeleteAll(previousItems)
+      publishCartDeleteAll(previousItems, cleared.raw)
       return { success: true }
     } finally {
       clearingCartRef.current = false
@@ -755,7 +753,7 @@ export function useCartSlice({
     if (!cleared.success) {
       console.error('[checkout] Pedido creado pero no se pudo vaciar el carrito', cleared.error)
     } else {
-      publishCartDeleteAll(cartItems)
+      publishCartDeleteAll(cartItems, cleared.raw)
     }
 
     const order = buildCheckoutOrder({

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { applyWebSocketMessage } from './applyMessage'
-import { startWebSocket, stopWebSocket, subscribeWebSocket } from './socket'
+import { startWebSocket, subscribeWebSocket } from './socket'
 
 export function useProductWebSocket({ userId } = {}) {
   const userIdRef = useRef(userId)
@@ -11,9 +11,6 @@ export function useProductWebSocket({ userId } = {}) {
       applyWebSocketMessage(message, userIdRef.current)
     })
     startWebSocket()
-    return () => {
-      unsubscribe()
-      stopWebSocket()
-    }
+    return unsubscribe
   }, [])
 }

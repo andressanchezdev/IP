@@ -175,8 +175,6 @@ export async function postCartItem({
       body,
     })
 
-    console.info('[cart] POST completado', { productId: body.id_producto })
-
     const carritos = extractCarts(payload)
     const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
 

@@ -1,8 +1,5 @@
-import { normalizeStockWarehouseKey, parseStockDetail } from '@/shared/lib/stockDetail'
-
-export const WS_PRODUCT_WAREHOUSE_ID = '6'
-
-const restoredStockByCart = new Map()
+import { FLAT_WAREHOUSE_KEY, normalizeStockWarehouseKey } from '@/shared/lib/stockDetail'
+import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 
 function parseListing(value) {
   if (typeof value === 'string') {
@@ -14,12 +11,12 @@ function parseListing(value) {
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
 
-  const keys = Object.keys(value)
-  if (keys.length && keys.every((key) => Array.isArray(value[key]))) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, rows]) => [key, rows.map((row) => ({ ...row }))]),
-    )
+  const listing = {}
+  for (const [key, rows] of Object.entries(value)) {
+    if (!Array.isArray(rows)) continue
+    listing[key] = rows.map((row) => (row && typeof row === 'object' ? { ...row } : row))
   }
+  if (Object.keys(listing).length) return listing
 
   const internal = {}
   for (const [warehouseId, bucket] of Object.entries(value)) {
@@ -30,17 +27,109 @@ function parseListing(value) {
   return Object.keys(internal).length ? internal : null
 }
 
-export function stockListingFromProduct(product) {
-  const raw = parseListing(product?.stockData)
-  if (raw) return raw
+function listingString(value) {
+  if (value == null || value === '' || typeof value === 'number' || typeof value === 'boolean') return null
+  const parsed = parseListing(value)
+  if (!parsed) return null
+  const warehouses = Object.fromEntries(
+    Object.entries(parsed).filter(([key]) => key !== FLAT_WAREHOUSE_KEY),
+  )
+  return Object.keys(warehouses).length ? JSON.stringify(warehouses) : null
+}
 
-  const detail = parseStockDetail(product?.stockDetail)
-  if (!detail) return null
-  const listing = {}
-  Object.entries(detail).forEach(([warehouseId, bucket]) => {
-    if (warehouseId !== '*') listing[warehouseId] = bucket.locations
-  })
-  return Object.keys(listing).length ? listing : null
+function asListadoText(value) {
+  if (value == null || value === '') return null
+  const normalized = typeof value === 'string' ? listingString(value.trim()) : listingString(value)
+  if (normalized) return normalized
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  if (typeof value === 'object') return JSON.stringify(value)
+  return null
+}
+
+function ubicacionEntries(source, found = [], depth = 0, seen = new Set()) {
+  if (source == null || depth > 6) return found
+  if (typeof source === 'string') {
+    const trimmed = source.trim()
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return found
+    try {
+      return ubicacionEntries(JSON.parse(trimmed), found, depth + 1, seen)
+    } catch {
+      return found
+    }
+  }
+  if (typeof source !== 'object' || seen.has(source)) return found
+  seen.add(source)
+  if (Array.isArray(source)) {
+    source.forEach((item) => ubicacionEntries(item, found, depth + 1, seen))
+    return found
+  }
+  for (const key of ['ubicacion_array', 'ubicacionArray']) {
+    const listado = asListadoText(source[key])
+    if (!listado) continue
+    found.push({
+      productId: source.id_producto ?? source.idProducto ?? source.id ?? null,
+      listado,
+    })
+  }
+  for (const [key, value] of Object.entries(source)) {
+    if (key === 'ubicacion_array' || key === 'ubicacionArray') continue
+    if (value && typeof value === 'object') ubicacionEntries(value, found, depth + 1, seen)
+  }
+  return found
+}
+
+function listadoForProduct(productId, ...sources) {
+  const entries = sources.flatMap((source) => ubicacionEntries(source))
+  if (entries.length === 0) return null
+  const id = String(productId ?? '').trim()
+  const match = id
+    ? entries.find((entry) => String(entry.productId ?? '') === id)
+    : null
+  return (match ?? entries[0]).listado
+}
+
+export function deleteAllListings(message) {
+  const direct = listingString(message?.listado)
+  if (direct) {
+    const rows = Array.isArray(message?.carrito) ? message.carrito : []
+    const productId = rows.length === 1
+      ? rows[0]?.id_producto ?? rows[0]?.idProducto
+      : message?.idProducto
+    return productId == null ? [] : [{ productId, listado: direct }]
+  }
+  if (typeof message?.listado !== 'string') return []
+  try {
+    const parsed = JSON.parse(message.listado)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return []
+    return Object.entries(parsed)
+      .map(([productId, value]) => ({ productId, listado: listingString(value) }))
+      .filter((entry) => entry.listado)
+  } catch {
+    return []
+  }
+}
+
+export function warehouseListing(...values) {
+  for (const value of values) {
+    if (listingString(value)) return value
+  }
+  return undefined
+}
+
+export function stockListingFromProduct(product) {
+  for (const rawValue of [
+    product?.stockData,
+    product?.stockDetail,
+    product?.stock,
+    product?.apiData?.stock,
+    product?.apiData?.stockData,
+    product?.apiData?.listado,
+  ]) {
+    const raw = parseListing(rawValue)
+    if (raw) return raw
+  }
+
+  return null
 }
 
 export function restoreStockForDeleteAll(product, warehouseId, quantity) {
@@ -74,176 +163,153 @@ function available(row) {
   return Number.isFinite(quantity) && quantity > 0 ? quantity : 0
 }
 
-function cartAllocationKey({ productId, warehouseId, cartId }) {
-  return `${productId}:${warehouseId}:${cartId ?? ''}`
-}
-
-function cartPayload(cart, { productId, userId, quantity, product }) {
-  const date = new Date()
-  const pad = (value) => String(value).padStart(2, '0')
-  const fecha = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-  const result = {
-    ...cart,
-    id_producto: cart?.id_producto ?? productId,
-    id_usuario: cart?.id_usuario ?? userId,
-    estado: cart?.estado ?? 'venta',
-    cantidad: cart?.cantidad ?? cart?.quantity ?? quantity ?? 1,
-    fecha: cart?.fecha ?? cart?.cartDate ?? fecha,
-    descuento: cart?.descuento ?? cart?.discount ?? 0,
-    precio_unitario: cart?.precio_unitario ?? cart?.price ?? product?.precio ?? product?.price ?? '0',
-    compra: cart?.compra ?? product?.compra ?? '0',
-    iva: cart?.iva ?? product?.iva ?? 0,
-    exento: cart?.exento ?? product?.exento ?? 0,
-    estadoCaja: cart?.estadoCaja ?? 'pendiente',
-    id_bodega: WS_PRODUCT_WAREHOUSE_ID,
-    aux_venta: cart?.aux_venta ?? JSON.stringify({ type: cart?.type ?? '', cons: cart?.cons ?? '' }),
-    aplicacion: cart?.aplicacion ?? product?.aplicacion ?? '',
-    cons: cart?.cons ?? '',
-    type: cart?.type ?? '',
-    id_bodega_aux: cart?.id_bodega_aux ?? 0,
-  }
-  for (const key of ['id_carrito', 'id_cliente', 'id_empresa']) {
-    if (cart?.[key] != null) result[key] = cart[key]
-  }
-  for (const key of ['id', 'quantity', 'cartId', 'userId', 'price', 'cartDate', 'discount']) {
-    delete result[key]
-  }
-  return result
-}
-
-function changeAvailable(listing, warehouseId, change, allocationKey) {
-  const key = normalizeStockWarehouseKey(warehouseId)
-  const rows = listing[key]
-  if (!Array.isArray(rows) || rows.length === 0 || change === 0) return false
-
-  if (change < 0) {
-    let remaining = Math.abs(change)
-    const allocations = []
-    const orderedRows = rows
-      .map((row, index) => ({ row, index }))
-      .sort((a, b) => Number(String(a.row.ubicacion).toUpperCase() === 'ZR')
-        - Number(String(b.row.ubicacion).toUpperCase() === 'ZR'))
-
-    for (const { row, index } of orderedRows) {
-      if (remaining <= 0) break
-      const taken = Math.min(remaining, available(row))
-      if (taken <= 0) continue
-      const next = Math.max(0, available(row) - taken)
-      row.cantidadAux = next
-      allocations.push({ index, quantity: taken })
-      remaining -= taken
-    }
-    if (allocationKey) {
-      const previous = restoredStockByCart.get(allocationKey) ?? []
-      const merged = new Map(previous.map(({ index, quantity }) => [index, quantity]))
-      allocations.forEach(({ index, quantity }) => {
-        merged.set(index, (merged.get(index) ?? 0) + quantity)
-      })
-      restoredStockByCart.set(
-        allocationKey,
-        Array.from(merged, ([index, quantity]) => ({ index, quantity })),
-      )
-    }
-    return true
-  }
-
-  const allocations = allocationKey ? restoredStockByCart.get(allocationKey) : null
-  if (allocations?.length) {
-    let remaining = change
-    const pending = []
-    allocations.forEach(({ index, quantity }) => {
-      const restored = Math.min(remaining, quantity)
-      if (rows[index] && restored > 0) {
-        rows[index].cantidadAux = available(rows[index]) + restored
-        remaining -= restored
-      }
-      if (quantity > restored) pending.push({ index, quantity: quantity - restored })
-    })
-    if (remaining > 0) {
-      const restoreIndex = Math.max(0, rows.findIndex((row) => String(row.ubicacion).toUpperCase() === 'ZR'))
-      rows[restoreIndex].cantidadAux = available(rows[restoreIndex]) + remaining
-    }
-    if (pending.length) restoredStockByCart.set(allocationKey, pending)
-    else restoredStockByCart.delete(allocationKey)
-    return true
-  }
-
-  const restoreIndex = Math.max(0, rows.findIndex((row) => String(row.ubicacion).toUpperCase() === 'ZR'))
-  rows[restoreIndex].cantidadAux = available(rows[restoreIndex]) + change
-  return true
-}
-
-export function buildStockCartMessage({
-  product,
-  productId,
-  userId,
-  cart,
-  quantityChange,
-}) {
+function listingFromProduct(product) {
   const listing = stockListingFromProduct(product)
-  if (!listing) return null
-  const normalizedWarehouseId = WS_PRODUCT_WAREHOUSE_ID
-  if (!normalizedWarehouseId || !Array.isArray(listing[normalizedWarehouseId]) || !userId) return null
+  return listing ? listingString(listing) : null
+}
 
-  const cartId = cart?.id_carrito ?? cart?.cartId
-  const key = cartAllocationKey({ productId, warehouseId: normalizedWarehouseId, cartId })
-  if (!changeAvailable(listing, normalizedWarehouseId, -Number(quantityChange || 0), key)) return null
+/** Suma la cantidad que sale del carrito a `cantidadAux` de la bodega de la sesión. */
+function releaseCartQuantity(listadoText, cart) {
+  const listing = parseListing(listadoText)
+  const quantity = Number(cart?.cantidad)
+  if (!listing || !Number.isFinite(quantity) || quantity <= 0) return listadoText ?? null
 
-  const carrito = cartPayload(cart, {
-    productId,
-    userId,
-    product,
-  })
+  const key = [getSessionWarehouseId(), normalizeStockWarehouseKey(cart?.id_bodega)]
+    .find((candidate) => candidate && Array.isArray(listing[candidate]) && listing[candidate].length)
+  const rows = key ? listing[key] : null
+  if (!Array.isArray(rows) || rows.length === 0) return JSON.stringify(listing)
 
+  let remaining = quantity
+  const ordered = rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => Number(String(a.row.ubicacion).toUpperCase() === 'ZR')
+      - Number(String(b.row.ubicacion).toUpperCase() === 'ZR'))
+
+  for (const { row } of ordered) {
+    if (remaining <= 0) break
+    const physical = Number(row.cantidad)
+    const current = Number(row.cantidadAux)
+    const aux = Number.isFinite(current) ? current : 0
+    if (!Number.isFinite(physical) || aux >= physical) continue
+    const add = Math.min(remaining, physical - aux)
+    row.cantidadAux = aux + add
+    remaining -= add
+  }
+
+  if (remaining > 0) {
+    const target = ordered.find(({ row }) => String(row.ubicacion).toUpperCase() === 'ZR')?.row
+      ?? ordered[0]?.row
+    if (target) {
+      const current = Number(target.cantidadAux)
+      target.cantidadAux = (Number.isFinite(current) ? current : 0) + remaining
+    }
+  }
+
+  return JSON.stringify(listing)
+}
+
+/** Resta la cantidad que otro usuario ordenó, sin bajar de 0. */
+export function reserveSessionQuantity(listadoText, quantity, warehouseId) {
+  const listing = parseListing(listadoText)
+  const amount = Number(quantity)
+  if (!listing || !Number.isFinite(amount) || amount <= 0) return null
+
+  const key = [getSessionWarehouseId(), normalizeStockWarehouseKey(warehouseId)]
+    .find((candidate) => candidate && Array.isArray(listing[candidate]) && listing[candidate].length)
+  const rows = key ? listing[key] : null
+  if (!Array.isArray(rows) || rows.length === 0) return JSON.stringify(listing)
+
+  let remaining = amount
+  const ordered = [...rows].sort((a, b) => Number(String(a.ubicacion).toUpperCase() === 'ZR')
+    - Number(String(b.ubicacion).toUpperCase() === 'ZR'))
+
+  for (const row of ordered) {
+    if (remaining <= 0) break
+    const current = Number(row.cantidadAux)
+    const aux = Number.isFinite(current) && current > 0 ? current : 0
+    if (aux <= 0) continue
+    const take = Math.min(remaining, aux)
+    row.cantidadAux = aux - take
+    remaining -= take
+  }
+
+  return JSON.stringify(listing)
+}
+
+function buildFailure(reason) {
+  return { message: null, reason }
+}
+
+function buildCartStockMessage({ tipo, response, cart }) {
+  if (!cart || typeof cart !== 'object' || cart.id_producto == null) {
+    return buildFailure('la respuesta no trae la línea de carrito (id_producto)')
+  }
+
+  const idProducto = response?.idProducto ?? response?.id_producto ?? cart.id_producto
+  const listado = listadoForProduct(idProducto, response, cart)
+  if (!listado) {
+    console.error(`[ws] ${tipo} sin ubicacion_array`, idProducto)
+  }
   return {
-    tipo: 'stock carrito',
-    idProducto: productId,
-    listado: JSON.stringify(listing),
-    carrito,
+    message: {
+      tipo,
+      idProducto,
+      ...(listado ? { listado } : {}),
+      carrito: { ...cart },
+    },
+    reason: null,
   }
 }
 
-export function buildStockDeleteMessage({ product, productId, cart }) {
-  const listing = stockListingFromProduct(product)
-  if (!listing) return null
-  const normalizedWarehouseId = WS_PRODUCT_WAREHOUSE_ID
-  if (!normalizedWarehouseId || !Array.isArray(listing[normalizedWarehouseId])) return null
+export function buildStockCartMessage({ response, cart }) {
+  return buildCartStockMessage({ tipo: 'stock carrito', response, cart })
+}
 
-  const cartId = cart?.id_carrito ?? cart?.cartId
-  const key = cartAllocationKey({ productId, warehouseId: normalizedWarehouseId, cartId })
-  if (!changeAvailable(listing, normalizedWarehouseId, Number(cart?.cantidad ?? cart?.quantity ?? 1), key)) return null
+export function buildStockDeleteMessage({ response, cart, product }) {
+  const built = buildCartStockMessage({ tipo: 'stock eliminar', response, cart })
+  if (!built.message) return built
+  const base = built.message.listado
+    ?? listingFromProduct(product)
+    ?? listingFromProduct(cart)
+  const listado = base
+    ? releaseCartQuantity(base, { ...cart, cantidad: product?.quantity ?? cart.cantidad })
+    : null
   return {
-    idProducto: productId,
-    tipo: 'stock eliminar',
-    listado: JSON.stringify(listing),
-    idBodega: String(normalizedWarehouseId),
-    ...(cartId != null ? { idCarrito: Number(cartId) || cartId } : {}),
+    message: {
+      ...built.message,
+      ...(listado ? { listado } : {}),
+    },
+    reason: null,
   }
 }
 
-export function buildStockDeleteAllMessage(cartItems = []) {
-  const carrito = cartItems.map((item) => {
-    const raw = item?.apiData
-    if (raw && typeof raw === 'object') {
-      return { ...raw, id_bodega: WS_PRODUCT_WAREHOUSE_ID }
+export function buildStockDeleteAllMessages(cartItems = [], response = null) {
+  const lines = cartItems
+    .map((item) => item?.apiData)
+    .filter((line) => line && typeof line === 'object' && line.id_producto != null)
+  if (lines.length === 0) {
+    return buildFailure('no hay líneas de la respuesta del carrito para stock eliminarTodo')
+  }
+  const messages = cartItems.flatMap((item) => {
+    const line = item?.apiData
+    if (!line || line.id_producto == null) return []
+    const idProducto = line.id_producto
+    const base = listadoForProduct(idProducto, response, line, item)
+      ?? listingFromProduct(item)
+    if (!base) {
+      console.error('[ws] stock eliminarTodo sin ubicacion_array', idProducto)
     }
-    return {
-      id_carrito: item?.cartId,
-      compra: item?.compra ?? '0',
-      iva: item?.iva ?? 0,
-      exento: item?.exento ?? 0,
-      id_bodega: WS_PRODUCT_WAREHOUSE_ID,
-      id_producto: item?.id,
-      fecha: item?.cartDate ?? '',
-      descuento: item?.discount ?? 0,
-      id_usuario: item?.userId ?? null,
-      cantidad: item?.quantity ?? 1,
-      precio_unitario: item?.price ?? 0,
-      aplicacion: item?.aplicacion ?? '',
-      type: item?.type ?? '',
-    }
+    const listado = base
+      ? releaseCartQuantity(base, { ...line, cantidad: item.quantity ?? line.cantidad })
+      : null
+    return [{
+      tipo: 'stock eliminarTodo',
+      idProducto,
+      ...(listado ? { listado } : {}),
+      carrito: { ...line },
+    }]
   })
-  return { productos: [], carrito, tipo: 'stock eliminarTodo' }
+  return { messages, message: messages[0], reason: null }
 }
 
 export function getStockListingFromMessage(message) {
@@ -253,8 +319,16 @@ export function getStockListingFromMessage(message) {
       listado: message.info?.lista ?? message.lista,
     }
   }
-  if (['stock carrito', 'stock eliminar'].includes(message?.tipo)) {
-    return { productId: message.idProducto, listado: message.listado }
+  if ([
+    'stock carrito',
+    'stock carrito aumentado',
+    'stock carrito eliminar',
+    'stock eliminar',
+    'stock eliminarTodo',
+  ].includes(message?.tipo)) {
+    const productId = message.idProducto ?? message.carrito?.id_producto
+    if (message.tipo === 'stock eliminarTodo' && (productId == null || message.listado == null)) return null
+    return { productId, listado: message.listado }
   }
   return null
 }

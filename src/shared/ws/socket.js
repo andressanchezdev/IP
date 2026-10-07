@@ -5,8 +5,24 @@ let socket = null
 let reconnectTimer = null
 let reconnectAttempt = 0
 let shouldConnect = false
+let lifecycleBound = false
 const listeners = new Set()
 const pendingMessages = []
+
+function recoverWebSocket() {
+  if (!shouldConnect) return
+  if (socket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(socket.readyState)) return
+  startWebSocket()
+}
+
+function bindLifecycle() {
+  if (lifecycleBound || typeof window === 'undefined') return
+  lifecycleBound = true
+  window.addEventListener('online', recoverWebSocket)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') recoverWebSocket()
+  })
+}
 
 function notify(message) {
   listeners.forEach((listener) => {
@@ -18,13 +34,24 @@ function notify(message) {
   })
 }
 
+function outgoingLabel(tipo) {
+  return {
+    'stock carrito': '[cart] POST completado',
+    'stock eliminar': '[cart] DELETE completado',
+    'stock eliminarTodo': '[cart] DELETE massive completado',
+  }[tipo] ?? `[ws] ${tipo}`
+}
+
+function logOutgoing(message) {
+  console.info(outgoingLabel(message?.tipo), message)
+}
+
 function flushPending(current) {
   while (socket === current && current.readyState === WebSocket.OPEN && pendingMessages.length > 0) {
     const payload = pendingMessages.shift()
     try {
       current.send(payload)
-      const message = JSON.parse(payload)
-      console.info(`[ws] POST ${message.tipo}`)
+      logOutgoing(JSON.parse(payload))
     } catch (error) {
       pendingMessages.unshift(payload)
       console.error('[ws] No se pudo enviar el mensaje pendiente', error)
@@ -37,6 +64,7 @@ function reconnect() {
   if (!shouldConnect || reconnectTimer != null) return
   const delay = Math.min(WS_RETRY_MIN_MS * (2 ** reconnectAttempt), WS_RETRY_MAX_MS)
   reconnectAttempt += 1
+  console.info('[ws] reconectando')
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null
     connectWebSocket()
@@ -105,6 +133,7 @@ export function startWebSocket() {
     return
   }
   shouldConnect = true
+  bindLifecycle()
   if (reconnectTimer != null) {
     window.clearTimeout(reconnectTimer)
     reconnectTimer = null
@@ -152,11 +181,11 @@ export function sendWebSocketMessage(message) {
       startWebSocket()
       return true
     }
+    logOutgoing(message)
     socket.send(payload)
-    console.info(`[ws] POST ${message?.tipo}`)
     return true
   } catch (error) {
-    console.error(`[ws POST ${message?.tipo} fail]`, error)
+    console.error(`[ws ${message?.tipo} fail]`, message, error)
     return false
   }
 }

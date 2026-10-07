@@ -2,7 +2,11 @@ import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 import { buildStockFields } from '@/shared/lib/stockDetail'
 import { getWebSocketStateSlot, getWebSocketStateValue } from './stateSlots'
 import { WS_PRODUCT_EVENTS, isProductStockMessage } from './messageTypes'
-import { getStockListingFromMessage, restoreStockForDeleteAll } from './stockMessages'
+import {
+  deleteAllListings,
+  getStockListingFromMessage,
+  restoreStockForDeleteAll,
+} from './stockMessages'
 
 const restoredCartIds = new Set()
 
@@ -17,6 +21,31 @@ function cartRows(message) {
   return []
 }
 
+function sameProduct(item, productId) {
+  const target = text(productId)
+  if (!target) return false
+  return [item?.id, item?.id_producto, item?.idProducto].some((value) => {
+    const current = text(value)
+    if (!current) return false
+    if (current === target) return true
+    const left = Number(current)
+    const right = Number(target)
+    return Number.isFinite(left) && Number.isFinite(right) && left === right
+  })
+}
+
+function orderLine(message) {
+  const cart = message?.carrito
+  if (cart && typeof cart === 'object' && !Array.isArray(cart)) return cart
+  return null
+}
+
+/** El listado del mensaje manda. El stock ya pintado por GET /general no lo reemplaza ni lo bloquea. */
+function listadoFromMessage(message, snapshot) {
+  const line = orderLine(message)
+  return snapshot?.listado ?? line?.ubicacion_array ?? line?.ubicacionArray ?? null
+}
+
 function applyStockSnapshot(productId, listado) {
   if (!productId || listado == null) return
   const stockFields = buildStockFields(listado, getSessionWarehouseId())
@@ -29,7 +58,7 @@ function applyStockSnapshot(productId, listado) {
       if (!Array.isArray(items)) return items
       let changed = false
       const next = items.map((item) => {
-        if (text(item?.id) !== text(productId)) return item
+        if (!sameProduct(item, productId)) return item
         changed = true
         return { ...item, ...stockFields, stockData: listado }
       })
@@ -40,11 +69,22 @@ function applyStockSnapshot(productId, listado) {
 
 function applyStock(message) {
   const snapshot = getStockListingFromMessage(message)
-  if (snapshot) {
-    applyStockSnapshot(snapshot.productId, snapshot.listado)
+  const listado = listadoFromMessage(message, snapshot)
+  const productId = snapshot?.productId ?? orderLine(message)?.id_producto
+  if (productId && listado != null) {
+    applyStockSnapshot(productId, listado)
     return
   }
-  if (message.tipo !== WS_PRODUCT_EVENTS.STOCK_DELETE_ALL) return
+  if (
+    message.tipo !== WS_PRODUCT_EVENTS.STOCK_DELETE_ALL
+    && message.tipo !== WS_PRODUCT_EVENTS.STOCK_DELETE
+  ) return
+
+  const listings = deleteAllListings(message)
+  if (listings.length > 0) {
+    listings.forEach(({ productId, listado }) => applyStockSnapshot(productId, listado))
+    return
+  }
 
   const grouped = new Map()
   for (const line of cartRows(message)) {
@@ -82,7 +122,10 @@ function applyCart(message, userId) {
   if (typeof setCart !== 'function' || !userId) return
   const lines = cartRows(message)
 
-  if (message.tipo === WS_PRODUCT_EVENTS.STOCK_CART) {
+  if (
+    message.tipo === WS_PRODUCT_EVENTS.STOCK_CART
+    || message.tipo === WS_PRODUCT_EVENTS.STOCK_CART_INCREASED
+  ) {
     const line = lines.find((item) => text(item?.id_usuario) === text(userId))
     if (!line) return
     const id = text(line.id_producto ?? message.idProducto)
@@ -116,9 +159,26 @@ function applyCart(message, userId) {
     return
   }
 
+  if (message.tipo === WS_PRODUCT_EVENTS.STOCK_CART_DELETE) {
+    const line = lines.find((item) => text(item?.id_usuario) === text(userId)) ?? lines[0]
+    const owner = text(line?.id_usuario)
+    if (owner && owner !== text(userId)) return
+    const productId = text(line?.id_producto ?? message.idProducto)
+    const cartId = text(line?.id_carrito)
+    if (!productId && !cartId) return
+    setCart((current = []) => {
+      const next = current.filter((item) => {
+        if (cartId && text(item.cartId) === cartId) return false
+        return text(item.id) !== productId
+      })
+      return next.length === current.length ? current : next
+    })
+    return
+  }
+
   if (message.tipo === WS_PRODUCT_EVENTS.STOCK_DELETE) {
-    const cartId = text(message.idCarrito)
-    const productId = text(message.idProducto)
+    const cartId = text(message.idCarrito ?? message.carrito?.id_carrito)
+    const productId = text(message.idProducto ?? message.carrito?.id_producto)
     setCart((current = []) => {
       const next = current.filter((item) => {
         if (cartId) return text(item.cartId) !== cartId

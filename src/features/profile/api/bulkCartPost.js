@@ -1,7 +1,7 @@
 import { getApiAuthToken } from '@/shared/api'
 import { postCartItem, putCartItem, readCartPostBackendMessage } from '@/features/cart/api/cartApi'
 import { planCartAdd } from '@/features/cart/api/cartPostBody'
-import { buildStockCartMessage, WS_PRODUCT_WAREHOUSE_ID } from '@/shared/ws/stockMessages'
+import { buildStockCartMessage } from '@/shared/ws/stockMessages'
 import { publishProductMessage } from '@/shared/ws/publishMessage'
 import { runWithConcurrency } from './bulkShared'
 
@@ -30,8 +30,6 @@ export async function postBulkOrderToCart(
   rows = [],
   {
     token,
-    userId,
-    getProductById,
     getExistingQty,
     getExistingCartId,
     onProgress,
@@ -137,26 +135,12 @@ export async function postBulkOrderToCart(
           product,
         })
       }
-      const sourceProduct = getProductById?.(productId) ?? product
       const cartLine = persisted.carritos?.find((entry) => String(entry.id_producto) === productId)
-      const message = buildStockCartMessage({
-        product: sourceProduct,
-        productId: requestBody.id_producto,
-        userId: cartLine?.id_usuario ?? userId,
-        cart: cartLine ?? {
-          id_carrito: existingCartId,
-          id_producto: requestBody.id_producto,
-          id_usuario: userId,
-          id_bodega: WS_PRODUCT_WAREHOUSE_ID,
-          cantidad: requestBody.cantidad,
-          precio_unitario: requestBody.precio_unitario,
-        },
-        quantityChange: requestBody.cantidad - existingQty,
-      })
-      if (message) {
-        publishProductMessage(message, userId)
+      const result = buildStockCartMessage({ response: persisted.raw, cart: cartLine, product })
+      if (result.message) {
+        publishProductMessage(result.message, cartLine.id_usuario)
       } else {
-        console.error('[ws] No se pudo crear stock carrito masivo: falta usuario o listado', productId)
+        console.error(`[ws] No se pudo crear stock carrito: ${result.reason}`, productId)
       }
       posted.push({
         codigo: row.codigo,
