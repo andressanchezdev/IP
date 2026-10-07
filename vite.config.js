@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function resolveAppPort(env) {
-  const parsed = Number.parseInt(String(env.PORT || ''), 10)
+  const parsed = Number.parseInt(String(env.PORT), 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5173
 }
 

@@ -7,7 +7,7 @@ import {
 } from './config'
 import { parseRealtimeFrame } from './parseFrame'
 
-/** @typedef {'idle' | 'connecting' | 'ready' | 'disconnected' | 'error'} RealtimeStatus */
+/** @typedef {'idle' | 'conectando' | 'listo' | 'desconectado' | 'error'} RealtimeStatus */
 
 let socket = null
 /** @type {RealtimeStatus} */
