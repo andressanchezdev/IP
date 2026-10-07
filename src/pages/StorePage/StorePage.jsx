@@ -1,4 +1,4 @@
-import { useAuth, useCart, useCatalog, useOrders, useUi } from '@/app/providers'
+import { useAuth, useCart, useCatalog, useOrders, useProfile, useUi } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { AuthModal } from '@/features/auth'
 import { FloatingCart } from '@/features/cart/components/FloatingCart/FloatingCart'
@@ -36,6 +36,7 @@ export function StorePage() {
     pendingCheckout,
     pendingEsperaView,
   } = useAuth()
+  const { profileSettings } = useProfile()
   const { cartItems, addToCart, refreshCartFromApi, orderingProductIds, isOrderingProduct } = useCart()
   const {
     pendingOrders,
@@ -303,6 +304,8 @@ export function StorePage() {
         results: pending.comparison.results || [],
         onlyOk: false,
         token,
+        userId: profileSettings?.personal?.userId,
+        getProductById: (productId) => products.find((product) => String(product.id) === String(productId)),
         getExistingQty: (productId) => {
           const existing = cartItems.find((item) => String(item.id) === String(productId))
           return existing ? Number(existing.quantity) || 0 : 0

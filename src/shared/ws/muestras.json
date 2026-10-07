@@ -1,0 +1,1809 @@
+10:55 35.78
+{
+  "tipo": "stock carrito",
+  "idProducto": 1109,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-A07\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":25,\"cantidadAux\":14}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":39,\"cantidadAux\":39}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"01-B05\",\"cantidad\":228,\"cantidadAux\":223},{\"ubicacion\":\"15-B03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"15-B02\",\"cantidad\":300,\"cantidadAux\":300}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510629,
+    "id_producto": 1109,
+    "id_usuario": 782,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:55:34",
+    "descuento": 0,
+    "precio_unitario": "3400",
+    "compra": "2058.82",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+
+10:55 21.95
+{
+  "idProducto": 13914,
+  "tipo": "stock eliminar",
+  "listado": "{\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"06-C29\",\"cantidad\":2,\"cantidadAux\":2,\"cantidadFact\":\"6\"}],\"1\":[{\"ubicacion\":\"ZR\",\"cantidad\":2,\"cantidadAux\":2}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "idBodega": "1",
+  "idCarrito": 510581
+}
+10:55 17.16
+{
+  "tipo": "tomaPedido",
+  "cuerpo": "217824",
+  "idBodega": 1,
+  "idCajero": 1135
+}
+10:55 15.34
+{
+  "cuerpo": "217812",
+  "tipo": "liberarPedido",
+  "estadoCambio": "facturacion"
+}
+10:55 12.76
+{
+  "cuerpo": "217813",
+  "tipo": "liberarPedido",
+  "estadoCambio": "facturacion"
+}
+10:55 07.89
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "lista": "{\"1\":[{\"ubicacion\":\"15-F08\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":61,\"cantidadAux\":44}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":52,\"cantidadAux\":52}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"16-C03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"02-I03\",\"cantidad\":220,\"cantidadAux\":200},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+    "conteo": [],
+    "movimientoStock": "[]",
+    "control": "stock"
+  },
+  "idProducto": "11119",
+  "idBodega": "6"
+}
+10:55 02.74
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217824",
+  "idBodega": 1
+}
+10:55 02.15
+{
+  "lista": "[{\"traslado\": 0, \"idpr\": 894, \"cant\": 2, \"costo\": \"6000\", \"aplicacion\": \"\", \"tipoPrecio\": \"empresarial\", \"rel\": 2, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"2418.24\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 15:54:13\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 2, \"costoOriginal\": \"6000\", \"tipoPrecioOriginal\": \"empresarial\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 2}]}]",
+  "idVenta": "217824",
+  "metodo": "cambioPickingCorroborar",
+  "tipo": "picking cambio corroborar",
+  "idBodega": 1
+}
+10:54 58.02
+{
+  "tipo": "stock carrito",
+  "idProducto": 11730,
+  "listado": "{\"6\":[{\"ubicacion\":\"05-C05\",\"cantidad\":9,\"cantidadAux\":9}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"1\":[{\"ubicacion\":\"02-E02\",\"cantidad\":0,\"cantidadAux\":0,\"cantidadFact\":\"2\"},{\"ubicacion\":\"ZR\",\"cantidad\":13,\"cantidadAux\":12}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510628,
+    "id_producto": 11730,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:54:56",
+    "descuento": 0,
+    "precio_unitario": "16000",
+    "compra": "10100.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1898,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cb55f53-c4ec-451f-8760-1f106d38cb4a\"}",
+    "aplicacion": "",
+    "cons": "8cb55f53-c4ec-451f-8760-1f106d38cb4a",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:54 56.23
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510626,
+      "compra": "2418.24",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 894,
+      "fecha": "2026-10-07 15:54:13",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 2,
+      "precio_unitario": "6000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:54 56.18
+{
+  "tipo": "picking",
+  "cuerpo": 217824,
+  "idVendedor": 1565,
+  "idBodega": 1
+}
+10:54 45.37
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "lista": "{\"1\":[{\"ubicacion\":\"01-D02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":4,\"cantidadAux\":3}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":14,\"cantidadAux\":14}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"06-D03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"15-A03\",\"cantidad\":72,\"cantidadAux\":76}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+    "conteo": [],
+    "movimientoStock": "[]",
+    "control": "stock"
+  },
+  "idProducto": "1306",
+  "idBodega": "6"
+}
+10:54 44.20
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217797,
+  "idBodega": 6,
+  "idCajero": "1666"
+}
+10:54 43.26
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510625,
+      "compra": "14989.92",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "6",
+      "id_producto": 11923,
+      "fecha": "2026-10-07 15:53:59",
+      "descuento": 0,
+      "id_usuario": 1718,
+      "cantidad": 1,
+      "precio_unitario": "30000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:54 42.99
+{
+  "tipo": "picking",
+  "cuerpo": 217823,
+  "idVendedor": 727,
+  "idBodega": 6
+}
+10:54 37.64
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "lista": "{\"1\":[{\"ubicacion\":\"01-D02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":4,\"cantidadAux\":3}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":14,\"cantidadAux\":14}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-A02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"06-D03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"15-A03\",\"cantidad\":72,\"cantidadAux\":76}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+    "conteo": [],
+    "movimientoStock": "[]",
+    "control": "stock"
+  },
+  "idProducto": "1306",
+  "idBodega": "6"
+}
+10:40 23.34
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217803",
+  "idBodega": 6
+}
+10:40 19.53
+{
+  "tipo": "stock carrito",
+  "idProducto": 509,
+  "listado": "{\"1\":[{\"ubicacion\":\"02-A05\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":16,\"cantidadAux\":15}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":20,\"cantidadAux\":20}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"05-K19\",\"cantidad\":4,\"cantidadAux\":8},{\"ubicacion\":\"15-B03\",\"cantidad\":84,\"cantidadAux\":84}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510596,
+    "id_producto": 509,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:40:18",
+    "descuento": 0,
+    "precio_unitario": "29400",
+    "compra": "15126.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1898,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cb55f53-c4ec-451f-8760-1f106d38cb4a\"}",
+    "aplicacion": "",
+    "cons": "8cb55f53-c4ec-451f-8760-1f106d38cb4a",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:40 18.17
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217809",
+  "idBodega": 1
+}
+10:40 17.06
+{
+  "lista": "[{\"traslado\": 0, \"idpr\": 1880, \"cant\": 1, \"costo\": \"22000\", \"aplicacion\": \"\", \"tipoPrecio\": \"empresarial\", \"rel\": 1, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"11328.09\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 15:38:23\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 1, \"costoOriginal\": \"22000\", \"tipoPrecioOriginal\": \"empresarial\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 1}]}, {\"traslado\": 0, \"idpr\": 1869, \"cant\": 1, \"costo\": \"14000\", \"aplicacion\": \"\", \"tipoPrecio\": \"empresarial\", \"rel\": 1, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"6722.00\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 15:38:35\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 1, \"costoOriginal\": \"14000\", \"tipoPrecioOriginal\": \"empresarial\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 1}]}]",
+  "idVenta": "217809",
+  "metodo": "cambioPickingCorroborar",
+  "tipo": "picking cambio corroborar",
+  "idBodega": 1
+}
+10:40 13.20
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217804,
+  "idBodega": 6,
+  "idCajero": "1556"
+}
+10:40 10.39
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217777",
+  "idBodega": 6
+}
+10:40 08.65
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510592,
+      "compra": "11328.09",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 1880,
+      "fecha": "2026-10-07 15:38:23",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 1,
+      "precio_unitario": "22000",
+      "aplicacion": "",
+      "type": ""
+    },
+    {
+      "id_carrito": 510593,
+      "compra": "6722.00",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 1869,
+      "fecha": "2026-10-07 15:38:35",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 1,
+      "precio_unitario": "14000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:40 08.62
+{
+  "tipo": "picking",
+  "cuerpo": 217809,
+  "idVendedor": 1559,
+  "idBodega": 1
+}
+10:39 59.53
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510595,
+      "id_bodega": "1",
+      "id_producto": 12859,
+      "id_usuario": 1564,
+      "cantidad": 1,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:39 59.50
+{
+  "tipo": "traslado",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": "",
+    "control": ""
+  },
+  "idVenta": 217808,
+  "idBodega": 1,
+  "idBodegaAux": 6
+}
+10:39 55.84
+{
+  "tipo": "stock carrito",
+  "idProducto": 12859,
+  "idBodega": "1",
+  "listado": "{\"1\":[{\"ubicacion\":\"21-A01\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"24-D02\",\"cantidad\":14,\"cantidadAux\":13}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510595,
+    "fecha": "2026-10-07 15:39:54",
+    "descuento": 0,
+    "id_producto": 12859,
+    "id_usuario": 1564,
+    "cantidad": 1,
+    "precio_unitario": "0",
+    "aplicacion": "",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"\"}",
+    "id_bodega": "1",
+    "cons": "",
+    "id_bodega_aux": 6
+  }
+}
+10:39 03.20
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217802,
+  "idBodega": 6,
+  "idCajero": "1793"
+}
+10:39 00.55
+{
+  "tipo": "stock carrito",
+  "idProducto": 1870,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-E09\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":38,\"cantidadAux\":25}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":73,\"cantidadAux\":73}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-A03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"04-E24\",\"cantidad\":15,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510594,
+    "id_producto": 1870,
+    "id_usuario": 1863,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:38:59",
+    "descuento": 0,
+    "precio_unitario": "15000",
+    "compra": "9663.86",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"ad85416b-b0d7-47e0-bf80-300c77634fe2\"}",
+    "aplicacion": "",
+    "cons": "ad85416b-b0d7-47e0-bf80-300c77634fe2",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:38 53.21
+{
+  "cajas": [],
+  "tipo": "despacho",
+  "cuerpo": "217801",
+  "idBodega": 6
+}
+10:38 36.34
+{
+  "tipo": "stock carrito",
+  "idProducto": 1869,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-E09\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":35,\"cantidadAux\":133}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":63,\"cantidadAux\":63}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"04-A21\",\"cantidad\":0,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510593,
+    "id_producto": 1869,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:38:35",
+    "descuento": 0,
+    "precio_unitario": "14000",
+    "compra": "6722.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1559,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"a481a5d9-b249-4175-b6ee-2b899650e862\"}",
+    "aplicacion": "",
+    "cons": "a481a5d9-b249-4175-b6ee-2b899650e862",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:38 33.62
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217803,
+  "idBodega": 6,
+  "idCajero": "225"
+}
+10:38 31.32
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217802",
+  "idBodega": 6
+}
+10:38 24.45
+{
+  "tipo": "stock carrito",
+  "idProducto": 1880,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-B09\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":14,\"cantidadAux\":3}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":30,\"cantidadAux\":30}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-A02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"04-D27\",\"cantidad\":3,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510592,
+    "id_producto": 1880,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:38:23",
+    "descuento": 0,
+    "precio_unitario": "22000",
+    "compra": "11328.09",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1559,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"a481a5d9-b249-4175-b6ee-2b899650e862\"}",
+    "aplicacion": "",
+    "cons": "a481a5d9-b249-4175-b6ee-2b899650e862",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:38 14.21
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217806,
+  "idBodega": 6,
+  "idCajero": "1796"
+}
+10:38 11.29
+{
+  "cuerpo": "217804",
+  "tipo": "liberarPedido",
+  "estadoCambio": "picking",
+  "idBodega": 6
+}
+10:38 08.36
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217804,
+  "idBodega": 6,
+  "idCajero": "1796"
+}
+10:36 59.59
+{
+  "tipo": "stock carrito",
+  "idProducto": 9759,
+  "listado": "{\"1\":[{\"ubicacion\":\"07-D03\",\"cantidad\":3,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":8,\"cantidadAux\":9}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-G04\",\"cantidad\":0,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510591,
+    "id_producto": 9759,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:36:58",
+    "descuento": 0,
+    "precio_unitario": "17000",
+    "compra": "7000.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1898,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cb55f53-c4ec-451f-8760-1f106d38cb4a\"}",
+    "aplicacion": "",
+    "cons": "8cb55f53-c4ec-451f-8760-1f106d38cb4a",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:36 57.20
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217711,
+  "idBodega": 6,
+  "idCajero": "1666"
+}
+10:36 55.84
+{
+  "tipo": "tomaPedido",
+  "cuerpo": "217807",
+  "idBodega": 1,
+  "idCajero": 1135
+}
+10:36 50.56
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217801",
+  "idBodega": 6
+}
+10:36 48.29
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "lista": "{\"1\":[{\"ubicacion\":\"01-D02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":4,\"cantidadAux\":3}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":14,\"cantidadAux\":14}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-A02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"06-D03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":72,\"cantidadAux\":76}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+    "conteo": [],
+    "movimientoStock": "[]",
+    "control": "stock"
+  },
+  "idProducto": "1306",
+  "idBodega": "6"
+}
+10:36 37.67
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217802,
+  "idBodega": 6,
+  "idCajero": "225"
+}
+10:36 28.00
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "lista": "{\"1\":[{\"ubicacion\":\"01-D02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":4,\"cantidadAux\":3}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":14,\"cantidadAux\":14}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-A02\",\"cantidad\":18,\"cantidadAux\":18},{\"ubicacion\":\"06-D03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":54,\"cantidadAux\":58}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+    "conteo": [],
+    "movimientoStock": "[]",
+    "control": "stock"
+  },
+  "idProducto": "1306",
+  "idBodega": "6"
+}
+10:36 13.65
+{
+  "tipo": "stock carrito",
+  "idProducto": 850,
+  "listado": "{\"1\":[{\"ubicacion\":\"07-A03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":48,\"cantidadAux\":81}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":47,\"cantidadAux\":47}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"06-F26\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"17-A01\",\"cantidad\":3041,\"cantidadAux\":3035}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510590,
+    "id_producto": 850,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:36:12",
+    "descuento": 0,
+    "precio_unitario": "20800",
+    "compra": "9300.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1898,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cb55f53-c4ec-451f-8760-1f106d38cb4a\"}",
+    "aplicacion": "",
+    "cons": "8cb55f53-c4ec-451f-8760-1f106d38cb4a",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:35 57.08
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217807",
+  "idBodega": 1
+}
+10:35 56.65
+{
+  "lista": "[{\"traslado\": 0, \"idpr\": 126, \"cant\": 2, \"costo\": \"6000\", \"aplicacion\": \"\", \"tipoPrecio\": \"empresarial\", \"rel\": 2, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"1764.70\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 15:35:23\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 2, \"costoOriginal\": \"6000\", \"tipoPrecioOriginal\": \"empresarial\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 2}]}, {\"traslado\": 0, \"idpr\": 132, \"cant\": 2, \"costo\": \"6000\", \"aplicacion\": \"\", \"tipoPrecio\": \"empresarial\", \"rel\": 2, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"1848.73\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 15:35:32\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 2, \"costoOriginal\": \"6000\", \"tipoPrecioOriginal\": \"empresarial\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 2}]}]",
+  "idVenta": "217807",
+  "metodo": "cambioPickingCorroborar",
+  "tipo": "picking cambio corroborar",
+  "idBodega": 1
+}
+10:35 53.69
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510588,
+      "compra": "1764.70",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 126,
+      "fecha": "2026-10-07 15:35:23",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 2,
+      "precio_unitario": "6000",
+      "aplicacion": "",
+      "type": ""
+    },
+    {
+      "id_carrito": 510589,
+      "compra": "1848.73",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 132,
+      "fecha": "2026-10-07 15:35:32",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 2,
+      "precio_unitario": "6000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:35 53.65
+{
+  "tipo": "picking",
+  "cuerpo": 217807,
+  "idVendedor": 1565,
+  "idBodega": 1
+}
+10:35 33.93
+{
+  "tipo": "stock carrito",
+  "idProducto": 132,
+  "listado": "{\"1\":[{\"ubicacion\":\"06-E03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":55,\"cantidadAux\":34}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":116,\"cantidadAux\":116}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"200-D14\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-A14\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-C14\",\"cantidad\":679,\"cantidadAux\":661},{\"ubicacion\":\"PISO\",\"cantidad\":1200,\"cantidadAux\":1200}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510589,
+    "id_producto": 132,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:35:32",
+    "descuento": 0,
+    "precio_unitario": "6000",
+    "compra": "1848.73",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1565,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c553dbb5-c99c-4274-adc1-9e9ded3d9053\"}",
+    "aplicacion": "",
+    "cons": "c553dbb5-c99c-4274-adc1-9e9ded3d9053",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:35 32.69
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217801,
+  "idBodega": 6,
+  "idCajero": "1553"
+}
+10:35 25.14
+{
+  "tipo": "stock carrito",
+  "idProducto": 126,
+  "listado": "{\"1\":[{\"ubicacion\":\"06-E03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":84,\"cantidadAux\":37}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":76,\"cantidadAux\":76}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"200-B15\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-A15\",\"cantidad\":284,\"cantidadAux\":284}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510588,
+    "id_producto": 126,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:35:23",
+    "descuento": 0,
+    "precio_unitario": "6000",
+    "compra": "1764.70",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1565,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c553dbb5-c99c-4274-adc1-9e9ded3d9053\"}",
+    "aplicacion": "",
+    "cons": "c553dbb5-c99c-4274-adc1-9e9ded3d9053",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:35 23.42
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510587,
+      "compra": "8500.00",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "6",
+      "id_producto": 13897,
+      "fecha": "2026-10-07 15:35:14",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 5,
+      "precio_unitario": "12000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:35 23.38
+{
+  "tipo": "picking",
+  "cuerpo": 217806,
+  "idVendedor": 727,
+  "idBodega": 6
+}
+10:35 15.59
+{
+  "tipo": "stock carrito",
+  "idProducto": 13897,
+  "listado": "{\"1\":[{\"ubicacion\":\"06-J04\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":44,\"cantidadAux\":44}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"10-B01\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":164,\"cantidadAux\":163}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510587,
+    "id_producto": 13897,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:35:14",
+    "descuento": 0,
+    "precio_unitario": "12600",
+    "compra": "8500.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 727,
+    "estadoCaja": "pendiente",
+    "id_bodega": "6",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"9f845ff4-54a4-42a8-82b1-d020a4e486df\"}",
+    "aplicacion": "",
+    "cons": "9f845ff4-54a4-42a8-82b1-d020a4e486df",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:35 13.75
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217711,
+  "idBodega": 6,
+  "idCajero": "1666"
+}
+10:34 39.14
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217801,
+  "idBodega": 6,
+  "idCajero": "1553"
+}
+10:34 37.00
+{
+  "tipo": "tomaPedido",
+  "cuerpo": "217805",
+  "idBodega": 1,
+  "idCajero": 273
+}
+10:34 16.26
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217711",
+  "idBodega": 6
+}
+10:34 02.04
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217805",
+  "idBodega": 1
+}
+10:34 01.44
+{
+  "lista": "[{\"traslado\": 0, \"idpr\": 11589, \"cant\": 1, \"costo\": \"12000\", \"aplicacion\": \"\", \"tipoPrecio\": \"empresarial\", \"rel\": 1, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"3211.40\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 15:33:50\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 1, \"costoOriginal\": \"12000\", \"tipoPrecioOriginal\": \"empresarial\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 1}]}]",
+  "idVenta": "217805",
+  "metodo": "cambioPickingCorroborar",
+  "tipo": "picking cambio corroborar",
+  "idBodega": 1
+}
+10:34 00.01
+{
+  "cajas": [],
+  "tipo": "despacho",
+  "cuerpo": "217774",
+  "idBodega": 6
+}
+10:33 59.36
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "lista": "{\"1\":[{\"ubicacion\":\"15-E09\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":35,\"cantidadAux\":134}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":63,\"cantidadAux\":63}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"04-A21\",\"cantidad\":0,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+    "conteo": [],
+    "movimientoStock": "[]",
+    "control": "stock"
+  },
+  "idProducto": "1869",
+  "idBodega": "6"
+}
+10:33 58.33
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510586,
+      "compra": "3211.40",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 11589,
+      "fecha": "2026-10-07 15:33:50",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 1,
+      "precio_unitario": "12000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:33 58.29
+{
+  "tipo": "picking",
+  "cuerpo": 217805,
+  "idVendedor": 1559,
+  "idBodega": 1
+}
+10:33 56.40
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510584,
+      "id_bodega": "1",
+      "id_producto": 2130,
+      "id_usuario": 1547,
+      "cantidad": 50,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    },
+    {
+      "id_carrito": 510585,
+      "id_bodega": "1",
+      "id_producto": 2137,
+      "id_usuario": 1547,
+      "cantidad": 50,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:33 56.38
+{
+  "tipo": "traslado",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": "",
+    "control": ""
+  },
+  "idVenta": 217804,
+  "idBodega": 1,
+  "idBodegaAux": 6
+}
+10:33 51.68
+{
+  "tipo": "stock carrito",
+  "idProducto": 11589,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-B09\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":101,\"cantidadAux\":72}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":6,\"cantidadAux\":6}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"201-D18\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ATRAS\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-B07\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-C07\",\"cantidad\":60,\"cantidadAux\":0},{\"ubicacion\":\"200-D07\",\"cantidad\":300,\"cantidadAux\":375},{\"ubicacion\":\"200-A07\",\"cantidad\":400,\"cantidadAux\":582}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510586,
+    "id_producto": 11589,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:33:50",
+    "descuento": 0,
+    "precio_unitario": "12000",
+    "compra": "3211.40",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1559,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"a481a5d9-b249-4175-b6ee-2b899650e862\"}",
+    "aplicacion": "",
+    "cons": "a481a5d9-b249-4175-b6ee-2b899650e862",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:33 47.98
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": {
+      "iva": "19",
+      "exento": 0,
+      "proveedores": "[]",
+      "predeterminado": "[]",
+      "referencia": "[]",
+      "codigos": "[]",
+      "stocking": "[]",
+      "cCarrito": "0",
+      "aplicaciones": "[]",
+      "aplicacion": "",
+      "estado": "{\"estatus\":1,\"candado\":1,\"prioridad\":0}",
+      "id": 15249,
+      "datos_productos": "{\"familia\":\"\",\"id_relacion\":0,\"iva\":19,\"descripcion\":\"\",\"id_marca\":79,\"id_modelo\":228,\"id_categoria\":80}",
+      "id_modelo": "228",
+      "id_categoria": "80",
+      "id_marca": "79",
+      "descripcion": "",
+      "searching": "CABLE DE CLUTCH LIBERO 125",
+      "codigo": "5VL-F6335-13TA",
+      "imagenArray": "[\"dependencias/img/general/imagen_base_productos.png\",\"dependencias/img/general/imagen_base_productos.png\",\"dependencias/img/general/imagen_base_productos.png\"]",
+      "stock": 0,
+      "stock_min": 0,
+      "stock_max": 0,
+      "estado_promocion": "{\"active\":\"0\",\"cantidad\":\"0\",\"inicial\":\"\",\"final\":\"\"}",
+      "ubicacion": "",
+      "fecha": "2026-10-07 10:33:46",
+      "precios": "[0,0,0,0,0]",
+      "precios_promocion": "[0,0,0]",
+      "categoria": "CABLE DE CLUTCH",
+      "marca": "yamaha nacional ta",
+      "imagen": "dependencias/img/marcas/59698646_marcas-521.png",
+      "modelo": "LIBERO 125"
+    },
+    "control": "nuevoProducto"
+  },
+  "idProducto": "0",
+  "idBodega": "6"
+}
+10:33 36.82
+{
+  "tipo": "stock carrito",
+  "idProducto": 2137,
+  "idBodega": "1",
+  "listado": "{\"1\":[{\"ubicacion\":\"15-E03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":16,\"cantidadAux\":18}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":42,\"cantidadAux\":42}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"16-B02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"01-C04\",\"cantidad\":15,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":120,\"cantidadAux\":57}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510585,
+    "fecha": "2026-10-07 15:33:35",
+    "descuento": 0,
+    "id_producto": 2137,
+    "id_usuario": 1547,
+    "cantidad": 50,
+    "precio_unitario": "0",
+    "aplicacion": "",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"\"}",
+    "id_bodega": "1",
+    "cons": "",
+    "id_bodega_aux": 6
+  }
+}
+10:33 23.86
+{
+  "tipo": "stock carrito",
+  "idProducto": 2130,
+  "idBodega": "1",
+  "listado": "{\"1\":[{\"ubicacion\":\"15-E03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":23,\"cantidadAux\":3}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"6\":[{\"ubicacion\":\"16-C04\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"02-I08\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":674,\"cantidadAux\":604}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}]}",
+  "carrito": {
+    "id_carrito": 510584,
+    "fecha": "2026-10-07 15:33:22",
+    "descuento": 0,
+    "id_producto": 2130,
+    "id_usuario": 1547,
+    "cantidad": 50,
+    "precio_unitario": "0",
+    "aplicacion": "",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"\"}",
+    "id_bodega": "1",
+    "cons": "",
+    "id_bodega_aux": 6
+  }
+}
+10:32 51.29
+{
+  "tipo": "stock carrito",
+  "idProducto": 875,
+  "listado": "{\"1\":[{\"ubicacion\":\"06-E01\",\"cantidad\":\"0\",\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":2,\"cantidadAux\":0}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"06-F22\",\"cantidad\":4,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510583,
+    "id_producto": 875,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:32:50",
+    "descuento": 0,
+    "precio_unitario": "27000",
+    "compra": "9243.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1564,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cc18746-2a9e-47f6-9a4a-b2e7899e4567\"}",
+    "aplicacion": "",
+    "cons": "8cc18746-2a9e-47f6-9a4a-b2e7899e4567",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:32 48.92
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510582,
+      "id_bodega": "1",
+      "id_producto": 875,
+      "id_usuario": 1564,
+      "cantidad": 4,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:32 48.88
+{
+  "tipo": "traslado",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": "",
+    "control": ""
+  },
+  "idVenta": 217803,
+  "idBodega": 1,
+  "idBodegaAux": 6
+}
+10:32 46.92
+{
+  "tipo": "stock carrito",
+  "idProducto": 875,
+  "idBodega": "1",
+  "listado": "{\"1\":[{\"ubicacion\":\"06-E01\",\"cantidad\":\"0\",\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":2,\"cantidadAux\":2}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"06-F22\",\"cantidad\":4,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510582,
+    "fecha": "2026-10-07 15:32:45",
+    "descuento": 0,
+    "id_producto": 875,
+    "id_usuario": 1564,
+    "cantidad": 4,
+    "precio_unitario": "0",
+    "aplicacion": "",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"\"}",
+    "id_bodega": "1",
+    "cons": "",
+    "id_bodega_aux": 6
+  }
+}
+10:31 41.14
+{
+  "cajas": [],
+  "tipo": "despacho",
+  "cuerpo": "217656",
+  "idBodega": 1
+}
+10:31 37.51
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217656,
+  "idBodega": 1,
+  "idCajero": "1699"
+}
+10:31 35.54
+{
+  "cajas": [],
+  "tipo": "despacho",
+  "cuerpo": "217765",
+  "idBodega": 1
+}
+10:31 32.38
+{
+  "tipo": "stock carrito",
+  "idProducto": 13914,
+  "listado": "{\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"06-C29\",\"cantidad\":2,\"cantidadAux\":2,\"cantidadFact\":\"6\"}],\"1\":[{\"ubicacion\":\"ZR\",\"cantidad\":2,\"cantidadAux\":1}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510581,
+    "id_producto": 13914,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:31:31",
+    "descuento": 0,
+    "precio_unitario": "147000",
+    "compra": "86925.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:31 29.91
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217765,
+  "idBodega": 1,
+  "idCajero": "1699"
+}
+10:31 28.59
+{
+  "cajas": [],
+  "tipo": "despacho",
+  "cuerpo": "217798",
+  "idBodega": 1
+}
+10:31 25.54
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217798,
+  "idBodega": 1,
+  "idCajero": "1699"
+}
+10:31 22.34
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217656",
+  "idBodega": 1
+}
+10:31 20.60
+{
+  "tipo": "stock carrito",
+  "idProducto": 9011,
+  "listado": "{\"1\":[{\"ubicacion\":\"04-C01\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":68,\"cantidadAux\":30}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":6414,\"cantidadAux\":6414}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510580,
+    "id_producto": 9011,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:31:19",
+    "descuento": 0,
+    "precio_unitario": "27500",
+    "compra": "22894.19",
+    "iva": 19,
+    "exento": 1,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:31 05.08
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": {
+      "iva": "19",
+      "exento": 0,
+      "proveedores": "[]",
+      "predeterminado": "[]",
+      "referencia": "[]",
+      "codigos": "[]",
+      "stocking": "[]",
+      "cCarrito": "0",
+      "aplicaciones": "[]",
+      "aplicacion": "",
+      "estado": "{\"estatus\":1,\"candado\":1,\"prioridad\":0}",
+      "id": 15248,
+      "datos_productos": "{\"familia\":\"\",\"id_relacion\":0,\"iva\":19,\"descripcion\":\"\",\"id_marca\":79,\"id_modelo\":207,\"id_categoria\":80}",
+      "id_modelo": "207",
+      "id_categoria": "80",
+      "id_marca": "79",
+      "descripcion": "",
+      "searching": "CABLE DE CLUTCH FZ 16",
+      "codigo": "21C-F6335-04TA",
+      "imagenArray": "[\"dependencias/img/general/imagen_base_productos.png\",\"dependencias/img/general/imagen_base_productos.png\",\"dependencias/img/general/imagen_base_productos.png\"]",
+      "stock": 0,
+      "stock_min": 0,
+      "stock_max": 0,
+      "estado_promocion": "{\"active\":\"0\",\"cantidad\":\"0\",\"inicial\":\"\",\"final\":\"\"}",
+      "ubicacion": "",
+      "fecha": "2026-10-07 10:31:03",
+      "precios": "[0,0,0,0,0]",
+      "precios_promocion": "[0,0,0]",
+      "categoria": "CABLE DE CLUTCH",
+      "marca": "yamaha nacional ta",
+      "imagen": "dependencias/img/marcas/59698646_marcas-521.png",
+      "modelo": "FZ 16"
+    },
+    "control": "nuevoProducto"
+  },
+  "idProducto": "0",
+  "idBodega": "6"
+}
+10:31 02.42
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510579,
+      "id_bodega": "1",
+      "id_producto": 1531,
+      "id_usuario": 1543,
+      "cantidad": 30,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:31 02.39
+{
+  "tipo": "traslado",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": "",
+    "control": ""
+  },
+  "idVenta": 217802,
+  "idBodega": 1,
+  "idBodegaAux": 6
+}
+10:31 00.51
+{
+  "tipo": "stock carrito",
+  "idProducto": 1531,
+  "idBodega": "1",
+  "listado": "{\"1\":[{\"ubicacion\":\"15-C06\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":10,\"cantidadAux\":6}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":1,\"cantidadAux\":1}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-B04\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"01-F03\",\"cantidad\":102,\"cantidadAux\":69}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510579,
+    "fecha": "2026-10-07 15:30:59",
+    "descuento": 0,
+    "id_producto": 1531,
+    "id_usuario": 1543,
+    "cantidad": 30,
+    "precio_unitario": "0",
+    "aplicacion": "",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"\"}",
+    "id_bodega": "1",
+    "cons": "",
+    "id_bodega_aux": 6
+  }
+}
+10:30 57.25
+{
+  "tipo": "stock carrito",
+  "idProducto": 1531,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-C06\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":10,\"cantidadAux\":6}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":1,\"cantidadAux\":1}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"15-B04\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"01-F03\",\"cantidad\":102,\"cantidadAux\":99}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510578,
+    "id_producto": 1531,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 1,
+    "fecha": "2026-10-07 15:30:56",
+    "descuento": 0,
+    "precio_unitario": "19000",
+    "compra": "10504.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:30 47.10
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217656,
+  "idBodega": 1,
+  "idCajero": "1699"
+}
+10:30 46.27
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217765",
+  "idBodega": 1
+}
+10:30 42.56
+{
+  "tipo": "stock carrito",
+  "idProducto": 2354,
+  "listado": "{\"1\":[{\"ubicacion\":\"07-G06\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":25,\"cantidadAux\":23}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":14,\"cantidadAux\":14}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"17-A03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"03-H03\",\"cantidad\":189,\"cantidadAux\":189}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510577,
+    "id_producto": 2354,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:30:41",
+    "descuento": 0,
+    "precio_unitario": "12000",
+    "compra": "6356.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:30 27.88
+{
+  "tipo": "stock carrito",
+  "idProducto": 1358,
+  "listado": "{\"1\":[{\"ubicacion\":\"16-A12\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":43,\"cantidadAux\":23}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":29,\"cantidadAux\":29}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"16-C02\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"03-E01\",\"cantidad\":96,\"cantidadAux\":96}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510576,
+    "id_producto": 1358,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:30:26",
+    "descuento": 0,
+    "precio_unitario": "14000",
+    "compra": "6302.52",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:30 18.58
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217774,
+  "idBodega": 6,
+  "idCajero": "1666"
+}
+10:30 18.32
+{
+  "tipo": "stock carrito",
+  "idProducto": 556,
+  "listado": "{\"1\":[{\"ubicacion\":\"03-C05\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"06-D06\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":10,\"cantidadAux\":7}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":1,\"cantidadAux\":1}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"03-F27\",\"cantidad\":231,\"cantidadAux\":216},{\"ubicacion\":\"16-A01\",\"cantidad\":400,\"cantidadAux\":400}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510575,
+    "id_producto": 556,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:30:17",
+    "descuento": 0,
+    "precio_unitario": "11000",
+    "compra": "5208.96",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"c2df5f87-65eb-4185-9082-bda9587d713c\"}",
+    "aplicacion": "",
+    "cons": "c2df5f87-65eb-4185-9082-bda9587d713c",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:29 47.94
+{
+  "tipo": "stock carrito",
+  "idProducto": 841,
+  "listado": "{\"1\":[{\"cantidad\":0,\"cantidadAux\":0,\"cantidadFact\":\"11\",\"ubicacion\":\"07-B03\"},{\"cantidad\":9,\"cantidadAux\":7,\"ubicacion\":\"ZR\"}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"cantidad\":0,\"cantidadAux\":0,\"ubicacion\":\"06-B23\"},{\"ubicacion\":\"ZR\",\"cantidad\":51,\"cantidadAux\":51}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510573,
+    "id_producto": 841,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:29:46",
+    "descuento": 0,
+    "precio_unitario": "11000",
+    "compra": "4953.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1898,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cb55f53-c4ec-451f-8760-1f106d38cb4a\"}",
+    "aplicacion": "",
+    "cons": "8cb55f53-c4ec-451f-8760-1f106d38cb4a",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:29 40.40
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217765,
+  "idBodega": 1,
+  "idCajero": "1699"
+}
+10:29 39.62
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217798",
+  "idBodega": 1
+}
+10:29 36.50
+{
+  "tipo": "stock carrito",
+  "idProducto": 826,
+  "listado": "{\"1\":[{\"ubicacion\":\"07-B03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":20,\"cantidadAux\":11}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":24,\"cantidadAux\":24}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"06-A18\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":56,\"cantidadAux\":62}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510572,
+    "id_producto": 826,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 2,
+    "fecha": "2026-10-07 15:29:35",
+    "descuento": 0,
+    "precio_unitario": "11000",
+    "compra": "3938.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1898,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"8cb55f53-c4ec-451f-8760-1f106d38cb4a\"}",
+    "aplicacion": "",
+    "cons": "8cb55f53-c4ec-451f-8760-1f106d38cb4a",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:29 27.71
+{
+  "tipo": "tomaPedido",
+  "cuerpo": "217800",
+  "idBodega": 1,
+  "idCajero": 273
+}
+10:29 21.81
+{
+  "tipo": "tomaPedido",
+  "cuerpo": "217770",
+  "idBodega": 6,
+  "idCajero": 1570
+}
+10:28 51.86
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510567,
+      "id_bodega": "1",
+      "id_producto": 1644,
+      "id_usuario": 1564,
+      "cantidad": 5,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    },
+    {
+      "id_carrito": 510569,
+      "id_bodega": "1",
+      "id_producto": 2338,
+      "id_usuario": 1564,
+      "cantidad": 5,
+      "precio_unitario": "0",
+      "aplicacion": "",
+      "cons": "",
+      "id_bodega_aux": 6,
+      "aux_venta": "{\"type\":\"\",\"cons\":\"\"}"
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:28 51.83
+{
+  "tipo": "traslado",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": "",
+    "control": ""
+  },
+  "idVenta": 217801,
+  "idBodega": 1,
+  "idBodegaAux": 6
+}
+10:28 42.01
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217798,
+  "idBodega": 1,
+  "idCajero": "1699"
+}
+10:28 27.45
+{
+  "tipo": "tomaPedido",
+  "cuerpo": 217777,
+  "idBodega": 6,
+  "idCajero": "1556"
+}
+10:28 26.41
+{
+  "cajas": [],
+  "tipo": "packing",
+  "cuerpo": "217800",
+  "idBodega": 1
+}
+10:28 25.85
+{
+  "lista": "[{\"traslado\": 0, \"idpr\": 584, \"cant\": 1, \"costo\": \"55000\", \"aplicacion\": \"\", \"tipoPrecio\": \"master\", \"rel\": 1, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"26231.80\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 14:43:57\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 1, \"costoOriginal\": \"55000\", \"tipoPrecioOriginal\": \"master\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 1}]}, {\"traslado\": 0, \"idpr\": 1885, \"cant\": 20, \"costo\": \"7000\", \"aplicacion\": \"\", \"tipoPrecio\": \"master\", \"rel\": 20, \"relT\": 0, \"estEli\": 0, \"cantAdic\": 0, \"costoAdic\": 0, \"compra\": \"4642.00\", \"iva\": 19, \"exento\": 0, \"fecha\": \"2026-10-07 14:44:30\", \"tipoPrecioAdic\": \"vacio\", \"descuento\": 0, \"cantOriginal\": 20, \"costoOriginal\": \"7000\", \"tipoPrecioOriginal\": \"master\", \"relArray\": [{\"ubicacion\": \"ZR\", \"cantidad\": 20}]}]",
+  "idVenta": "217800",
+  "metodo": "cambioPickingCorroborar",
+  "tipo": "picking cambio corroborar",
+  "idBodega": 1
+}
+10:28 25.77
+{
+  "tipo": "stock carrito",
+  "idProducto": 126,
+  "listado": "{\"1\":[{\"ubicacion\":\"06-E03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":84,\"cantidadAux\":39}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":76,\"cantidadAux\":76}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"200-B15\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"200-A15\",\"cantidad\":284,\"cantidadAux\":284}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510571,
+    "id_producto": 126,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 10,
+    "fecha": "2026-10-07 15:28:24",
+    "descuento": 0,
+    "precio_unitario": "3200",
+    "compra": "1764.70",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"ad85416b-b0d7-47e0-bf80-300c77634fe2\"}",
+    "aplicacion": "",
+    "cons": "ad85416b-b0d7-47e0-bf80-300c77634fe2",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:28 22.47
+{
+  "productos": [],
+  "carrito": [
+    {
+      "id_carrito": 510458,
+      "compra": "26231.80",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 584,
+      "fecha": "2026-10-07 14:43:57",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 1,
+      "precio_unitario": "55000",
+      "aplicacion": "",
+      "type": ""
+    },
+    {
+      "id_carrito": 510461,
+      "compra": "4642.00",
+      "iva": 19,
+      "exento": 0,
+      "id_bodega": "1",
+      "id_producto": 1885,
+      "fecha": "2026-10-07 14:44:30",
+      "descuento": 0,
+      "id_usuario": 694,
+      "cantidad": 20,
+      "precio_unitario": "7000",
+      "aplicacion": "",
+      "type": ""
+    }
+  ],
+  "tipo": "stock eliminarTodo"
+}
+10:28 22.46
+{
+  "tipo": "picking",
+  "cuerpo": 217800,
+  "idVendedor": 1559,
+  "idBodega": 1
+}
+10:28 18.03
+{
+  "tipo": "nuevoControl",
+  "info": {
+    "paso": "paso",
+    "conteo": [],
+    "producto": {
+      "iva": "19",
+      "exento": 0,
+      "proveedores": "[]",
+      "predeterminado": "[]",
+      "referencia": "[]",
+      "codigos": "[]",
+      "stocking": "[]",
+      "cCarrito": "0",
+      "aplicaciones": "[]",
+      "aplicacion": "",
+      "estado": "{\"estatus\":1,\"candado\":1,\"prioridad\":0}",
+      "id": 15247,
+      "datos_productos": "{\"familia\":\"\",\"id_relacion\":0,\"iva\":19,\"descripcion\":\"\",\"id_marca\":79,\"id_modelo\":266,\"id_categoria\":80}",
+      "id_modelo": "266",
+      "id_categoria": "80",
+      "id_marca": "79",
+      "descripcion": "",
+      "searching": "CABLE DE CLUTCH SZR 150",
+      "codigo": "54B-F6335-02TA",
+      "imagenArray": "[\"dependencias/img/general/imagen_base_productos.png\",\"dependencias/img/general/imagen_base_productos.png\",\"dependencias/img/general/imagen_base_productos.png\"]",
+      "stock": 0,
+      "stock_min": 0,
+      "stock_max": 0,
+      "estado_promocion": "{\"active\":\"0\",\"cantidad\":\"0\",\"inicial\":\"\",\"final\":\"\"}",
+      "ubicacion": "",
+      "fecha": "2026-10-07 10:28:16",
+      "precios": "[0,0,0,0,0]",
+      "precios_promocion": "[0,0,0]",
+      "categoria": "CABLE DE CLUTCH",
+      "marca": "yamaha nacional ta",
+      "imagen": "dependencias/img/marcas/59698646_marcas-521.png",
+      "modelo": "SZR 150"
+    },
+    "control": "nuevoProducto"
+  },
+  "idProducto": "0",
+  "idBodega": "6"
+}
+10:28 14.65
+{
+  "tipo": "stock carrito",
+  "idProducto": 1109,
+  "listado": "{\"1\":[{\"ubicacion\":\"15-A07\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":25,\"cantidadAux\":15}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":39,\"cantidadAux\":39}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"01-B05\",\"cantidad\":228,\"cantidadAux\":223},{\"ubicacion\":\"15-B03\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"15-B02\",\"cantidad\":300,\"cantidadAux\":300}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510570,
+    "id_producto": 1109,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 10,
+    "fecha": "2026-10-07 15:28:13",
+    "descuento": 0,
+    "precio_unitario": "3400",
+    "compra": "2058.82",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"ad85416b-b0d7-47e0-bf80-300c77634fe2\"}",
+    "aplicacion": "",
+    "cons": "ad85416b-b0d7-47e0-bf80-300c77634fe2",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:28 02.53
+{
+  "tipo": "stock carrito",
+  "idProducto": 2338,
+  "idBodega": "1",
+  "listado": "{\"1\":[{\"ubicacion\":\"01-D07\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"01-B07\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":5,\"cantidadAux\":5}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"ubicacion\":\"ZR\",\"cantidad\":0,\"cantidadAux\":0},{\"ubicacion\":\"04-H19\",\"cantidad\":74,\"cantidadAux\":69},{\"ubicacion\":\"11-C03\",\"cantidad\":200,\"cantidadAux\":200}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510569,
+    "fecha": "2026-10-07 15:28:01",
+    "descuento": 0,
+    "id_producto": 2338,
+    "id_usuario": 1564,
+    "cantidad": 5,
+    "precio_unitario": "0",
+    "aplicacion": "",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"\"}",
+    "id_bodega": "1",
+    "cons": "",
+    "id_bodega_aux": 6
+  }
+}
+10:28 02.42
+{
+  "tipo": "stock carrito",
+  "idProducto": 9043,
+  "listado": "{\"1\":[{\"cantidad\":2,\"cantidadAux\":0,\"cantidadFact\":\"9\",\"ubicacion\":\"15-C05\"},{\"cantidad\":10,\"cantidadAux\":2,\"ubicacion\":\"ZR\"}],\"4\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"5\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"6\":[{\"cantidad\":-1,\"cantidadAux\":0,\"ubicacion\":\"A-149\"},{\"ubicacion\":\"ZR\",\"cantidad\":1,\"cantidadAux\":0}],\"7\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}],\"8\":[{\"ubicacion\":\"ZR\",\"cantidad\":\"0\",\"cantidadAux\":\"0\"}]}",
+  "carrito": {
+    "id_carrito": 510568,
+    "id_producto": 9043,
+    "id_usuario": 694,
+    "estado": "venta",
+    "cantidad": 10,
+    "fecha": "2026-10-07 15:28:01",
+    "descuento": 0,
+    "precio_unitario": "4900",
+    "compra": "3300.00",
+    "iva": 19,
+    "exento": 0,
+    "id_cliente": 1543,
+    "estadoCaja": "pendiente",
+    "id_bodega": "1",
+    "aux_venta": "{\"type\":\"\",\"cons\":\"ad85416b-b0d7-47e0-bf80-300c77634fe2\"}",
+    "aplicacion": "",
+    "cons": "ad85416b-b0d7-47e0-bf80-300c77634fe2",
+    "type": "",
+    "id_bodega_aux": 0,
+    "id_empresa": 1
+  }
+}
+10:27 54.45
+Connected to wss://api.importadorapremium.com/wss2/
+10:27 53.87
+Connecting to wss://api.importadorapremium.com/wss2/

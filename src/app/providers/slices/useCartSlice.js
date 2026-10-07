@@ -15,9 +15,14 @@ import { enrichCartItemsFiscalFromCatalog } from '@/features/catalog/lib/product
 import { summarizeCartItems } from '@/shared/lib/money'
 import { resolveCheckoutPaymentType } from '@/features/orders/utils/resolveCheckoutPaymentType'
 import { normalizeDeliveryAddressForApi } from '@/features/orders/utils/normalizeDeliveryAddress'
-import { noteRealtimeMutation } from '@/features/realtime/pendingMutations'
-import { useRealtimeRef, useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
-import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
+import {
+  buildStockCartMessage,
+  buildStockDeleteAllMessage,
+  buildStockDeleteMessage,
+  WS_PRODUCT_WAREHOUSE_ID,
+} from '@/shared/ws/stockMessages'
+import { publishProductMessage } from '@/shared/ws/publishMessage'
+import { useWebSocketStateSlot } from '@/shared/ws/stateSlots'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeCartItem } from '../helpers'
 
@@ -49,6 +54,7 @@ export function useCartSlice({
   productsRef,
   authUsername,
   currentUserId,
+  webSocketUserId,
   initialCartItems,
   cartHydratingRef: cartHydratingRefProp,
 }) {
@@ -58,8 +64,7 @@ export function useCartSlice({
   const [mutatingQtyIds, setMutatingQtyIds] = useState(() => new Set())
   const [isClearingCart, setIsClearingCart] = useState(false)
   const cartItemsRef = useRef(cartItems)
-  useRealtimeSlot('cart', setCartItems)
-  useRealtimeRef('cartItems', cartItemsRef)
+  useWebSocketStateSlot('cart', setCartItems, cartItems)
   const orderingIdsRef = useRef(new Set())
   const mutatingQtyRef = useRef(new Set())
   const clearingCartRef = useRef(false)
@@ -100,6 +105,50 @@ export function useCartSlice({
       typeof updater === 'function' ? updater(currentItems) : updater
     ))
   }, [])
+
+  const publishCartAdd = useCallback(({ product, productId, quantity, previousQuantity, cart }) => {
+    const message = buildStockCartMessage({
+      product,
+      productId,
+      userId: webSocketUserId,
+      cart: {
+        ...cart,
+        id_producto: productId,
+        id_usuario: cart?.id_usuario ?? webSocketUserId,
+        id_bodega: WS_PRODUCT_WAREHOUSE_ID,
+        cantidad: cart?.cantidad ?? quantity,
+        precio_unitario: cart?.precio_unitario ?? cart?.price ?? product?.precio ?? product?.price,
+      },
+      quantityChange: quantity - previousQuantity,
+    })
+    if (!message) {
+      console.error('[ws] No se pudo crear stock carrito: falta listado del producto', productId)
+      return false
+    }
+    return publishProductMessage(message, webSocketUserId)
+  }, [webSocketUserId])
+
+  const publishCartDelete = useCallback((item) => {
+    const product = productsRef.current.find((row) => String(row.id) === String(item.id)) ?? item
+    const message = buildStockDeleteMessage({
+      product,
+      productId: item.id,
+      cart: item.apiData ?? {
+        id_carrito: item.cartId,
+        id_bodega: WS_PRODUCT_WAREHOUSE_ID,
+        cantidad: item.quantity,
+      },
+    })
+    if (!message) {
+      console.error('[ws] No se pudo crear stock eliminar: falta listado del producto', item.id)
+      return false
+    }
+    return publishProductMessage(message, webSocketUserId)
+  }, [productsRef, webSocketUserId])
+
+  const publishCartDeleteAll = useCallback((items) => {
+    return publishProductMessage(buildStockDeleteAllMessage(items), webSocketUserId)
+  }, [webSocketUserId])
 
   /** Filas API → ítems de carrito con fiscales del catálogo (o del ítem previo si no está en catálogo). */
   const mapCartRowsWithFiscal = useCallback((carritos, previousItems, catalogProducts = null) => {
@@ -349,6 +398,16 @@ export function useCartSlice({
             product,
           })
       if (!persisted.success) {
+        const alreadyInCart = /ya existe en el carrito/i.test(String(persisted.error || ''))
+        if (alreadyInCart) {
+          try {
+            const { carritos } = await getAllCart({ token: tokenAccess })
+            commitCart((items) => mergeCartFromApiRows(items, carritos))
+          } catch (error) {
+            console.warn('[cart] El producto ya estaba en el carrito y no se pudo leer id_carrito', error)
+          }
+          return { success: true, alreadyInCart: true, quantity: planned.body.cantidad }
+        }
         if (existing) {
           commitCart((items) => items.map((item) => (
             String(item.id) === orderKey
@@ -362,13 +421,17 @@ export function useCartSlice({
       }
 
       await syncCartAfterMutation(persisted)
-      noteRealtimeMutation({
-        action: cartId ? 'put' : 'post',
-        productId: orderKey,
-        cartId,
+      const cartLine = persisted.carritos?.find((row) => String(row.id_producto) === orderKey)
+      publishCartAdd({
+        product,
+        productId: planned.body.id_producto,
         quantity: planned.body.cantidad,
-        warehouseId: getSessionWarehouseId(),
-        userId: currentUserId,
+        previousQuantity: previousQty,
+        cart: cartLine ?? {
+          id_carrito: cartId,
+          precio_unitario: planned.body.precio_unitario,
+          ...planned.body,
+        },
       })
 
       const responseHasCartId = persisted.carritos?.some((row) => (
@@ -391,7 +454,7 @@ export function useCartSlice({
       orderingIdsRef.current.delete(orderKey)
       syncOrderingProductIds()
     }
-  }, [tokenAccess, currentUserId, events, persistCartItemToApi, productsRef, syncCartAfterMutation, syncOrderingProductIds, commitCart, mergeCartFromApiRows])
+  }, [tokenAccess, currentUserId, events, persistCartItemToApi, productsRef, syncCartAfterMutation, syncOrderingProductIds, commitCart, mergeCartFromApiRows, publishCartAdd])
 
   const removeFromCart = useCallback(async (productId, options = {}) => {
     if (!tokenAccess) {
@@ -430,19 +493,13 @@ export function useCartSlice({
       }
 
       await syncCartAfterMutation(removed, { allowEmpty: true })
-      noteRealtimeMutation({
-        action: 'delete',
-        productId: removeKey,
-        cartId: item.cartId,
-        warehouseId: getSessionWarehouseId(),
-        userId: currentUserId,
-      })
+      publishCartDelete(item)
       return { success: true }
     } finally {
       mutatingQtyRef.current.delete(removeKey)
       syncMutatingQtyIds()
     }
-  }, [tokenAccess, currentUserId, syncCartAfterMutation, removeCartItemFromApi, commitCart, syncMutatingQtyIds])
+  }, [tokenAccess, currentUserId, syncCartAfterMutation, removeCartItemFromApi, commitCart, syncMutatingQtyIds, publishCartDelete])
 
   const QTY_PUT_DEBOUNCE_MS = 250
 
@@ -554,13 +611,22 @@ export function useCartSlice({
         }
 
         await syncCartAfterMutation(updated)
-        noteRealtimeMutation({
-          action: 'put',
-          productId,
-          cartId: pending.cartId,
+        const productForWs = productsRef.current.find((entry) => String(entry.id) === qtyKey) ?? target
+        const updatedLine = updated.carritos?.find((row) => String(row.id_producto) === qtyKey)
+        publishCartAdd({
+          product: productForWs,
+          productId: pending.idProducto,
           quantity: pending.nextQuantity,
-          warehouseId: getSessionWarehouseId(),
-          userId: currentUserId,
+          previousQuantity: pending.previousQty,
+          cart: updatedLine ?? {
+            ...target.apiData,
+            id_carrito: pending.cartId,
+            id_producto: pending.idProducto,
+            id_usuario: webSocketUserId,
+            id_bodega: WS_PRODUCT_WAREHOUSE_ID,
+            cantidad: pending.nextQuantity,
+            precio_unitario: pending.precioUnitario,
+          },
         })
         const ok = {
           success: true,
@@ -600,7 +666,7 @@ export function useCartSlice({
       }, QTY_PUT_DEBOUNCE_MS)
       qtyDebounceTimersRef.current.set(qtyKey, timer)
     })
-  }, [tokenAccess, currentUserId, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds])
+  }, [tokenAccess, currentUserId, webSocketUserId, productsRef, syncCartAfterMutation, commitCart, syncMutatingQtyIds, publishCartAdd])
   const clearCart = useCallback(async () => {
     if (!tokenAccess) {
       commitCart([])
@@ -623,17 +689,13 @@ export function useCartSlice({
         commitCart(previousItems)
         return cleared
       }
-      noteRealtimeMutation({
-        action: 'delete-massive',
-        warehouseId: getSessionWarehouseId(),
-        userId: currentUserId,
-      })
+      publishCartDeleteAll(previousItems)
       return { success: true }
     } finally {
       clearingCartRef.current = false
       setIsClearingCart(false)
     }
-  }, [tokenAccess, currentUserId, commitCart])
+  }, [tokenAccess, currentUserId, commitCart, publishCartDeleteAll])
 
   const createOrderFromCheckout = useCallback(async ({
     clientData,
@@ -688,22 +750,12 @@ export function useCartSlice({
       }
     }
 
-    noteRealtimeMutation({
-      action: 'sale',
-      warehouseId: getSessionWarehouseId(),
-      userId: currentUserId,
-    })
-
     // Pedido creado en servidor: vaciar carrito API (best effort).
     const cleared = await clearCartMassiveSafe({ token: tokenAccess })
     if (!cleared.success) {
       console.error('[checkout] Pedido creado pero no se pudo vaciar el carrito', cleared.error)
     } else {
-      noteRealtimeMutation({
-        action: 'delete-massive',
-        warehouseId: getSessionWarehouseId(),
-        userId: currentUserId,
-      })
+      publishCartDeleteAll(cartItems)
     }
 
     const order = buildCheckoutOrder({
@@ -726,7 +778,7 @@ export function useCartSlice({
       sale: created.sale,
       cartCleared: Boolean(cleared.success),
     }
-  }, [cartItems, commitCart, currentUserId, events, tokenAccess])
+  }, [cartItems, commitCart, currentUserId, events, tokenAccess, publishCartDeleteAll])
 
   const initiateCheckout = useCallback(() => {
     if (cartItems.length === 0) {

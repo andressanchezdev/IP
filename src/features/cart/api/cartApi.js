@@ -1,8 +1,6 @@
 import { apiRequest } from '@/shared/api'
-import { auditProductFiscalFields } from '@/features/catalog/lib/auditProductFiscalFields'
 import { applyCartPostFiscalGate, buildCartPostBody } from './cartPostBody'
 import { collectCartPages } from './cartPagination'
-import { withWarehouse } from '@/shared/lib/sessionWarehouse'
 
 const CART_PAGE_SIZE = 50
 export const MAX_CART_ITEMS = 600
@@ -93,9 +91,7 @@ export async function getCart({
     token,
     signal,
   })
-
   const carritos = extractCarts(payload)
-  auditProductFiscalFields(carritos, 'cart')
   const metaCandidate = payload?.meta ?? payload?.data?.meta
   const meta = metaCandidate && typeof metaCandidate === 'object' ? metaCandidate : {}
   const hasMore = typeof meta.has_more === 'boolean' ? meta.has_more : undefined
@@ -170,22 +166,7 @@ export async function postCartItem({
     product,
   })
   // Solo POST: el API rechaza iva/exento/compra del producto si no pasan el gate.
-  const { body, raw, wasAdjusted } = applyCartPostFiscalGate(plannedBody)
-
-  console.info('[cart POST]', {
-    path: CARTS_PATH,
-    method: 'POST',
-    productId: product?.id ?? idProducto,
-    productCodigo: product?.codigo ?? product?.reference ?? null,
-    fiscalFromProduct: {
-      compra: product?.compra ?? null,
-      exento: product?.exento ?? null,
-      iva: product?.iva ?? null,
-    },
-    bodyBeforeGate: { ...plannedBody, compra: raw.compra, exento: raw.exento, iva: raw.iva },
-    bodySent: body,
-    fiscalGateAdjusted: wasAdjusted,
-  })
+  const { body } = applyCartPostFiscalGate(plannedBody)
 
   try {
     const payload = await apiRequest(CARTS_PATH, {
@@ -194,10 +175,7 @@ export async function postCartItem({
       body,
     })
 
-    console.info('[cart POST ok]', {
-      productId: body.id_producto,
-      response: payload,
-    })
+    console.info('[cart] POST completado', { productId: body.id_producto })
 
     const carritos = extractCarts(payload)
     const meta = payload?.meta && typeof payload.meta === 'object' ? payload.meta : {}
@@ -210,15 +188,10 @@ export async function postCartItem({
       request: body,
     }
   } catch (error) {
-    console.error('[cart POST fail]', {
+    console.error('[cart] POST fallido', {
       status: error?.status,
       payload: error?.payload,
       bodySent: body,
-      fiscalFromProduct: {
-        compra: product?.compra ?? null,
-        exento: product?.exento ?? null,
-        iva: product?.iva ?? null,
-      },
     })
     throw error
   }
@@ -308,9 +281,9 @@ export async function deleteCartItem({
     throw new Error('id_carrito inválido')
   }
 
-  const body = withWarehouse({
+  const body = {
     id_carrito: cartId,
-  })
+  }
 
   const payload = await apiRequest(CARTS_PATH, {
     method: 'DELETE',
@@ -334,14 +307,14 @@ export async function deleteCartItem({
  * DELETE /api/v1/inventory/carts/massive
  * Vacía todo el carrito del usuario en una sola petición.
  * Body: { "type": "all" }
- * El backend emite WS `stock eliminarTodo` para actualizar stock en catálogo.
+ * La respuesta confirma que se eliminó el carrito completo.
  */
 export async function deleteMassiveCartItems({
   token,
 } = {}) {
-  const body = withWarehouse({
+  const body = {
     type: 'all',
-  })
+  }
   const payload = await apiRequest(CARTS_PATH_MASSIVE, {
     method: 'DELETE',
     token,

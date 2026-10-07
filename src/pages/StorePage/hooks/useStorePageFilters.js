@@ -13,12 +13,10 @@ import {
   isFilterSelectionBlocked,
 } from '@/features/catalog/utils/catalogFilters'
 import { matchesOrderIdSearch } from '@/features/orders/utils/orderSearch'
-import { overlayRealtimeStock } from '@/features/realtime/stockMemory'
-import { useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
 import { getApiAuthToken } from '@/shared/api'
 import { getBrandLogoUrl } from '@/shared/lib/brandLogos'
-import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
+import { useWebSocketStateSlot } from '@/shared/ws/stateSlots'
 
 const SEARCH_DEBOUNCE_MS = 350
 /** Cap filtered landing results to avoid scroll/request storms after applying filters. */
@@ -50,11 +48,6 @@ function applyCatalogFilters(list, {
       matchesWithStock
     )
   })
-}
-
-/** Lista recién llegada del API + fotos de stock llegadas mientras la petición estaba en vuelo. */
-function withLiveStock(list, requestedAt) {
-  return overlayRealtimeStock(list, requestedAt, getSessionWarehouseId())
 }
 
 function isAbortError(error) {
@@ -99,7 +92,7 @@ export function useStorePageFilters({
   const [isLoadingLatest, setIsLoadingLatest] = useState(false)
   const [isLoadingFilteredProducts, setIsLoadingFilteredProducts] = useState(false)
   const [filteredProductsFromApi, setFilteredProductsFromApi] = useState(null)
-  useRealtimeSlot('filtered', setFilteredProductsFromApi)
+  useWebSocketStateSlot('filtered', setFilteredProductsFromApi, filteredProductsFromApi)
 
   const headerSearch = {
     tienda: { placeholder: 'Buscar productos ', ariaLabel: 'Buscar productos' },
@@ -173,7 +166,6 @@ export function useStorePageFilters({
     const search = committedProductSearch
 
     beginCatalogSearch?.()
-    const requestedAt = Date.now()
 
     // Corrige errores de escritura y, si el texto completo no trae productos,
     // reintenta solo con categoría/marca/modelo reconocidos.
@@ -185,7 +177,7 @@ export function useStorePageFilters({
       .then((result) => {
         if (cancelled) return
         const mapped = rankCatalogProducts(
-          withLiveStock(mapApiProducts(result.productos).map(normalizeProduct), requestedAt),
+          mapApiProducts(result.productos).map(normalizeProduct),
           result.cleaned || search,
           undefined,
           { keepAll: true },
@@ -234,7 +226,6 @@ export function useStorePageFilters({
     const controller = new AbortController()
     let cancelled = false
     setIsLoadingLatest(true)
-    const requestedAt = Date.now()
 
     getLatestInventoryProducts({
       token,
@@ -242,7 +233,7 @@ export function useStorePageFilters({
     })
       .then((result) => {
         if (cancelled) return
-        const mapped = withLiveStock(mapApiProducts(result.productos).map(normalizeProduct), requestedAt)
+        const mapped = mapApiProducts(result.productos).map(normalizeProduct)
         setLatestProducts?.(mapped)
       })
       .catch((error) => {
@@ -297,11 +288,10 @@ export function useStorePageFilters({
       withStock,
     })
 
-    const requestedAt = Date.now()
     postInventoryProductsFilter({ token, body, signal: controller.signal })
       .then((result) => {
         if (cancelled) return
-        const mapped = withLiveStock(mapApiProducts(result.productos).map(normalizeProduct), requestedAt)
+        const mapped = mapApiProducts(result.productos).map(normalizeProduct)
         setFilteredProductsFromApi(mapped)
         if (mapped.length === 0) {
           showToast('No se encontraron productos para estos filtros aplicados', 'warning')

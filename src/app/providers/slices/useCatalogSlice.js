@@ -2,10 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getGeneral, getGeneralInitial, PRODUCTS_PAGE_SIZE } from '@/features/catalog/api/generalApi'
 import { mapApiProducts } from '@/features/catalog/mappers/mapProduct'
 import { mergeUniqueProducts } from '@/features/catalog/mappers/mergeUniqueProducts'
-import { overlayRealtimeStock } from '@/features/realtime/stockMemory'
-import { useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
 import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 import { reapplyStockScopeInList } from '@/shared/lib/stockDetail'
+import { useWebSocketStateSlot } from '@/shared/ws/stateSlots'
 import { APP_EVENTS } from '../appEvents'
 import { normalizeProduct } from '../helpers'
 import { useCatalogFilters } from './useCatalogFilters'
@@ -41,10 +40,9 @@ export function useCatalogSlice({
   /** Mutual exclusion: 'search' | 'scroll' | null — search always wins. */
   const productFetchModeRef = useRef(null)
   productsRef.current = products
-
-  useRealtimeSlot('products', setProducts)
-  useRealtimeSlot('search', setSearchProducts)
-  useRealtimeSlot('latest', filtersApi.setLatestProducts)
+  useWebSocketStateSlot('products', setProducts, products)
+  useWebSocketStateSlot('search', setSearchProducts, searchProducts)
+  useWebSocketStateSlot('latest', filtersApi.setLatestProducts, filtersApi.latestProducts)
 
   // Si cambia la bodega del cliente, `stock` se recalcula desde `stockDetail` (sin pedir nada al API).
   useEffect(() => {
@@ -82,19 +80,13 @@ export function useCatalogSlice({
     lastId = null,
     replace = false,
   }) => {
-    const requestedAt = Date.now()
     const result = await getGeneral({
       token,
       lastId,
       limit: PRODUCTS_PAGE_SIZE,
     })
 
-    // Avisos del WS llegados mientras el API respondía se reaplican (el API pudo leer antes del cambio).
-    const mappedProducts = overlayRealtimeStock(
-      mapApiProducts(result.productos).map(normalizeProduct),
-      requestedAt,
-      getSessionWarehouseId(),
-    )
+    const mappedProducts = mapApiProducts(result.productos).map(normalizeProduct)
 
     if (!replace && isCatalogSearchActive()) {
       return {
@@ -204,13 +196,8 @@ export function useCatalogSlice({
       setIsLoadingProducts(true)
 
       try {
-        const requestedAt = Date.now()
         const result = await getGeneralInitial({ token: tokenAccess })
-        const mappedProducts = overlayRealtimeStock(
-          mapApiProducts(result.productos).map(normalizeProduct),
-          requestedAt,
-          getSessionWarehouseId(),
-        )
+        const mappedProducts = mapApiProducts(result.productos).map(normalizeProduct)
 
         if (!cancelled) {
           setProducts(mappedProducts)

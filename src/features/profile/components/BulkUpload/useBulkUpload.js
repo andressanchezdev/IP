@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useAuth, useCart } from '@/app/providers'
+import { useAuth, useCart, useCatalog, useProfile } from '@/app/providers'
 import { useToast } from '@/app/providers/ToastProvider'
 import { getApiAuthToken, suppressApiLoadingIndicator } from '@/shared/api'
 import { loadSweetAlert } from '@/shared/lib/loadSweetAlert'
@@ -15,6 +15,8 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
   const { showToast } = useToast()
   const { tokenAccess, openAuthModal } = useAuth()
   const { cartItems, refreshCartFromApi } = useCart()
+  const { products } = useCatalog()
+  const { profileSettings } = useProfile()
   const inputRef = useRef(null)
   const cartItemsRef = useRef(cartItems)
   cartItemsRef.current = cartItems
@@ -165,6 +167,8 @@ export function useBulkUpload({ onCancelOrder, onOrderSent } = {}) {
         results: processState.comparison.results || [],
         onlyOk,
         token,
+        userId: profileSettings?.personal?.userId,
+        getProductById: (productId) => products.find((product) => String(product.id) === String(productId)),
         getExistingQty: (productId) => {
           const existing = cartItemsRef.current.find(
             (item) => String(item.id) === String(productId),

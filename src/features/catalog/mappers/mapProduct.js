@@ -137,7 +137,7 @@ export function mapApiProduct(product) {
     brand,
     model: String(product.modelo ?? '').trim(),
     reference: String(product.codigo ?? '').trim(),
-    // stock = cantidadAux de la bodega del cliente; stockReal = cantidad; stockDetail = bodega → ubicaciones.
+    stockData: product.stock,
     ...buildStockFields(product.stock, getSessionWarehouseId()),
     searching: String(product.searching ?? '').trim(),
     imageUrl,

@@ -1,8 +1,8 @@
 /**
- * Modelo único de stock por bodega y ubicación (GET de productos, WS y carrito).
+ * Modelo único de stock por bodega y ubicación para productos y carrito.
  * Sin imports con alias: se prueba con node --test.
  *
- * Forma de entrada (GET `stock` o WS `listado`):
+ * Forma de entrada (`stock`):
  *   { "6": [ { ubicacion: "ZR", cantidad: 0, cantidadAux: 0 },
  *            { ubicacion: "01-C16", cantidad: 29, cantidadAux: 29 } ], "1": [...] }
  *
@@ -13,7 +13,7 @@
  *   { "6": { real: 29, available: 29, locations: [{ ubicacion, cantidad, cantidadAux }] } }
  */
 
-/** Bodega 0 / "0" se trata como "6" (misma regla que el WS). */
+/** Bodega 0 / "0" se trata como "6". */
 export const ZERO_WAREHOUSE_ID = '6'
 /** Clave para stock sin información de bodega (número o lista plana). */
 export const FLAT_WAREHOUSE_KEY = '*'
@@ -175,72 +175,6 @@ export function buildStockFields(raw, warehouseId = null) {
     stockScope: summary.scope,
     stockWarehouseId: summary.warehouseId,
   }
-}
-
-/** El mensaje WS es la foto completa de las bodegas que trae: reemplaza esas y conserva el resto. */
-export function mergeStockDetail(previous, incoming) {
-  if (!incoming) return previous ?? null
-  const base = { ...previous }
-  if (hasWarehouseKeys(incoming)) delete base[FLAT_WAREHOUSE_KEY]
-  return { ...base, ...incoming }
-}
-
-/** Producto/ítem con el detalle nuevo ya mezclado y `stock` recalculado. */
-export function patchStockFields(item, incomingDetail, warehouseId = null) {
-  const merged = mergeStockDetail(item?.stockDetail, incomingDetail)
-  const summary = summarizeStockDetail(merged, warehouseId)
-  return {
-    ...item,
-    stock: summary.available,
-    stockReal: summary.real,
-    stockDetail: merged,
-    stockByWarehouse: toStockByWarehouse(merged),
-    stockScope: summary.scope,
-    stockWarehouseId: summary.warehouseId,
-    stockUpdatedAt: Date.now(),
-  }
-}
-
-/** Aplica el detalle WS al producto `productId` de una lista; devuelve la misma lista si no hay cambio. */
-export function patchStockInList(list, productId, incomingDetail, warehouseId = null) {
-  if (!Array.isArray(list) || !incomingDetail) return list
-  const id = String(productId ?? '').trim()
-  if (!id) return list
-
-  let changed = false
-  const next = list.map((item) => {
-    if (String(item?.id) !== id) return item
-    changed = true
-    return patchStockFields(item, incomingDetail, warehouseId)
-  })
-  return changed ? next : list
-}
-
-/**
- * Productos recién leídos del API (`freshById`: id → producto con `stockDetail`) → parchea el stock
- * de los que ya están en `list`. Devuelve la MISMA lista (y los mismos objetos) si nada cambió,
- * para no re-renderizar tarjetas sin necesidad.
- */
-export function patchStockFromFresh(list, freshById, warehouseId = null) {
-  if (!Array.isArray(list) || list.length === 0 || !freshById || freshById.size === 0) return list
-
-  let changed = false
-  const next = list.map((item) => {
-    const fresh = freshById.get(String(item?.id ?? ''))
-    if (!fresh?.stockDetail) return item
-
-    const patched = patchStockFields(item, fresh.stockDetail, warehouseId)
-    if (
-      patched.stock === item.stock
-      && patched.stockReal === item.stockReal
-      && JSON.stringify(patched.stockDetail) === JSON.stringify(item.stockDetail)
-    ) {
-      return item
-    }
-    changed = true
-    return patched
-  })
-  return changed ? next : list
 }
 
 /** Recalcula `stock` desde `stockDetail` cuando cambia la bodega del cliente. */

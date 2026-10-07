@@ -1,7 +1,8 @@
-import { noteRealtimeMutation } from '@/features/realtime/pendingMutations'
 import { getApiAuthToken } from '@/shared/api'
 import { postCartItem, putCartItem, readCartPostBackendMessage } from '@/features/cart/api/cartApi'
 import { planCartAdd } from '@/features/cart/api/cartPostBody'
+import { buildStockCartMessage, WS_PRODUCT_WAREHOUSE_ID } from '@/shared/ws/stockMessages'
+import { publishProductMessage } from '@/shared/ws/publishMessage'
 import { runWithConcurrency } from './bulkShared'
 
 /** Concurrencia moderada para no saturar POST/PUT /inventory/carts. */
@@ -29,6 +30,8 @@ export async function postBulkOrderToCart(
   rows = [],
   {
     token,
+    userId,
+    getProductById,
     getExistingQty,
     getExistingCartId,
     onProgress,
@@ -95,9 +98,10 @@ export async function postBulkOrderToCart(
     }
 
     try {
+      let persisted
       // Ya en carrito → solo PUT. POST de nuevo provoca 400.
       if (existingCartId != null && existingCartId !== '') {
-        await putCartItem({
+        persisted = await putCartItem({
           token: authToken,
           idCarrito: existingCartId,
           idProducto: requestBody.id_producto,
@@ -120,7 +124,7 @@ export async function postBulkOrderToCart(
         onProgress?.(done, list.length)
         return
       } else {
-        await postCartItem({
+        persisted = await postCartItem({
           token: authToken,
           idProducto: requestBody.id_producto,
           cantidad: requestBody.cantidad,
@@ -133,12 +137,27 @@ export async function postBulkOrderToCart(
           product,
         })
       }
-      noteRealtimeMutation({
-        action: existingCartId ? 'put' : 'post',
-        productId,
-        cartId: existingCartId,
-        quantity: requestBody.cantidad,
+      const sourceProduct = getProductById?.(productId) ?? product
+      const cartLine = persisted.carritos?.find((entry) => String(entry.id_producto) === productId)
+      const message = buildStockCartMessage({
+        product: sourceProduct,
+        productId: requestBody.id_producto,
+        userId: cartLine?.id_usuario ?? userId,
+        cart: cartLine ?? {
+          id_carrito: existingCartId,
+          id_producto: requestBody.id_producto,
+          id_usuario: userId,
+          id_bodega: WS_PRODUCT_WAREHOUSE_ID,
+          cantidad: requestBody.cantidad,
+          precio_unitario: requestBody.precio_unitario,
+        },
+        quantityChange: requestBody.cantidad - existingQty,
       })
+      if (message) {
+        publishProductMessage(message, userId)
+      } else {
+        console.error('[ws] No se pudo crear stock carrito masivo: falta usuario o listado', productId)
+      }
       posted.push({
         codigo: row.codigo,
         cantidad: planned.orderQty,

@@ -1,5 +1,4 @@
 import { apiRequest } from '@/shared/api'
-import { withWarehouse } from '@/shared/lib/sessionWarehouse'
 
 function extractSales(payload) {
   const data = payload?.data ?? payload
@@ -98,12 +97,12 @@ export async function postManagementSales({
     throw new Error('total inválido')
   }
 
-  const body = withWarehouse({
+  const body = {
     metodo_pago: method,
     direccion: address,
     fecha: fecha || formatSalesFecha(new Date()),
     total: amount,
-  })
+  }
 
   const payload = await apiRequest('/api/v1/managment/sales', {
     method: 'POST',

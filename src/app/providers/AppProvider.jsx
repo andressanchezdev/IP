@@ -20,7 +20,7 @@ import { usePersistUserWorkspace } from './hooks/usePersistUserWorkspace'
 import { useExpiredStorageCleaner } from './hooks/useExpiredStorageCleaner'
 import { useAuthContextValue } from './hooks/useAuthContextValue'
 import { syncCatalogProductsRef } from './hooks/syncCatalogProductsRef'
-import { useRealtimeConnection } from './hooks/useRealtimeConnection'
+import { useProductWebSocket } from '@/shared/ws/useProductWebSocket'
 
 /**
  * Compone slices + providers. El acoplamiento entre dominios vive en wiring/.
@@ -59,6 +59,7 @@ export function AppProvider({ children }) {
     productsRef,
     authUsername: auth.authSession?.username,
     currentUserId: auth.currentUserId,
+    webSocketUserId: profile.profileSettings?.personal?.userId || auth.currentUserId,
     initialCartItems: initialUserData.cartItems,
     cartHydratingRef,
   })
@@ -75,11 +76,8 @@ export function AppProvider({ children }) {
   })
 
   syncCatalogProductsRef(productsRef, catalog)
-
-  // Un solo socket mientras haya sesión. Los HTTP 2xx no lo abren: ya está conectado.
-  useRealtimeConnection({
-    enabled: Boolean(auth.authSession?.tokenAccess && auth.authSession?.userId),
-    userId: auth.authSession?.userId,
+  useProductWebSocket({
+    userId: profile.profileSettings?.personal?.userId || auth.currentUserId,
   })
 
   useAppDomainWiring({ events, auth, profile, orders, cart, catalog, ui })

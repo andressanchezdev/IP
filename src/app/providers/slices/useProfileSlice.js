@@ -11,7 +11,6 @@ import {
   mergeApiProfileWithWorkspace,
 } from '@/features/auth/utils/mapLoginUserToProfile'
 import { clearApiAuthToken } from '@/shared/api'
-import { useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
 import { clearAuthSession } from '@/features/auth/utils/authStorage'
 import { APP_EVENTS } from '../appEvents'
 import { PROFILE_SETTINGS_TTL, sanitizeProfileSettings } from '../helpers'
@@ -28,7 +27,7 @@ export function useProfileSlice({
   const aboutRequestRef = useRef(0)
   const aboutAbortRef = useRef(null)
   const warehouseId = profileSettings?.personal?.warehouseId ?? null
-  // Bodega del cliente: define qué stock se muestra y el `id_bodega` de cada petición.
+  // Bodega del cliente: define qué stock muestra la tienda. No viaja en los endpoints.
   setSessionWarehouseId(warehouseId)
 
   useEffect(() => {
@@ -38,18 +37,6 @@ export function useProfileSlice({
       PROFILE_SETTINGS_TTL,
     )
   }, [profileSettings])
-
-  const applyRealtimeCredit = useCallback((available) => {
-    setProfileSettings((current) => ({
-      ...current,
-      credit: {
-        ...(current.credit ?? {}),
-        available,
-        hasCredit: available > 0 || Boolean(current.credit?.hasCredit),
-      },
-    }))
-  }, [])
-  useRealtimeSlot('credit', applyRealtimeCredit)
 
   const profile = useMemo(() => ({
     ...createEmptyProfileView(profileSettings),

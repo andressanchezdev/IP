@@ -12,7 +12,6 @@ import {
   mapSalesToCreditHistoryOrders,
   mapSalesToPendingOrders,
 } from '@/features/orders/mappers/mapSalesHistory'
-import { useRealtimeSlot } from '@/features/realtime/useRealtimeSlot'
 import { APP_EVENTS } from '../appEvents'
 
 const HISTORY_TTL_MS = 45_000
@@ -178,9 +177,6 @@ export function useOrdersSlice({
   const historyFetchedAtRef = useRef(0)
   pendingOrdersRef.current = pendingOrders
   historyOrdersRef.current = historyOrders
-
-  useRealtimeSlot('pendingOrders', setPendingOrders)
-  useRealtimeSlot('historyOrders', setHistoryOrders)
 
   const resetOrderDrawer = useCallback(() => {
     setSelectedOrderId(null)

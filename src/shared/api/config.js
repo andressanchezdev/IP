@@ -9,4 +9,4 @@ export const API_BASE_URL = String(apiBaseUrl).trim().replace(/\/+$/, '')
 
 export const API_ASSET_BASE_URL = String(apiAssetBaseUrl).trim().replace(/\/+$/, '')
 
-export const DEFAULT_STOCK_WAREHOUSE_ID = '1'
+export const DEFAULT_STOCK_WAREHOUSE_ID = '6'
