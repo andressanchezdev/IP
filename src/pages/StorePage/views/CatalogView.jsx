@@ -1,14 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useCatalog } from '@/app/providers'
 import { ProductCard } from '@/features/catalog/components/ProductCard/ProductCard'
+import { getLandingScrollRoot } from '../scrollLanding'
 import './CatalogView.css'
-
-function getLandingScrollRoot(node) {
-  if (!node || typeof node.closest !== 'function') {
-    return null
-  }
-  return node.closest('.landing__content')
-}
 
 export function CatalogView({
   products,

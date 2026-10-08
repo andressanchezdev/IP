@@ -17,10 +17,14 @@
   justify-content: flex-end;
 }
 
-.content-list-data__label {
-  color: var(--drawer-color-muted, var(--color-text-secondary));
+.drawer .content-list-data__label,
+.drawer .drawer-shell-section-body .content-list-data__label {
+  color: var(--color-text-primary);
   font-size: var(--drawer-fs-sm, 12px);
-  font-weight: var(--drawer-fw, 400);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .content-list-data__row {

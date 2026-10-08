@@ -4,6 +4,7 @@
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  padding: 15px;
 }
 
 .profile-price-list__actions .content-list-data__row--action {
@@ -17,9 +18,9 @@
   font: inherit;
   gap: 12px;
   justify-content: space-between;
-  padding: 0;
-  text-align: left;
+  padding: 10px;
   width: 100%;
+  color: greenyellow;
 }
 
 .profile-price-list__actions .content-list-data__row--action .content-list-data__label,

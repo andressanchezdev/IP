@@ -17,6 +17,7 @@ import { getApiAuthToken } from '@/shared/api'
 import { getBrandLogoUrl } from '@/shared/lib/brandLogos'
 import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 import { useWebSocketStateSlot } from '@/shared/ws/stateSlots'
+import { scrollLandingToTop } from '../scrollLanding'
 
 const SEARCH_DEBOUNCE_MS = 350
 /** Cap filtered landing results to avoid scroll/request storms after applying filters. */
@@ -126,6 +127,8 @@ export function useStorePageFilters({
     const next = String(query != null && query !== '' ? query : searchValue || '').trim()
     setCommittedProductSearch(next)
     setProductSearchNonce((current) => current + 1)
+    // La grilla se reemplaza in-place; sin esto la nueva lista nace en el scroll de la búsqueda anterior.
+    scrollLandingToTop()
   }, [isStoreView, searchValue])
 
   const clearCommittedProductSearch = useCallback(() => {
@@ -183,6 +186,7 @@ export function useStorePageFilters({
           { keepAll: true },
         )
         setSearchProducts?.(mapped)
+        scrollLandingToTop()
       })
       .catch((error) => {
         if (cancelled || isAbortError(error) || controller.signal.aborted) {
@@ -194,6 +198,7 @@ export function useStorePageFilters({
           error,
         )
         setSearchProducts?.([])
+        scrollLandingToTop()
       })
 
     return () => {

@@ -14,7 +14,7 @@ function PanelRow({ label, value, highlight = false, subdued = false }) {
       <span
         className={`content-list-data__value ${highlight ? 'content-list-data__value--highlight' : ''} ${subdued ? 'content-list-data__value--subdued' : ''}`}
       >
-        {value}
+      "*"{value}
       </span>
     </div>
   )
