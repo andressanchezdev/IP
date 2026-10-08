@@ -12,9 +12,11 @@ import {
   locationReply,
   paymentReply,
   shippingReply,
+  teamMatchReply,
   whatsappReply,
 } from './intents'
-import { companyFact } from './agentFacts'
+import { livePublishedTeam } from './botip/liveData'
+import { matchLandingTeam } from './teamLookup'
 import type { SessionContext } from './sessionContext'
 
 export type AgentToolId =
@@ -25,6 +27,7 @@ export type AgentToolId =
   | 'get_credit'
   | 'get_location_hours'
   | 'handoff_advisor'
+  | 'handoff_team'
 
 export type AgentToolRisk = 'read_only' | 'mutating' | 'dangerous'
 
@@ -43,13 +46,7 @@ const TOOLS: Record<AgentToolId, AgentTool> = {
   get_company: {
     id: 'get_company',
     risk: 'read_only',
-    run: () => {
-      const base = companyReply()
-      return {
-        ...base,
-        text: `${companyFact('empresa')}\n\n${base.text}`,
-      }
-    },
+    run: () => companyReply(),
   },
   get_payment: {
     id: 'get_payment',
@@ -75,6 +72,15 @@ const TOOLS: Record<AgentToolId, AgentTool> = {
     id: 'handoff_advisor',
     risk: 'read_only',
     run: () => executiveReply(),
+  },
+  handoff_team: {
+    id: 'handoff_team',
+    risk: 'read_only',
+    run: (_ctx, tokens) => {
+      const match = matchLandingTeam(tokens)
+      if (match) return teamMatchReply(match, tokens)
+      return teamMatchReply({ type: 'group', group: 'asesor', members: livePublishedTeam('asesor') }, tokens)
+    },
   },
 }
 

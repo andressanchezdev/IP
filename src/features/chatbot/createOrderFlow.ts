@@ -12,6 +12,7 @@ import {
 import { liveInventory } from './botip/liveData'
 import { getApiAuthToken } from '@/shared/api'
 import {
+  isCompanyAsk,
   isComplaintAsk,
   isCreateOrderAsk,
   isCreditAsk,
@@ -763,6 +764,7 @@ export async function runOrderFlowTurn(
     || isPaymentAsk(tokens, raw)
     || isHoursAsk(tokens, raw)
     || isLocationAsk(tokens, raw)
+    || isCompanyAsk(tokens, raw)
     || isCreditAsk(tokens, raw)
     || isShippingAsk(tokens, raw)
     || isReturnsAsk(tokens, raw)

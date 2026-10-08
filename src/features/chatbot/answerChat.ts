@@ -74,7 +74,7 @@ import { pushPhaseLog } from './pipelineLog'
 import { matchLandingTeam } from './teamLookup'
 import { parseUserFrame, isTeamNameLookupAllowed } from './userFrame'
 import { confirmFollowLine, effectiveTurnKind } from './followLine'
-import { focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, isCreditAsk, isHoursAsk, isLocationAsk, isShippingAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
+import { focusLabel, isFollowUpTurn, isProductSeekingAsk, isReturnsAsk, isVacancyAsk, isComplaintAsk, isPaymentAsk, isExecutiveAsk, isAdvisorAsk, isCompanyAsk, isCreateOrderAsk, isThreadReleaseAsk, isOrderProcessAsk, isCreditAsk, isHoursAsk, isLocationAsk, isShippingAsk, releaseRemainder, keepConversationFocus, liveShippingCues, mentionedFamily, mergeFocusTokens, nextConversationFocus, pareceCodigo, searchMissGuideText } from './conversationThread'
 import { isScaffoldActive, openScaffold, resetScaffold, resumeScaffoldQuestion, runScaffoldTurn, scaffoldAsideReply } from './scaffoldSearch'
 import { isOrderFlowActive, resetOrderFlow, runOrderFlowTurn, beginAddFromLastOffer, orderProcessGuideReply } from './createOrderFlow'
 import { tryFastLaneReply } from './agentLane'
@@ -740,9 +740,11 @@ export async function answerLandingChat(raw: string): Promise<ChatReply> {
               ? 'shipping'
               : isLocationAsk(seekTokens, raw) || isHoursAsk(seekTokens, raw)
                 ? 'location'
-                : isExecutiveAsk(seekTokens, raw)
-                  ? 'attention'
-                  : 'company'
+                : isCompanyAsk(seekTokens, raw)
+                  ? 'company'
+                  : isAdvisorAsk(seekTokens, raw) || isExecutiveAsk(seekTokens, raw)
+                    ? 'attention'
+                    : 'company'
         return finalize(ctx, fast, fastIntent, 9, cfg)
       }
     }

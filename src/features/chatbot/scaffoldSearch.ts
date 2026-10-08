@@ -20,6 +20,8 @@ import {
   complaintReply,
   returnsReply,
   executiveReply,
+  companyReply,
+  teamMatchReply,
   scaffoldAbortReply,
   scaffoldAskBrandReply,
   scaffoldAskModelReply,
@@ -30,6 +32,8 @@ import {
   type ChatReply,
 } from './intents'
 import {
+  isAdvisorAsk,
+  isCompanyAsk,
   isComplaintAsk,
   isCreditAsk,
   isExecutiveAsk,
@@ -39,6 +43,8 @@ import {
   isReturnsAsk,
   isShippingAsk,
 } from './conversationThread'
+import { livePublishedTeam } from './botip/liveData'
+import { matchLandingTeam, wantsAdvisorContact } from './teamLookup'
 import { isGreetingToken } from './prepare'
 import type { SessionContext } from './sessionContext'
 
@@ -321,12 +327,19 @@ export function resumeScaffoldQuestion(ctx: SessionContext, reply: ChatReply): C
 
 export function scaffoldAsideReply(ctx: SessionContext, tokens: readonly string[], raw: string): ChatReply | null {
   if (!isScaffoldActive(ctx)) return null
+  if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, locationReply(tokens, raw))
+  if (isCompanyAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, companyReply())
+  if (isAdvisorAsk(tokens, raw) || wantsAdvisorContact(tokens)) {
+    resetScaffold(ctx)
+    const match = matchLandingTeam(tokens)
+    if (match) return teamMatchReply(match, tokens)
+    return teamMatchReply({ type: 'group', group: 'asesor', members: livePublishedTeam('asesor') }, tokens)
+  }
   if (isExecutiveAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, executiveReply())
   if (isComplaintAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, complaintReply())
   if (isReturnsAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, returnsReply())
   if (isPaymentAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, paymentReply(tokens, ctx))
   if (isShippingAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, shippingReply())
-  if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, locationReply(tokens, raw))
   if (isCreditAsk(tokens, raw)) return resumeScaffoldQuestion(ctx, creditReply())
   return null
 }

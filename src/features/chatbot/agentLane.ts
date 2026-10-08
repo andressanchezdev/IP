@@ -5,6 +5,8 @@
 
 import type { ChatReply } from './intents'
 import {
+  isAdvisorAsk,
+  isCompanyAsk,
   isComplaintAsk,
   isCreditAsk,
   isExecutiveAsk,
@@ -17,7 +19,7 @@ import {
   isVacancyAsk,
 } from './conversationThread'
 import { runAgentTool, type AgentToolId } from './agentTools'
-import { resumeScaffoldQuestion } from './scaffoldSearch'
+import { resetScaffold, resumeScaffoldQuestion } from './scaffoldSearch'
 import type { SessionContext } from './sessionContext'
 import { isScaffoldActive } from './scaffoldSearch'
 
@@ -32,6 +34,8 @@ export function isDomainAsideAsk(tokens: readonly string[], raw: string) {
     || isReturnsAsk(tokens, raw)
     || isComplaintAsk(tokens, raw)
     || isExecutiveAsk(tokens, raw)
+    || isAdvisorAsk(tokens, raw)
+    || isCompanyAsk(tokens, raw)
     || isVacancyAsk(tokens, raw)
   )
 }
@@ -43,12 +47,14 @@ export function isFastLaneAsk(tokens: readonly string[], raw: string) {
 }
 
 function toolForAside(tokens: readonly string[], raw: string): AgentToolId | null {
+  if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw)) return 'get_location_hours'
+  if (isCompanyAsk(tokens, raw)) return 'get_company'
+  if (isAdvisorAsk(tokens, raw)) return 'handoff_team'
   if (isExecutiveAsk(tokens, raw)) return 'handoff_advisor'
   if (isComplaintAsk(tokens, raw) || isReturnsAsk(tokens, raw)) return 'handoff_advisor'
   if (isPaymentAsk(tokens, raw)) return 'get_payment'
   if (isCreditAsk(tokens, raw)) return 'get_credit'
   if (isShippingAsk(tokens, raw)) return 'get_shipping'
-  if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw)) return 'get_location_hours'
   return null
 }
 
@@ -65,6 +71,10 @@ export function tryFastLaneReply(
   const toolId = toolForAside(tokens, raw)
   if (!toolId) return null
   const reply = runAgentTool(toolId, ctx, tokens, raw)
+  if (toolId === 'handoff_team' || toolId === 'handoff_advisor') {
+    if (isScaffoldActive(ctx)) resetScaffold(ctx)
+    return reply
+  }
   if (isScaffoldActive(ctx)) {
     return resumeScaffoldQuestion(ctx, reply)
   }

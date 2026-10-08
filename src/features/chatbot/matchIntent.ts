@@ -36,6 +36,7 @@ export const TYPO_ALIASES: Record<string, string> = {
   pastas: 'pastilla',
   pasitllas: 'pastilla',
   kiero: 'quiero',
+  quiro: 'quiero',
   queiro: 'quiero',
   qeuiro: 'quiero',
   quero: 'quiero',

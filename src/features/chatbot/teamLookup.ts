@@ -212,7 +212,7 @@ function exactMembers(tokens: readonly string[]) {
 }
 
 function closestMember(token: string) {
-  if (token.length < 5) return null
+  if (token.length < 4) return null
   let best: LandingTeamMember | null = null
   let bestDistance = 2
   for (const member of publishedTeam()) {
@@ -264,6 +264,16 @@ export function matchLandingTeam(
       !FOCUS_NOISE.has(token),
   )
   const asksAll = normalized.some((token) => teamAllWords().has(token))
+  const namePool = leftover.length ? leftover : cleaned
+
+  if (allowNameLookup && leftover.length > 0) {
+    const named = exactMembers(leftover)
+    if (named.length > 0) return { type: 'member', members: named }
+    if (leftover.length === 1) {
+      const near = closestMember(leftover[0])
+      if (near) return { type: 'suggest', asked: leftover[0], member: near }
+    }
+  }
 
   if (roleGroups.length > 1 || (asksAll && roleGroups.length !== 1)) {
     return allTeams()
@@ -276,9 +286,14 @@ export function matchLandingTeam(
 
   if (asksAll && leftover.length === 0) return allTeams()
 
-  if (allowNameLookup && cleaned.length === 1) {
-    const near = closestMember(cleaned[0])
-    if (near) return { type: 'suggest', asked: cleaned[0], member: near }
+  if (allowNameLookup && namePool.length === 1) {
+    const near = closestMember(namePool[0])
+    if (near) return { type: 'suggest', asked: namePool[0], member: near }
+  }
+
+  if (roleGroups.length === 1) {
+    const group = roleGroups[0]
+    return { type: 'group', group, members: livePublishedTeam(group) }
   }
 
   return null

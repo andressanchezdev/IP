@@ -278,11 +278,11 @@ export const DEFAULT_REPLIES: Record<string, BotReplyConfig> = {
     ],
   },
   company: {
-    keywords: 'vision, mision, nosotros, marca, marcas, empresa, quienes, somos, historia, aliados, aliadas, acerca',
-    text: 'Importadora Premium: puedes conocer la visión, el equipo y marcas aliadas como {brands}. Dime si buscas empresa, una persona del equipo, un producto.',
+    keywords: 'vision, mision, nosotros, marca, marcas, empresa, quienes, somos, historia, aliados, aliadas, acerca, informacion',
+    text: 'Somos Importadora Premium, repuestos y productos para moto. Estamos en {address}, {city}. Horario: {hours}. Marcas aliadas como {brands}.',
     texts: [
-      'Somos Importadora Premium. En el sitio están visión, equipo y marcas ({brands}). ¿Quieres datos de la empresa o de un repuesto?',
-      'Te oriento: visión, misión, equipo y marcas aliadas ({brands}) están en la página. También puedo ayudarte con una pieza si me das marca y modelo.',
+      'Somos Importadora Premium. Estamos en {address}, {city}. Horario: {hours}. Marcas aliadas: {brands}.',
+      'Importadora Premium: sede en {address}, {city}. Atendemos {hours}. Marcas aliadas como {brands}.',
     ],
   },
   social: {
@@ -737,7 +737,7 @@ export function liveContact(): LiveContact {
       ...base,
       ...raw,
       social: Array.isArray(raw.social) && raw.social.length ? raw.social : base.social,
-      address: LANDING_CONTACT.address,
+      address: String(raw.address || '').trim() || LANDING_CONTACT.address,
       whatsappUrls: base.whatsappUrls,
     }
     if (raw.phoneDisplay && !raw.whatsappUrl) {

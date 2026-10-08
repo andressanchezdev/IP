@@ -787,26 +787,30 @@ export const OTHER_CITY_LIST = [
 ] as const
 
 function placeAddress() {
-  return `Estamos en ${liveContact().address}.`
+  const contact = liveContact()
+  const city = [contact.city, contact.region].filter(Boolean).join(', ')
+  const where = city ? `${contact.address}, ${city}` : contact.address
+  return `Estamos en ${where}. Horario: ${contact.hoursDisplay}.`
 }
 
 export function locationReply(tokens: readonly string[] = [], raw = ''): ChatReply {
-  const hours = liveContact().hoursDisplay
+  const contact = liveContact()
+  const hours = contact.hoursDisplay
   const otherCities = liveLexiconSet('otherCities', new Set(OTHER_CITY_LIST))
   const homePlace = liveLexiconSet('homePlace', new Set(HOME_PLACE_LIST))
   const askedAway = tokens.find((token) => otherCities.has(token) && !homePlace.has(token))
   let text: string
   if (askedAway) {
     const city = askedAway.charAt(0).toUpperCase() + askedAway.slice(1)
-    text = `No tenemos local en ${city}. Estamos en ${liveContact().address}.`
+    text = `No tenemos local en ${city}. ${placeAddress()}`
   } else if (isHoursAsk(tokens, raw) && !isLocationAsk(tokens, raw)) {
-    text = `Atendemos ${hours}.`
+    text = `Atendemos ${hours}. Estamos en ${contact.address}.`
   } else {
     text = placeAddress()
   }
   return {
     text,
-    actions: [{ href: liveContact().mapsShareUrl, label: 'Abrir mapa', external: true }],
+    actions: [{ href: contact.mapsShareUrl, label: 'Abrir mapa', external: true }],
   }
 }
 
@@ -1042,15 +1046,16 @@ export function rectifyNeedPartReply(): ChatReply {
 
 export function companyReply(): ChatReply {
   const brands = liveBrandNames().slice(0, 3).join(', ') || 'nuestras marcas'
+  const contact = liveContact()
+  const fallback = `Somos Importadora Premium, repuestos y productos para moto. Estamos en ${contact.address}, ${contact.city}. Horario: ${contact.hoursDisplay}. Marcas aliadas como ${brands}.`
+  const intro = applyBotText('company', fallback, completeVars('', { brands, address: contact.address, hours: contact.hoursDisplay }))
+  const facts = `Estamos en ${contact.address}, ${contact.city}. Horario: ${contact.hoursDisplay}.`
+  const text = /calle|estamos en|direccion|horario/i.test(intro) ? intro : `${intro}\n\n${facts}`
   return {
-    text: applyBotText(
-      'company',
-      `Importadora Premium: puedes conocer la visión, el equipo y marcas aliadas como ${brands}. Dime si buscas empresa, una persona del equipo o un producto.`,
-      completeVars('', { brands }),
-    ),
+    text,
     actions: [
+      { href: contact.mapsShareUrl, label: 'Abrir mapa', external: true },
       { href: CATALOG_PATH, label: 'Ver catálogo' },
-      advisorContactAction(),
     ],
   }
 }

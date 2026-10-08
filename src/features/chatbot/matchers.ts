@@ -6,7 +6,7 @@ import { scoreMatch } from './matchIntent'
 import type { EntityMap, SessionContext } from './sessionContext'
 import type { PipelineConfig } from './pipelineConfig'
 import { isTeamNameLookupAllowed, parseUserFrame } from './userFrame'
-import { isBroadPriceAsk, isCreditAsk, isPaymentAsk, isShippingAsk, isOrderStatusAsk, isComplaintAsk, isReturnsAsk, isBrandLineAsk, isCatalogFindAsk, isVacancyAsk, isProductSeekingAsk, hasVehicleHint, isLocationAsk, isHoursAsk, isAdvisorAsk, isExecutiveAsk } from './conversationThread'
+import { isBroadPriceAsk, isCreditAsk, isPaymentAsk, isShippingAsk, isOrderStatusAsk, isComplaintAsk, isReturnsAsk, isBrandLineAsk, isCatalogFindAsk, isVacancyAsk, isProductSeekingAsk, hasVehicleHint, isLocationAsk, isHoursAsk, isAdvisorAsk, isCompanyAsk, isExecutiveAsk } from './conversationThread'
 import { pickLastOffer } from './inventory'
 
 export type Candidate = {
@@ -192,10 +192,24 @@ export function runAllMatchers(
     }
   })
 
-  const attention = runSafe('attention', () => {
-    if (!isAdvisorAsk(tokens, raw)) return null
+  const company = runSafe('company', () => {
+    if (!isCompanyAsk(tokens, raw)) return null
     const matched = tokens.filter((token) =>
-      ['asesor', 'asesora', 'asesores', 'asesoria', 'hablar', 'persona', 'humano', 'real', 'contactar'].includes(token),
+      ['empresa', 'nosotros', 'mision', 'vision', 'quienes', 'somos', 'importadora', 'premium'].includes(token),
+    )
+    return {
+      intent: 'company',
+      score: applyModifiers(9, 'company', matched.length ? matched : [...tokens.slice(0, 2)], ctx, hasQuestion, veryShort, cfg),
+      entities: ctx.entities,
+      matchedTokens: matched.length ? matched : [...tokens.slice(0, 2)],
+    }
+  })
+
+  const attention = runSafe('attention', () => {
+    if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw) || isCompanyAsk(tokens, raw)) return null
+    if (!isAdvisorAsk(tokens, raw) && !wantsAdvisorContact(tokens)) return null
+    const matched = tokens.filter((token) =>
+      ['asesor', 'asesora', 'asesores', 'asesore', 'asesoria', 'hablar', 'persona', 'humano', 'real', 'contactar'].includes(token),
     )
     return {
       intent: 'attention',
@@ -300,7 +314,6 @@ export function runAllMatchers(
     .filter((intent) => intent.id !== 'greeting' && intent.id !== 'vacancy')
     .map((intent) =>
       runSafe(intent.id, () => {
-        if (['complaint', 'returns', 'quote', 'accessory', 'credit', 'payment', 'shipping', 'orderStatus', 'location', 'attention'].includes(intent.id)) return null
         if (intent.id === 'company' && isBrandLineAsk(tokens, raw)) {
           return {
             intent: 'company',
@@ -309,6 +322,7 @@ export function runAllMatchers(
             matchedTokens: ['marcas'],
           }
         }
+        if (['complaint', 'returns', 'quote', 'accessory', 'credit', 'payment', 'shipping', 'orderStatus', 'location', 'attention', 'company'].includes(intent.id)) return null
         if (intent.id === 'whatsapp' && isPaymentAsk(tokens, raw)) return null
         if (intent.id === 'catalog' && isPaymentAsk(tokens, raw)) return null
         if (intent.id === 'person' && isExecutiveAsk(tokens, raw)) return null
@@ -352,7 +366,7 @@ export function runAllMatchers(
     }
   })
 
-  return [team, returns, location, attention, product, accessory, namedPart, complaint, quote, credit, payment, shipping, orderStatus, vacancy, ...chatOnes, greeting].filter(
+  return [team, returns, location, company, attention, product, accessory, namedPart, complaint, quote, credit, payment, shipping, orderStatus, vacancy, ...chatOnes, greeting].filter(
     (item): item is Candidate => Boolean(item && item.score > 0),
   )
 }

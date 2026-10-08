@@ -563,16 +563,28 @@ const LOCATION_STOP = new Set([
 
 function hasLocationPhrase(text: string) {
   return (
-    /\bdonde (estan|esta|quedan|queda|se ubican|se ubica|ubicados|ubicado|se encuentran|se encuentra)\b/.test(text) ||
-    /\b(en )?donde (queda|esta) (el |la |su |sus )?(local|sede|sucursal|tienda|almacen|punto)\b/.test(text) ||
-    /\b(cual es |me das |dime |indican |indicar )?(su |la |tu )?(direccion|ubicacion)\b/.test(text) ||
+    (/\bdonde\b/.test(text) &&
+      /\b(estan|esta|quedan|queda|ubican|ubica|ubicados|ubicado|encuentran|encuentra|local|sede|sucursal|tienda|almacen|punto|empresa)\b/.test(text)) ||
+    /\b(en )?donde (queda|esta|estan) (el |la |su |sus )?(local|sede|sucursal|tienda|almacen|punto|empresa)?\b/.test(text) ||
+    /\b(cual es |me das |dime |indican |indicar |quiero saber |saber )?(su |la |tu |nuestra |de la empresa )?(direccion|ubicacion)\b/.test(text) ||
     /\bcomo (puedo |puedes |pueden )?(llegar|llego)\b/.test(text) ||
     /\b(local fisico|sede fisica|punto de venta)\b/.test(text) ||
     /\b(donde (los |las )?(encuentro|visito|quedan))\b/.test(text) ||
-    /\b(ubicados|ubicado|ubicacion)\b/.test(text) ||
+    /\b(ubicados|ubicado|ubicacion|direccion)\b/.test(text) ||
     /\b(tienen|hay) (un |una )?(sucursal|sede|local)( fisico)?\b/.test(text)
   )
 }
+
+const LOCATION_TOKEN_CUE = new Set([
+  'ubicacion',
+  'ubicados',
+  'ubicado',
+  'direccion',
+  'llegar',
+  'llego',
+  'sede',
+  'sucursal',
+])
 
 export function isLocationAsk(tokens: readonly string[], raw = '') {
   if (isReturnsAsk(tokens, raw)) return false
@@ -584,24 +596,58 @@ export function isLocationAsk(tokens: readonly string[], raw = '') {
     return false
   }
   const text = foldAskText(raw)
+  if (/\b(asesor|asesora|asesores|asesore|vendedor|vendedora)\b/.test(text) && !/\b(direccion|ubicacion|ubicados|ubicado|sede|sucursal|llegar)\b/.test(text)) {
+    return false
+  }
+  if (tokens.some((token) => LOCATION_TOKEN_CUE.has(token))) return true
   if (!text || !hasLocationPhrase(text)) return false
-  const extra = tokens.filter((token) => token.length >= 4 && !LOCATION_STOP.has(token))
-  return extra.length < 3
+  return true
 }
 
+const ADVISOR_ROLE_RE = '(asesor|asesora|asesores|asesore|asesoria|vendedor|vendedora)'
+const ADVISOR_ARTICLE_RE = '(un |una |el |la |los |las |unos |unas )?'
+
 export function isAdvisorAsk(tokens: readonly string[], raw = '') {
-  void tokens
+  if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw) || isCompanyAsk(tokens, raw)) return false
   const text = foldAskText(raw)
+  const set = new Set(tokens.map((token) => foldAskText(token)).filter(Boolean))
+  const hasRole =
+    set.has('asesor') ||
+    set.has('asesora') ||
+    set.has('asesores') ||
+    set.has('asesore') ||
+    set.has('asesoria') ||
+    (text ? new RegExp(`\\b${ADVISOR_ROLE_RE}\\b`).test(text) : false)
+  const hasCue =
+    ['hablar', 'contactar', 'comunicar', 'comunicarme', 'pasame', 'pasar', 'conectar', 'llamar'].some((cue) => set.has(cue)) ||
+    /\b(hablar|contactar|comunicarme|comunicar|pasar|pasame|conectar)\b/.test(text)
+  if (hasRole && hasCue) return true
   if (!text) return false
   return (
-    /\b(hablar|contactar|comunicarme|comunicar) (con )?(un |una )?(asesor|asesora|asesores)\b/.test(text) ||
-    /\bcomo (puedo |puedes |pueden )?(hablar|contactar|comunicarme) (con )?(un |una )?(asesor|asesora|persona)\b/.test(text) ||
+    new RegExp(`\\b(hablar|contactar|comunicarme|comunicar) (con )?${ADVISOR_ARTICLE_RE}${ADVISOR_ROLE_RE}\\b`).test(text) ||
+    new RegExp(`\\bcomo (puedo |puedes |pueden )?(hablar|contactar|comunicarme) (con )?${ADVISOR_ARTICLE_RE}(${ADVISOR_ROLE_RE}|persona)\\b`).test(text) ||
     /\b(persona real|persona humana|asesor real)\b/.test(text) ||
-    /\b(quiero |necesito )(un |una )?(asesor|asesora)\b/.test(text) ||
+    new RegExp(`\\b(quiero |necesito |busco )${ADVISOR_ARTICLE_RE}${ADVISOR_ROLE_RE}\\b`).test(text) ||
     /\bno (quiero|deseo|necesito) (hablar|chatear|seguir) (mas )?(contigo|con (el |la )?(bot|chat|asistente|ia))\b/.test(text) ||
     /\bno (quiero|deseo) hablar (con )?(el |la )?(bot|chat|asistente)\b/.test(text) ||
-    /\b(prefiero|quiero) (hablar con )?(un |una )?(asesor|asesora|persona) (real|humana)?\b/.test(text) ||
-    /\bpasa(me)? (con |a )?(un |una )?(asesor|humano|persona)\b/.test(text)
+    new RegExp(`\\b(prefiero|quiero) hablar con ${ADVISOR_ARTICLE_RE}(${ADVISOR_ROLE_RE}|persona)( real| humana)?\\b`).test(text) ||
+    new RegExp(`\\bpasa(me)? (con |a )?${ADVISOR_ARTICLE_RE}(${ADVISOR_ROLE_RE}|humano|persona)\\b`).test(text)
+  )
+}
+
+export function isCompanyAsk(tokens: readonly string[], raw = '') {
+  if (isLocationAsk(tokens, raw) || isHoursAsk(tokens, raw)) return false
+  if (isReturnsAsk(tokens, raw) || isVacancyAsk(tokens, raw)) return false
+  if (isPaymentAsk(tokens, raw) || isShippingAsk(tokens, raw) || isCreditAsk(tokens, raw)) return false
+  if (hasPartTerm(tokens) || hasVehicleHint(tokens, raw)) return false
+  const text = foldAskText(raw)
+  const set = new Set(tokens.map((token) => foldAskText(token)))
+  if (set.has('empresa') || set.has('nosotros') || set.has('mision') || set.has('vision') || set.has('quienes')) {
+    return true
+  }
+  return (
+    /\b(quienes (somos|son)|sobre (la )?empresa|informacion (de |de la )?(empresa|importadora)|la empresa|importadora premium)\b/.test(text) ||
+    /\b(vision|mision|historia) (de |de la )?(empresa|importadora)?\b/.test(text)
   )
 }
 
@@ -614,10 +660,7 @@ export function isHoursAsk(tokens: readonly string[], raw = '') {
     tokens.some((token) => (HOUR_CUE_LIST as readonly string[]).includes(token)) ||
     /\b(horario|horarios|a que hora|estan abiertos)\b/.test(text)
   if (!hourCue) return false
-  const extra = tokens.filter(
-    (token) => token.length >= 4 && !LOCATION_STOP.has(token) && !(HOUR_CUE_LIST as readonly string[]).includes(token),
-  )
-  return extra.length < 3
+  return true
 }
 
 export function isCreateOrderAsk(tokens: readonly string[], raw = '') {

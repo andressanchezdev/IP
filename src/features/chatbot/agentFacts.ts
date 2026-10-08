@@ -47,7 +47,7 @@ export function companyFact(key: CompanyFactKey): string {
         || 'El crédito aplica según trayectoria y cupo del cliente. Si no lo ves en Finalizar, consulta con un asesor.',
       )
     case 'empresa':
-      return 'Somos Importadora Premium: repuestos y productos para moto. Catálogo, carrito y pedidos en esta misma app.'
+      return `Somos Importadora Premium: repuestos y productos para moto. Estamos en ${address}. Horario: ${hours}.`
     case 'alcance':
       return 'Atiendo solo consultas de la empresa, contacto, productos del catálogo y cómo comprar. Fuera de eso te paso con un asesor.'
     default:
