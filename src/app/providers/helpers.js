@@ -1,7 +1,10 @@
 import { loadPersistedState } from '@/shared/lib/storage'
 import { defaultProfileSettings } from '@/features/profile/data/profileDefaults'
 import { getOrCreateUserWorkspace } from '@/features/auth/utils/userWorkspace'
-import { mergeApiProfileWithWorkspace } from '@/features/auth/utils/mapLoginUserToProfile'
+import {
+  mergeApiProfileWithWorkspace,
+  warehouseIdFromAccessToken,
+} from '@/features/auth/utils/mapLoginUserToProfile'
 import { getBrandLogoUrl } from '@/shared/lib/brandLogos'
 
 export const PROFILE_SETTINGS_TTL = 365 * 24 * 60 * 60 * 1000
@@ -50,9 +53,21 @@ export function loadInitialUserData(session) {
   const workspace = getOrCreateUserWorkspace(session.userId, seedProfile)
   const workspaceProfile = workspace.profileSettings ?? seedProfile
 
-  const profileSettings = session.profile
+  let profileSettings = session.profile
     ? mergeApiProfileWithWorkspace(session.profile, workspaceProfile)
     : workspaceProfile
+
+  // [WS-HOY 2026-10-08] Sesiones guardadas antes del ajuste del login pueden venir sin id_bodega.
+  // Respaldo: se toma del access_token (JWT trae warehouseId) para que el stock filtre la bodega correcta.
+  if (!String(profileSettings?.personal?.warehouseId ?? '').trim()) {
+    const tokenWarehouseId = warehouseIdFromAccessToken(session.tokenAccess)
+    if (tokenWarehouseId) {
+      profileSettings = {
+        ...profileSettings,
+        personal: { ...profileSettings.personal, warehouseId: tokenWarehouseId },
+      }
+    }
+  }
 
   return {
     profileSettings,

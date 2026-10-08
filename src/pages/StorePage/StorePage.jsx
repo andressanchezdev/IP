@@ -448,7 +448,16 @@ export function StorePage() {
       />
     )
   }
-
+  useEffect(() => {
+    if (!detailProduct) return
+    console.info('[modal:stock]', {
+      id: detailProduct.id,
+      stock: detailProduct.stock,
+      scope: detailProduct.stockScope,
+      bodega: detailProduct.stockWarehouseId,
+      enCarrito: cartProductIds.has(String(detailProduct.id)),
+    })
+  }, [detailProduct, cartProductIds])
   return (
     <div className={`landing ${drawerOpen ? 'landing--drawer-open' : ''}`}>
       <Sidebar

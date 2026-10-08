@@ -71,24 +71,58 @@ function reconnect() {
   }, delay)
 }
 
+// [WS-HOY 2026-10-08] INICIO: normalizeIncoming (agregada hoy).
+// Deja idProducto / idBodega / idCarrito en el nivel superior del mensaje de stock, vengan como
+// idProducto, id_producto o dentro de carrito. No toca `listado` (puede ser string o mapa por producto).
+function normalizeIncoming(message) {
+  if (!isProductStockMessage(message)) return message
+  const line = message.carrito && typeof message.carrito === 'object' && !Array.isArray(message.carrito)
+    ? message.carrito
+    : null
+  const pick = (...values) => values.find((value) => value != null && value !== '')
+  const idProducto = pick(message.idProducto, message.id_producto, line?.id_producto)
+  const idBodega = pick(message.idBodega, message.id_bodega, line?.id_bodega)
+  const idCarrito = pick(message.idCarrito, message.id_carrito, line?.id_carrito)
+  const next = { ...message }
+  if (idProducto != null) next.idProducto = idProducto
+  if (idBodega != null) next.idBodega = idBodega
+  if (idCarrito != null) next.idCarrito = idCarrito
+  return next
+}
+// [WS-HOY 2026-10-08] FIN
+
+// [WS-HOY 2026-10-08] Único punto de entrada: muestra en consola el mensaje escuchado y lo notifica.
+function dispatchIncoming(message) {
+  console.log(`[ws] recibido: ${message.tipo}`, message)
+  notify(message)
+}
+
 function parseMessage(raw) {
   let value = raw
   for (let depth = 0; depth < 4 && typeof value === 'string'; depth += 1) {
     try {
       value = JSON.parse(value)
     } catch {
+      console.log('[ws] ignorado (no es JSON):', raw)
       return null
     }
   }
   if (Array.isArray(value)) {
-    value.forEach((item) => notify(item))
+    value.forEach((item) => {
+      const message = parseMessage(item)
+      if (message) dispatchIncoming(message)
+    })
     return null
   }
-  if (!value || typeof value !== 'object') return null
-  if (value.tipo) return value
+  if (!value || typeof value !== 'object') {
+    console.log('[ws] ignorado (no es objeto):', raw)
+    return null
+  }
+  if (value.tipo) return normalizeIncoming(value) // [WS-HOY 2026-10-08]
   for (const key of ['data', 'message', 'mensaje', 'payload', 'body']) {
     if (value[key] != null) return parseMessage(value[key])
   }
+  console.log('[ws] ignorado (sin tipo):', value)
   return null
 }
 
@@ -114,11 +148,13 @@ function connectWebSocket() {
   })
   current.addEventListener('message', ({ data }) => {
     if (socket !== current) return
+    // [WS-HOY 2026-10-08] antes se llamaba notify dos veces y message.tipo fallaba con null.
     const message = parseMessage(data)
-    if (message) notify(message)
+    if (!message) return
+    dispatchIncoming(message)
   })
   current.addEventListener('error', () => {
-    if (socket === current) console.error('[ws] error de conexión')
+    if (socket === current) console.error('[ws] ERROR DE CONEXIÓN')
   })
   current.addEventListener('close', () => {
     if (socket !== current) return

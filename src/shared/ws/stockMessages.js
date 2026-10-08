@@ -1,4 +1,8 @@
-import { FLAT_WAREHOUSE_KEY, normalizeStockWarehouseKey } from '@/shared/lib/stockDetail'
+import {
+  FLAT_WAREHOUSE_KEY,
+  ZERO_WAREHOUSE_ID, // [WS-HOY 2026-10-08] para tratar la bodega "0" como "6" en findWarehouseRows
+  normalizeStockWarehouseKey,
+} from '@/shared/lib/stockDetail'
 import { getSessionWarehouseId } from '@/shared/lib/sessionWarehouse'
 
 function parseListing(value) {
@@ -169,7 +173,7 @@ function listingFromProduct(product) {
 }
 
 /** Suma la cantidad que sale del carrito a `cantidadAux` de la bodega de la sesión. */
-function releaseCartQuantity(listadoText, cart) {
+export function releaseCartQuantity(listadoText, cart) {
   const listing = parseListing(listadoText)
   const quantity = Number(cart?.cantidad)
   if (!listing || !Number.isFinite(quantity) || quantity <= 0) return listadoText ?? null
@@ -204,7 +208,6 @@ function releaseCartQuantity(listadoText, cart) {
       target.cantidadAux = (Number.isFinite(current) ? current : 0) + remaining
     }
   }
-
   return JSON.stringify(listing)
 }
 
@@ -332,3 +335,55 @@ export function getStockListingFromMessage(message) {
   }
   return null
 }
+
+// [WS-HOY 2026-10-08] INICIO: findWarehouseRows + applyAuxIncreaseFromZero (agregadas hoy).
+/**
+ * Filas de la bodega de la sesión dentro de un listado.
+ * La bodega "6" también puede venir como "0" (ver normalizeStockWarehouseKey).
+ * Devuelve la clave tal como está escrita en el listado para poder escribir de vuelta.
+ */
+function findWarehouseRows(listing, warehouseId) {
+  const key = normalizeStockWarehouseKey(warehouseId)
+  if (!listing || !key) return null
+  const candidates = key === ZERO_WAREHOUSE_ID ? [key, '0'] : [key]
+  for (const candidate of candidates) {
+    if (Array.isArray(listing[candidate])) return { key: candidate, rows: listing[candidate] }
+  }
+  return null
+}
+
+/**
+ * Card con 0 disponible en la bodega de la sesión y el socket trae aumento:
+ * copia solo `cantidadAux` en las ubicaciones que coinciden. Devuelve el listado
+ * nuevo (string) o null si no aplica; en ese caso manda el listado del mensaje.
+ */
+export function applyAuxIncreaseFromZero(currentRaw, incomingRaw, warehouseId) {
+  const current = parseListing(currentRaw)
+  const incoming = parseListing(incomingRaw)
+  const currentBucket = findWarehouseRows(current, warehouseId)
+  const incomingBucket = findWarehouseRows(incoming, warehouseId)
+  if (!currentBucket || !incomingBucket) return null
+
+  const currentAvailable = currentBucket.rows.reduce((sum, row) => {
+    const aux = Number(row?.cantidadAux)
+    return sum + (Number.isFinite(aux) && aux > 0 ? aux : 0)
+  }, 0)
+  if (currentAvailable > 0) return null
+
+  let changed = false
+  const nextRows = currentBucket.rows.map((row) => {
+    const ubicacion = String(row?.ubicacion ?? '').trim().toUpperCase()
+    const match = incomingBucket.rows.find((candidate) =>
+      String(candidate?.ubicacion ?? '').trim().toUpperCase() === ubicacion,
+    )
+    const nextAux = Number(match?.cantidadAux)
+    if (!match || !Number.isFinite(nextAux) || nextAux <= 0) return row
+
+    changed = true
+    return { ...row, cantidadAux: nextAux }
+  })
+
+  if (!changed) return null
+  return JSON.stringify({ ...current, [currentBucket.key]: nextRows })
+}
+// [WS-HOY 2026-10-08] FIN: findWarehouseRows + applyAuxIncreaseFromZero.

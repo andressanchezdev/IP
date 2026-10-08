@@ -9,6 +9,25 @@ function text(value) {
   return String(value).trim()
 }
 
+// [WS-HOY 2026-10-08] INICIO: warehouseIdFromAccessToken (agregada hoy).
+/**
+ * id_bodega desde el payload del access_token (JWT del login trae `warehouseId`).
+ * Respaldo para sesiones persistidas sin id_bodega en el perfil. Devuelve '' si no se puede leer.
+ */
+export function warehouseIdFromAccessToken(token) {
+  try {
+    const payload = String(token ?? '').split('.')[1]
+    if (!payload) return ''
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    const decoded = JSON.parse(atob(padded))
+    return text(decoded.warehouseId ?? decoded.id_bodega)
+  } catch {
+    return ''
+  }
+}
+// [WS-HOY 2026-10-08] FIN
+
 /** `user.usuario` viene como JSON string en POST /api/v1/auth/login. */
 export function parseUsuarioDetails(usuario) {
   if (!usuario) {
@@ -99,6 +118,10 @@ export function mergeApiProfileWithWorkspace(apiProfile, workspaceProfile) {
       ...defaultProfileSettings.personal,
       ...previous.personal,
       ...apiProfile.personal,
+      // [WS-HOY 2026-10-08] id_bodega no se pierde: si /users/about no lo trae (''),
+      // se conserva el valor ya conocido (login o workspace).
+      warehouseId: text(apiProfile?.personal?.warehouseId)
+        || text(previous?.personal?.warehouseId),
     },
     company: {
       ...previous.company,

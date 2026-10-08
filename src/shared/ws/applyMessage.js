@@ -5,6 +5,7 @@ import { WS_PRODUCT_EVENTS, isProductStockMessage } from './messageTypes'
 import {
   deleteAllListings,
   getStockListingFromMessage,
+  releaseCartQuantity,
   restoreStockForDeleteAll,
 } from './stockMessages'
 
@@ -46,6 +47,9 @@ function listadoFromMessage(message, snapshot) {
   return snapshot?.listado ?? line?.ubicacion_array ?? line?.ubicacionArray ?? null
 }
 
+// [WS-HOY 2026-10-08] VERSIÓN ANTERIOR de applyStockSnapshot (referencia de la de las 7 a. m.).
+// Reemplazaba el listado completo sin pasar por applyAuxIncreaseFromZero.
+/*
 function applyStockSnapshot(productId, listado) {
   if (!productId || listado == null) return
   const stockFields = buildStockFields(listado, getSessionWarehouseId())
@@ -66,13 +70,56 @@ function applyStockSnapshot(productId, listado) {
     })
   }
 }
+*/
+// [WS-HOY 2026-10-08] applyStockSnapshot NUEVA: el listado del mensaje REEMPLAZA el stock de la card.
+// stock = suma de cantidadAux del listado en la bodega de la sesión (buildStockFields). Antes se fusionaba
+// con applyAuxIncreaseFromZero, pero esa fusión descartaba ubicaciones nuevas del mensaje (stock incorrecto).
+function applyStockSnapshot(productId, listado) {
+  if (!productId || listado == null) return
+  const session = getSessionWarehouseId()
+  const stockFields = buildStockFields(listado, session)
+  if (!stockFields.stockDetail) return
+  console.info('[ws:stock]', { productId, id_bodega: session, stock: stockFields.stock, stockScope: stockFields.stockScope, listado })
+
+  for (const slotName of ['products', 'search', 'latest', 'filtered', 'cart']) {
+    const setList = getWebSocketStateSlot(slotName)
+    if (typeof setList !== 'function') continue
+    setList((items) => {
+      if (!Array.isArray(items)) return items
+      let changed = false
+      const next = items.map((item) => {
+        if (!sameProduct(item, productId)) return item
+        changed = true
+        return { ...item, ...stockFields, stockData: listado }
+      })
+      console.info('[ws:stock aplicado]', { slotName, changed, stock: stockFields.stock })
+      return changed ? next : items
+    })
+  }
+}
+function listadoForDelete(message, listado) {
+  const isDelete = message?.tipo === WS_PRODUCT_EVENTS.STOCK_DELETE
+    || message?.tipo === WS_PRODUCT_EVENTS.STOCK_DELETE_ALL
+  if (!isDelete) return listado
+
+  const available = buildStockFields(listado, getSessionWarehouseId()).stock
+  if (available > 0) return listado
+
+  const quantity = Number(message.carrito?.cantidad)
+  if (!Number.isFinite(quantity) || quantity <= 0) return listado
+
+  return releaseCartQuantity(listado, {
+    cantidad: quantity,
+    id_bodega: getSessionWarehouseId(),
+  }) ?? listado
+}
 
 function applyStock(message) {
   const snapshot = getStockListingFromMessage(message)
   const listado = listadoFromMessage(message, snapshot)
   const productId = snapshot?.productId ?? orderLine(message)?.id_producto
   if (productId && listado != null) {
-    applyStockSnapshot(productId, listado)
+    applyStockSnapshot(productId, listadoForDelete(message, listado))
     return
   }
   if (
@@ -80,6 +127,8 @@ function applyStock(message) {
     && message.tipo !== WS_PRODUCT_EVENTS.STOCK_DELETE
   ) return
 
+  // Respaldo: el listado ya se aplicó arriba cuando el mensaje trae idProducto + listado.
+  // Aquí message.listado es un mapa de bodegas (usa idProducto) o un mapa por producto.
   const listings = deleteAllListings(message)
   if (listings.length > 0) {
     listings.forEach(({ productId, listado }) => applyStockSnapshot(productId, listado))
@@ -117,6 +166,7 @@ function applyStock(message) {
   }
 }
 
+/** Actualiza la membresía del carrito de esta sesión. El stock de la tarjeta lo escribe applyStock. */
 function applyCart(message, userId) {
   const setCart = getWebSocketStateSlot('cart')
   if (typeof setCart !== 'function' || !userId) return
@@ -126,6 +176,8 @@ function applyCart(message, userId) {
     message.tipo === WS_PRODUCT_EVENTS.STOCK_CART
     || message.tipo === WS_PRODUCT_EVENTS.STOCK_CART_INCREASED
   ) {
+    // Entra o actualiza la línea solo si carrito.id_usuario es esta sesión.
+    // Cantidad, id de carrito y precio salen de esa línea. Otro usuario no marca Ordenado.
     const line = lines.find((item) => text(item?.id_usuario) === text(userId))
     if (!line) return
     const id = text(line.id_producto ?? message.idProducto)
@@ -160,6 +212,8 @@ function applyCart(message, userId) {
   }
 
   if (message.tipo === WS_PRODUCT_EVENTS.STOCK_CART_DELETE) {
+    // Quita la línea de esta sesión por id_carrito o, si no viene, por id_producto.
+    // Si id_usuario es de otro usuario, no toca este carrito.
     const line = lines.find((item) => text(item?.id_usuario) === text(userId)) ?? lines[0]
     const owner = text(line?.id_usuario)
     if (owner && owner !== text(userId)) return
@@ -177,6 +231,8 @@ function applyCart(message, userId) {
   }
 
   if (message.tipo === WS_PRODUCT_EVENTS.STOCK_DELETE) {
+    // Quita la línea por idCarrito del mensaje (o carrito.id_carrito).
+    // Sin id de carrito, la quita por idProducto. No cambia la cantidadAux: eso ya lo hizo applyStock con listado.
     const cartId = text(message.idCarrito ?? message.carrito?.id_carrito)
     const productId = text(message.idProducto ?? message.carrito?.id_producto)
     setCart((current = []) => {
@@ -190,6 +246,8 @@ function applyCart(message, userId) {
   }
 
   if (message.tipo === WS_PRODUCT_EVENTS.STOCK_DELETE_ALL) {
+    // Vacía solo las líneas cuyo carrito.id_usuario es esta sesión.
+    // Cada id_producto de esas líneas sale del carrito. El stock lo pinta el listado en applyStock.
     const productIds = new Set(
       lines
         .filter((line) => text(line.id_usuario) === text(userId))

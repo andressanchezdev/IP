@@ -92,6 +92,14 @@ export function useAuthSlice({ events, cartHydratingRef }) {
 
       const userId = client.userId
       const aboutSeedProfile = mapAboutUserToProfileSettings({}, client.email || loginEmail)
+      // [WS-HOY 2026-10-08] id_bodega del login entra al perfil (antes se perdía: el seed se armaba
+      // desde {} y client.warehouseId no se usaba). "0" es válido y se normaliza a "6" al usarse.
+      if (client.warehouseId) {
+        aboutSeedProfile.personal = {
+          ...aboutSeedProfile.personal,
+          warehouseId: client.warehouseId,
+        }
+      }
       const workspace = getOrCreateUserWorkspace(userId, aboutSeedProfile)
       const nextProfile = mergeApiProfileWithWorkspace(
         aboutSeedProfile,
